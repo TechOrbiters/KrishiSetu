@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   PlusCircle,
@@ -16,9 +16,20 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
+import { getMarketPriceSummary } from '@/lib/api/client';
+import { MarketPriceSummaryCard } from '@/lib/types/market';
 
 export default function FarmerDashboard() {
   const [showOverlay, setShowOverlay] = useState(false);
+  const [marketSummaries, setMarketSummaries] = useState<MarketPriceSummaryCard[]>([]);
+
+  useEffect(() => {
+    getMarketPriceSummary().then((res) => {
+      if (res.success && res.data) {
+        setMarketSummaries(res.data);
+      }
+    });
+  }, []);
 
   return (
     <FarmerLayout>
@@ -402,37 +413,31 @@ export default function FarmerDashboard() {
             {/* 2. Today's Market Prices Card (आज का बाजार भाव)       */}
             {/* ---------------------------------------------------- */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3.5">
-              <h3 className="font-extrabold text-base text-slate-900 border-b border-slate-100 pb-3">
-                आज का बाजार भाव
-              </h3>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="font-extrabold text-base text-slate-900">
+                  आज का बाजार भाव
+                </h3>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                  AGMARKNET
+                </span>
+              </div>
 
               <div className="space-y-3 text-xs">
-                {/* Wheat Price */}
-                <div className="flex items-center justify-between py-1">
-                  <span className="font-bold text-slate-800">गेहूँ</span>
-                  <span className="font-semibold text-slate-700">₹22 - ₹24 / kg</span>
-                  <span className="font-bold text-emerald-600 flex items-center gap-0.5">
-                    ↑ ₹1
-                  </span>
-                </div>
-
-                {/* Potato Price */}
-                <div className="flex items-center justify-between py-1">
-                  <span className="font-bold text-slate-800">आलू</span>
-                  <span className="font-semibold text-slate-700">₹17 - ₹19 / kg</span>
-                  <span className="font-bold text-red-600 flex items-center gap-0.5">
-                    ↓ ₹1
-                  </span>
-                </div>
-
-                {/* Tomato Price */}
-                <div className="flex items-center justify-between py-1">
-                  <span className="font-bold text-slate-800">टमाटर</span>
-                  <span className="font-semibold text-slate-700">₹22 - ₹26 / kg</span>
-                  <span className="font-bold text-emerald-600 flex items-center gap-0.5">
-                    ↑ ₹2
-                  </span>
-                </div>
+                {marketSummaries.length > 0 ? (
+                  marketSummaries.slice(0, 3).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
+                      <span className="font-bold text-slate-800">{item.crop}</span>
+                      <span className="font-semibold text-slate-700">₹{item.minPrice / 100} - ₹{item.maxPrice / 100} / kg</span>
+                      <span className={`font-bold flex items-center gap-0.5 ${item.trend === 'UP' ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {item.trend === 'UP' ? '↑' : '↓'} ₹{item.pricePerKg}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-2 text-slate-400 text-xs font-semibold">
+                    मंडी भाव लोड हो रहे हैं...
+                  </div>
+                )}
               </div>
 
               {/* View All Prices Button */}

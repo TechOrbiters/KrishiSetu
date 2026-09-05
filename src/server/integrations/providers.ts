@@ -84,10 +84,13 @@ export class SarvamLanguageDetectorImpl implements LanguageDetectorProvider {
   }
 }
 
+import { activeDataGovProvider } from "./market/dataGovProvider";
+
 // Global Provider Registry (KRISHISETU Provider Manager)
 export const activeProviders = {
   vision: new GoogleVisionProviderImpl(),
   maps: new OSRMMapsProviderImpl(),
+  market: activeDataGovProvider,
   stt: new SarvamSTTProviderImpl(),
   tts: new SarvamTTSProviderImpl(),
   translation: new SarvamTranslationProviderImpl(),

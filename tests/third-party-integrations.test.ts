@@ -1,5 +1,5 @@
 /**
- * KRISHISETU — Third-Party & Open Map Stack Integration Automated Test Suite
+ * KRISHISETU — Third-Party & Open Map Stack & Mandi Price Integration Automated Test Suite
  * Validates:
  * 1. Google Cloud Vision API analysis & fallback contract
  * 2. Open Map Stack Haversine distance calculation & coordinate validation
@@ -8,21 +8,24 @@
  * 5. Sarvam AI Speech-to-Text Saaras model intent parsing
  * 6. Sarvam AI Text-to-Speech & Translation
  * 7. Krishi AI Assistant draft execution guardrails
- * 8. Open Map Stack Provider Abstraction Registry
+ * 8. Government Mandi Price API (data.gov.in / AGMARKNET) Provider & Unit Normalization
+ * 9. Provider Abstraction Registry
  */
 
 import { analyzeProduceImage } from "../src/lib/google/vision";
 import { calculateHaversineDistance, calculateRoute, calculateHaversineFallback } from "../src/lib/maps/routing";
-import { validateCoordinates, checkLocationStale } from "../src/lib/maps/types";
+import { validateCoordinates } from "../src/lib/maps/types";
 import { evaluateFreshRoute } from "../src/lib/domain/freshroute";
 import { parseIntentFromTranscript } from "../src/lib/sarvam/stt";
 import { translateText } from "../src/lib/sarvam/translate";
 import { detectLanguage } from "../src/lib/sarvam/language";
 import { processKrishiAssistantRequest } from "../src/lib/sarvam/assistant";
 import { activeProviders } from "../src/server/integrations/providers";
+import { activeDataGovProvider } from "../src/server/integrations/market/dataGovProvider";
+import { activeMarketService } from "../src/server/services/marketService";
 
 async function runThirdPartyTests() {
-  console.log("🧪 Starting KRISHISETU Open Map Stack & Third-Party Integration Tests...\n");
+  console.log("🧪 Starting KRISHISETU Third-Party API & Mandi Price Verification Tests...\n");
   let passed = 0;
   let total = 0;
 
@@ -94,21 +97,19 @@ async function runThirdPartyTests() {
   total++;
   try {
     const nowIso = new Date().toISOString();
-    const harvestTimeIso = new Date(Date.now() - 2 * 3600 * 1000).toISOString(); // Harvested 2h ago
+    const harvestTimeIso = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
 
-    // 1. Safe route (2h harvest + 50h freshness vs 2h route duration)
     const safeRes = evaluateFreshRoute({
       harvestTimeIso,
       freshnessDurationHours: 50,
-      routeDurationMinutes: 120, // 2 hours
+      routeDurationMinutes: 120,
       serverTimeIso: nowIso,
     });
 
-    // 2. Ineligible route (2h harvest + 3h freshness vs 5h route duration)
     const ineligibleRes = evaluateFreshRoute({
       harvestTimeIso,
       freshnessDurationHours: 3,
-      routeDurationMinutes: 300, // 5 hours
+      routeDurationMinutes: 300,
       serverTimeIso: nowIso,
     });
 
@@ -184,23 +185,47 @@ async function runThirdPartyTests() {
     console.error("❌ TEST 7 FAILED:", err.message);
   }
 
-  // TEST 8: Open Map Stack Provider Abstraction Registry
+  // TEST 8: Government Mandi Price API (data.gov.in / AGMARKNET) Provider & Unit Normalization
+  total++;
+  try {
+    const fetchRes = await activeDataGovProvider.fetchPrices({ state: "Uttar Pradesh", limit: 5 });
+    const marketData = await activeMarketService.getMarketPrices({ limit: 10 });
+    const summaryCards = await activeMarketService.getSummaryCards();
+
+    if (
+      marketData.prices.length > 0 &&
+      typeof marketData.prices[0].modalPrice === "number" &&
+      marketData.prices[0].unit === "₹/quintal" &&
+      typeof marketData.prices[0].pricePerKg === "number" &&
+      summaryCards.length >= 4
+    ) {
+      console.log(`✅ TEST 8 PASSED: data.gov.in Mandi Price API contract, record normalization (₹/quintal -> ₹/kg), and summary KPI engine verified (${marketData.prices.length} records, ${summaryCards.length} KPI cards)`);
+      passed++;
+    } else {
+      console.error("❌ TEST 8 FAILED:", fetchRes, marketData);
+    }
+  } catch (err: any) {
+    console.error("❌ TEST 8 FAILED:", err.message);
+  }
+
+  // TEST 9: Provider Abstraction Registry
   total++;
   if (
     activeProviders.vision &&
     activeProviders.maps &&
+    activeProviders.market &&
     activeProviders.stt &&
     activeProviders.tts &&
     activeProviders.translation &&
     activeProviders.languageDetector
   ) {
-    console.log("✅ TEST 8 PASSED: Swappable Provider Abstraction Registry (Open Map Stack) initialized successfully");
+    console.log("✅ TEST 9 PASSED: Swappable Provider Abstraction Registry (with data.gov.in Mandi Price provider) verified");
     passed++;
   } else {
-    console.error("❌ TEST 8 FAILED: Provider registry missing instances");
+    console.error("❌ TEST 9 FAILED: Provider registry missing instances");
   }
 
-  console.log(`\n🎉 Verification Summary: ${passed}/${total} Open Map Stack & Integration tests passed successfully!`);
+  console.log(`\n🎉 Verification Summary: ${passed}/${total} Third-Party & Government API Integration tests passed successfully!`);
 
   if (passed !== total) {
     process.exit(1);

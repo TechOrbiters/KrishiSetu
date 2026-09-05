@@ -15,6 +15,7 @@ export async function GET() {
   const osrmConfigured = Boolean(
     process.env.OSRM_BASE_URL || "https://router.project-osrm.org"
   );
+  const dataGovConfigured = Boolean(process.env.DATA_GOV_API_KEY);
   const googleVisionConfigured = Boolean(process.env.GOOGLE_VISION_API_KEY);
   const sarvamConfigured = Boolean(process.env.SARVAM_API_KEY);
 
@@ -26,6 +27,11 @@ export async function GET() {
     firebase: {
       status: firebaseConfigured ? "HEALTHY" : "NOT_CONFIGURED",
       role: "Phone Auth, Realtime DB, Push Notifications",
+    },
+    data_gov_mandi: {
+      status: dataGovConfigured ? "HEALTHY" : "NOT_CONFIGURED",
+      role: "Government of India AGMARKNET Mandi Price API",
+      clientSafe: false,
     },
     openstreetmap: {
       status: osmTileConfigured ? "HEALTHY" : "NOT_CONFIGURED",
@@ -57,6 +63,7 @@ export async function GET() {
   const allHealthy =
     supabaseConfigured &&
     firebaseConfigured &&
+    dataGovConfigured &&
     osmTileConfigured &&
     osrmConfigured &&
     googleVisionConfigured &&

@@ -5,6 +5,7 @@
 
 import { LatLng, RouteResult, validateCoordinates } from "../maps/types";
 import { calculateHaversineFallback } from "../maps/routing";
+import { MarketPriceQueryFilters, MarketPriceApiResponse, MarketPriceSummaryCard } from "../types/market";
 
 // Simple in-memory cache for recent route queries (TTL: 60 seconds)
 const routeCache = new Map<string, { result: RouteResult; timestamp: number }>();
@@ -51,4 +52,67 @@ export async function getRoute(origin: LatLng, destination: LatLng): Promise<Rou
   const fallback = calculateHaversineFallback(origin, destination);
   routeCache.set(cacheKey, { result: fallback, timestamp: Date.now() });
   return fallback;
+}
+
+/**
+ * Fetch Government Market Prices (AGMARKNET data.gov.in)
+ */
+export async function getMarketPrices(filters: MarketPriceQueryFilters = {}): Promise<MarketPriceApiResponse> {
+  try {
+    const params = new URLSearchParams();
+    if (filters.state) params.append("state", filters.state);
+    if (filters.district) params.append("district", filters.district);
+    if (filters.market) params.append("market", filters.market);
+    if (filters.commodity) params.append("commodity", filters.commodity);
+    if (filters.page) params.append("page", filters.page.toString());
+    if (filters.limit) params.append("limit", filters.limit.toString());
+
+    const res = await fetch(`/api/market-prices?${params.toString()}`);
+    if (!res.ok) {
+      throw new Error(`Market prices API returned HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err: any) {
+    console.warn('[ApiClient] getMarketPrices error:', err.message);
+    return {
+      success: false,
+      error: {
+        code: 'NETWORK_ERROR',
+        message: err.message || 'Failed to connect to market price service.',
+      },
+    };
+  }
+}
+
+/**
+ * Fetch Top 4 Market Price Summary Cards for Dashboard and Header
+ */
+export async function getMarketPriceSummary(): Promise<{ success: boolean; data?: MarketPriceSummaryCard[] }> {
+  try {
+    const res = await fetch('/api/market-prices/summary');
+    if (!res.ok) {
+      throw new Error(`Market summary API returned HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err: any) {
+    console.warn('[ApiClient] getMarketPriceSummary error:', err.message);
+    return { success: false };
+  }
+}
+
+/**
+ * Trigger Market Price Sync from data.gov.in
+ */
+export async function syncMarketPrices(state: string = 'Uttar Pradesh'): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await fetch('/api/market-prices/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state, limit: 100 }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.warn('[ApiClient] syncMarketPrices error:', err.message);
+    return { success: false, message: err.message };
+  }
 }

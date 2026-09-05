@@ -1,0 +1,72 @@
+{
+  "status": "ok",
+  "total": 2701,
+  "count": 5,
+  "limit": 5,
+  "offset": 0,
+  "title": "Current Daily Price of Various Commodities from Various Markets (Mandi)",
+  "source": "data.gov.in",
+  "updated_date": "2026-09-05T13:00:49Z",
+  "records": [
+    {
+      "state": "Uttar Pradesh",
+      "district": "Banda",
+      "market": "Banda APMC",
+      "commodity": "Gram Raw(Chholia)",
+      "variety": "Other",
+      "grade": "FAQ",
+      "arrival_date": "05/09/2026",
+      "min_price": 5780,
+      "max_price": 5990,
+      "modal_price": 5852.16
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Raebarelli",
+      "market": "Bachranwa APMC",
+      "commodity": "Wheat",
+      "variety": "Dara",
+      "grade": "FAQ",
+      "arrival_date": "05/09/2026",
+      "min_price": 2400,
+      "max_price": 2600,
+      "modal_price": 2493.81
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Etah",
+      "market": "Etah APMC",
+      "commodity": "Wheat",
+      "variety": "Mill Quality",
+      "grade": "FAQ",
+      "arrival_date": "05/09/2026",
+      "min_price": 2500,
+      "max_price": 2500,
+      "modal_price": 2500
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Agra",
+      "market": "Achnera APMC",
+      "commodity": "Wheat",
+      "variety": "Dara",
+      "grade": "FAQ",
+      "arrival_date": "05/09/2026",
+      "min_price": 2560,
+      "max_price": 2640,
+      "modal_price": 2618.35
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Fatehpur",
+      "market": "Fatehpur APMC",
+      "commodity": "Wheat",
+      "variety": "Dara",
+      "grade": "FAQ",
+      "arrival_date": "05/09/2026",
+      "min_price": 2500,
+      "max_price": 2500,
+      "modal_price": 2500
+    }
+  ]
+}
