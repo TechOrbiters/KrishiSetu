@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Sprout,
@@ -14,32 +14,48 @@ import {
   Globe,
   LogOut,
   ChevronDown,
+  Bot,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useFarmerStore } from '@/lib/store/farmerStore';
 
 export const FarmerSidebar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { t, language, setLanguage, languages } = useLanguage();
-  const { user } = useFarmerStore();
+  const { user, notificationsCount } = useFarmerStore();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Show farmer avatar in sidebar on market-prices, orders, delivery pages
-  // Profile and Dashboard pages show the Kisan Setu logo
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    // Clear any stored session data
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ks_auth_token');
+        sessionStorage.clear();
+      }
+    } catch (_) {}
+    // Small delay for UX feedback, then redirect to landing
+    setTimeout(() => router.push('/'), 400);
+  };
+
   const showFarmerAvatar =
     pathname.includes('/market-prices') ||
     pathname.includes('/orders') ||
     pathname.includes('/delivery') ||
     pathname.includes('/payments') ||
-    pathname.includes('/listings');
+    pathname.includes('/listings') ||
+    pathname.includes('/ai-assistant');
 
   const mainNavItems = [
-    { href: '/farmer/dashboard', labelKey: 'nav.dashboard', subKey: 'Dashboard', icon: LayoutDashboard },
-    { href: '/farmer/listings', labelKey: 'nav.listings', subKey: 'My Listings', icon: Sprout },
-    { href: '/farmer/orders', labelKey: 'nav.orders', subKey: 'Orders', icon: ShoppingBag },
-    { href: '/farmer/delivery', labelKey: 'nav.delivery', subKey: 'Delivery Status', icon: Truck },
-    { href: '/farmer/payments', labelKey: 'nav.payments', subKey: 'Payments', icon: CreditCard },
-    { href: '/farmer/market-prices', labelKey: 'nav.marketPrices', subKey: 'Market Prices', icon: BarChart2 },
-    { href: '/farmer/profile', labelKey: 'nav.profile', subKey: 'My Profile', icon: User },
+    { href: '/farmer/dashboard',    labelKey: 'nav.dashboard',    subKey: 'Dashboard',        icon: LayoutDashboard },
+    { href: '/farmer/listings',     labelKey: 'nav.listings',     subKey: 'My Listings',      icon: Sprout },
+    { href: '/farmer/orders',       labelKey: 'nav.orders',       subKey: 'Orders',           icon: ShoppingBag },
+    { href: '/farmer/delivery',     labelKey: 'nav.delivery',     subKey: 'Delivery Status',  icon: Truck },
+    { href: '/farmer/payments',     labelKey: 'nav.payments',     subKey: 'Payments',         icon: CreditCard },
+    { href: '/farmer/market-prices',labelKey: 'nav.marketPrices', subKey: 'Market Prices',    icon: BarChart2 },
+    { href: '/farmer/ai-assistant', labelKey: 'nav.aiAssistant',  subKey: 'AI Assistant',     icon: Bot },
+    { href: '/farmer/profile',      labelKey: 'nav.profile',      subKey: 'My Profile',       icon: User },
   ];
 
   return (
@@ -129,12 +145,14 @@ export const FarmerSidebar: React.FC = () => {
 
         {/* Logout */}
         <button
-          onClick={() => alert('Logged out successfully')}
-          className="w-full text-left px-3 py-2 text-xs text-red-600 font-bold hover:bg-red-50 rounded-xl flex items-center gap-2.5 transition-all"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          aria-label="Logout from KRISHISETU"
+          className="w-full text-left px-3 py-2 text-xs text-red-600 font-bold hover:bg-red-50 rounded-xl flex items-center gap-2.5 transition-all disabled:opacity-60"
         >
-          <LogOut className="w-4 h-4 text-red-500" />
+          <LogOut className={`w-4 h-4 text-red-500 ${isLoggingOut ? 'animate-spin' : ''}`} />
           <div className="flex flex-col leading-none">
-            <span>लॉगआउट</span>
+            <span>{isLoggingOut ? 'लॉग आउट हो रहे हैं...' : 'लॉगआउट'}</span>
             <span className="text-[10px] text-red-400 font-normal">Logout</span>
           </div>
         </button>

@@ -2,30 +2,208 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================ */
+/* KRISHISETU — Premium Design System                           */
+/* ============================================================ */
+
+/* 1. DESIGN TOKENS */
 :root {
-  --foreground-rgb: 17, 24, 39;
-  --background-start-rgb: 247, 248, 250;
-  --background-end-rgb: 255, 255, 255;
+  /* Brand Colors */
+  --brand-green: #15803d;
+  --brand-green-light: #16a34a;
+  --brand-green-pale: #f0fdf4;
+  --brand-green-muted: #dcfce7;
+
+  /* Background */
+  --bg-base: #f7f8fa;
+  --bg-card: #ffffff;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-elevated: 0 4px 16px -2px rgb(0 0 0 / 0.1), 0 2px 6px -2px rgb(0 0 0 / 0.07);
+  --shadow-brand: 0 4px 20px -4px rgb(21 128 61 / 0.3);
+
+  /* Typography */
+  --font-sans: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+  --font-devanagari: 'Noto Sans Devanagari', 'Inter', system-ui, sans-serif;
+
+  /* Transitions */
+  --transition-base: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 2. BASE RESET */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #F7F8FA;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: #0f172a;
+  background-color: var(--bg-base);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* 3. PREMIUM SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* 4. MICRO-ANIMATIONS */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-::-webkit-scrollbar-track {
-  background: #F1F5F9;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 9999px;
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(21 128 61 / 0.3); }
+  50%       { box-shadow: 0 0 0 8px rgb(21 128 61 / 0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes notificationPing {
+  0%   { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* 5. ANIMATION UTILITY CLASSES */
+.animate-fade-up    { animation: fadeUp 0.4s ease-out both; }
+.animate-fade-in    { animation: fadeIn 0.3s ease-out both; }
+.animate-slide-left { animation: slideInLeft 0.35s ease-out both; }
+.animate-slide-right{ animation: slideInRight 0.35s ease-out both; }
+.animate-scale-in   { animation: scaleIn 0.3s ease-out both; }
+.animate-pulse-green{ animation: pulseGreen 2s ease-in-out infinite; }
+.animate-float      { animation: float 3s ease-in-out infinite; }
+
+/* Staggered children */
+.animate-children > *                { animation: fadeUp 0.4s ease-out both; }
+.animate-children > *:nth-child(1)   { animation-delay: 0ms; }
+.animate-children > *:nth-child(2)   { animation-delay: 70ms; }
+.animate-children > *:nth-child(3)   { animation-delay: 140ms; }
+.animate-children > *:nth-child(4)   { animation-delay: 210ms; }
+.animate-children > *:nth-child(5)   { animation-delay: 280ms; }
+.animate-children > *:nth-child(6)   { animation-delay: 350ms; }
+.animate-children > *:nth-child(7)   { animation-delay: 420ms; }
+.animate-children > *:nth-child(8)   { animation-delay: 490ms; }
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
+}
+
+/* 6. COMPONENT UTILITIES */
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+.card-hover:hover {
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-1px);
+}
+
+/* Brand Button */
+.btn-brand {
+  background: var(--brand-green);
+  color: white;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 10px 20px;
+  transition: all var(--transition-base);
+  box-shadow: 0 2px 8px -2px rgb(21 128 61 / 0.35);
+  cursor: pointer;
+}
+.btn-brand:hover {
+  background: #166534;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-brand);
+}
+.btn-brand:active { transform: scale(0.97); }
+
+/* Glass morphism */
+.glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #15803d 0%, #16a34a 50%, #22c55e 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 4s ease infinite;
+}
+
+/* Status badges */
+.badge-active    { background: #dcfce7; color: #15803d; }
+.badge-pending   { background: #fef9c3; color: #a16207; }
+.badge-cancelled { background: #fee2e2; color: #dc2626; }
+.badge-transit   { background: #dbeafe; color: #1d4ed8; }
+.badge-expired   { background: #f1f5f9; color: #64748b; }
+
+/* 7. FOCUS STYLES */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--brand-green);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* 8. PAGE TRANSITION */
+main { animation: fadeUp 0.35s ease-out both; }
+
+/* 9. SMOOTH HOVER TRANSITIONS */
+a, button { transition: all var(--transition-base); }
+
+/* 10. PRINT HIDE */
+@media print {
+  aside, nav, .no-print { display: none !important; }
+}
+
+/* 11. CUSTOM TAILWIND OVERRIDES */
+.brand-bg { background-color: var(--bg-base); }

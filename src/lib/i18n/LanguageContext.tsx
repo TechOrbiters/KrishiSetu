@@ -28,6 +28,8 @@ const translations: Record<string, Record<string, string>> = {
     'nav.marketPrices': 'बाजार भाव',
     'nav.help': 'सहायता केंद्र',
     'nav.profile': 'मेरा प्रोफाइल',
+    'nav.aiAssistant': 'कृषि AI सहायक',
+    'nav.fpo': 'FPO प्रबंधन',
   },
   en: {
     'nav.dashboard': 'Dashboard',
@@ -38,6 +40,8 @@ const translations: Record<string, Record<string, string>> = {
     'nav.marketPrices': 'Market Prices',
     'nav.help': 'Help Center',
     'nav.profile': 'My Profile',
+    'nav.aiAssistant': 'Krishi AI Assistant',
+    'nav.fpo': 'FPO Management',
   },
 };
 

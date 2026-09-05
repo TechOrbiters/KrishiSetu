@@ -8,17 +8,20 @@ import { useFarmerStore } from '@/lib/store/farmerStore';
 export const FarmerTopbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useFarmerStore();
+  const { user, notificationsCount } = useFarmerStore();
 
   const getPageTitle = () => {
-    if (pathname.includes('/profile')) return 'मेरा प्रोफाइल';
+    if (pathname.includes('/profile'))       return 'मेरा प्रोफाइल';
     if (pathname.includes('/market-prices')) return 'बाजार भाव';
-    if (pathname.includes('/orders')) return 'मेरे ऑर्डर';
-    if (pathname.includes('/delivery')) return 'डिलीवरी ट्रैक करें';
-    if (pathname.includes('/listings/new')) return 'नई उपज लिस्ट करें';
-    if (pathname.includes('/listings')) return 'मेरी उपज';
-    if (pathname.includes('/payments')) return 'भुगतान';
-    if (pathname.includes('/help')) return 'सहायता केंद्र';
+    if (pathname.includes('/orders'))        return 'मेरे ऑर्डर';
+    if (pathname.includes('/delivery'))      return 'डिलीवरी ट्रैक करें';
+    if (pathname.includes('/listings/new'))  return 'नई उपज लिस्ट करें';
+    if (pathname.includes('/listings'))      return 'मेरी उपज';
+    if (pathname.includes('/payments'))      return 'भुगतान';
+    if (pathname.includes('/help'))          return 'सहायता केंद्र';
+    if (pathname.includes('/ai-assistant'))  return 'कृषि AI सहायक';
+    if (pathname.includes('/ai-recommendations')) return 'AI सुझाव';
+    if (pathname.includes('/fpo'))           return 'FPO प्रबंधन';
     return 'डैशबोर्ड';
   };
 
@@ -41,8 +44,8 @@ export const FarmerTopbar: React.FC = () => {
           {isHome ? (
             <>
               <h1 className="font-extrabold text-base sm:text-2xl text-slate-900 leading-tight flex items-center gap-1 truncate">
-                <span className="truncate">नमस्ते रमेश जी</span>
-                <span className="animate-bounce flex-shrink-0 text-sm sm:text-base">👋</span>
+                <span className="truncate">नमस्ते {user.fullName.split(' ')[0]} जी</span>
+                <span className="flex-shrink-0 text-sm sm:text-base">👋</span>
               </h1>
               <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">
                 स्वागत है आपके किसान डैशबोर्ड पर
@@ -79,11 +82,13 @@ export const FarmerTopbar: React.FC = () => {
         </div>
 
         {/* Notification Bell Badge */}
-        <button className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs flex-shrink-0">
+        <button className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs flex-shrink-0" aria-label={`${notificationsCount} notifications`}>
           <span className="text-xs sm:text-base">🔔</span>
-          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-600 text-white font-bold text-[9px] flex items-center justify-center border border-white">
-            3
-          </span>
+          {notificationsCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white font-bold text-[9px] flex items-center justify-center border-2 border-white">
+              {notificationsCount > 9 ? '9+' : notificationsCount}
+            </span>
+          )}
         </button>
       </div>
     </header>
