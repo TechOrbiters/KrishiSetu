@@ -2,8 +2,7 @@
 
 /**
  * KRISHISETU — MapComponent
- * Legacy wrapper — re-exports LiveTrackingMap for backward compatibility.
- * New code should import LiveTrackingMap directly.
+ * Re-exports LiveTrackingMap (Open Map Stack: Leaflet + OSM + OSRM) for backward compatibility.
  */
 
 export { LiveTrackingMap as MapComponent } from './LiveTrackingMap';

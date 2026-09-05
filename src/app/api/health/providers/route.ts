@@ -9,9 +9,13 @@ export async function GET() {
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY
   );
 
-  const googleMapsConfigured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+  const osmTileConfigured = Boolean(
+    process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  );
+  const osrmConfigured = Boolean(
+    process.env.OSRM_BASE_URL || "https://router.project-osrm.org"
+  );
   const googleVisionConfigured = Boolean(process.env.GOOGLE_VISION_API_KEY);
-  const googleGeolocationConfigured = Boolean(process.env.GOOGLE_GEOLOCATION_API_KEY);
   const sarvamConfigured = Boolean(process.env.SARVAM_API_KEY);
 
   const providers = {
@@ -23,19 +27,24 @@ export async function GET() {
       status: firebaseConfigured ? "HEALTHY" : "NOT_CONFIGURED",
       role: "Phone Auth, Realtime DB, Push Notifications",
     },
-    google_maps: {
-      status: googleMapsConfigured ? "HEALTHY" : "NOT_CONFIGURED",
-      role: "Interactive Maps & Client Location Services",
+    openstreetmap: {
+      status: osmTileConfigured ? "HEALTHY" : "NOT_CONFIGURED",
+      role: "Leaflet Map Tiles & Attribution",
+      clientSafe: true,
+    },
+    osrm_routing: {
+      status: osrmConfigured ? "HEALTHY" : "NOT_CONFIGURED",
+      role: "Road Route & Travel Duration Engine",
+      clientSafe: true,
+    },
+    browser_geolocation: {
+      status: "HEALTHY",
+      role: "Native Browser Device Positioning",
       clientSafe: true,
     },
     google_vision: {
       status: googleVisionConfigured ? "HEALTHY" : "NOT_CONFIGURED",
       role: "Assistive Produce Photo Analysis",
-      clientSafe: false,
-    },
-    google_geolocation: {
-      status: googleGeolocationConfigured ? "HEALTHY" : "NOT_CONFIGURED",
-      role: "Network Geolocation Fallback",
       clientSafe: false,
     },
     sarvam_ai: {
@@ -48,7 +57,8 @@ export async function GET() {
   const allHealthy =
     supabaseConfigured &&
     firebaseConfigured &&
-    googleMapsConfigured &&
+    osmTileConfigured &&
+    osrmConfigured &&
     googleVisionConfigured &&
     sarvamConfigured;
 

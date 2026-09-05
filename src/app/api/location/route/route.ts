@@ -1,30 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { calculateRouteEta } from "@/lib/google/maps";
+import { calculateRoute } from "@/lib/maps/routing";
+import { validateCoordinates } from "@/lib/maps/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const originLat = parseFloat(searchParams.get("originLat") || "0");
-    const originLng = parseFloat(searchParams.get("originLng") || "0");
-    const destLat = parseFloat(searchParams.get("destLat") || "0");
-    const destLng = parseFloat(searchParams.get("destLng") || "0");
+    const originLat = parseFloat(searchParams.get("originLat") || "NaN");
+    const originLng = parseFloat(searchParams.get("originLng") || "NaN");
+    const destLat = parseFloat(searchParams.get("destLat") || "NaN");
+    const destLng = parseFloat(searchParams.get("destLng") || "NaN");
 
-    if (!originLat || !originLng || !destLat || !destLng) {
+    if (!validateCoordinates(originLat, originLng) || !validateCoordinates(destLat, destLng)) {
       return NextResponse.json(
-        { error: { code: "BAD_REQUEST", message: "originLat, originLng, destLat, destLng are required." } },
+        {
+          error: {
+            code: "BAD_REQUEST",
+            message: "Valid originLat, originLng, destLat, destLng coordinates are required.",
+          },
+        },
         { status: 400 }
       );
     }
 
-    const routeInfo = await calculateRouteEta(
+    const routeInfo = await calculateRoute(
       { lat: originLat, lng: originLng },
       { lat: destLat, lng: destLng }
     );
 
     return NextResponse.json({
       success: true,
+      provider: routeInfo.provider,
       data: routeInfo,
     });
   } catch (err: any) {
@@ -33,8 +40,8 @@ export async function GET(req: NextRequest) {
       {
         error: {
           code: "ROUTE_ERROR",
-          message: err.message || "Failed to calculate route ETA.",
-          provider: "google_maps",
+          message: err.message || "Failed to calculate route.",
+          provider: "osrm",
           retryable: true,
         },
       },

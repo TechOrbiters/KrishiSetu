@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { geocodeAddress } from "@/lib/google/maps";
+import { getManualLocationFallback } from "@/lib/location/geolocation";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const address = searchParams.get("address");
+    const address = searchParams.get("address") || "";
 
     if (!address) {
       return NextResponse.json(
@@ -15,11 +15,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const result = await geocodeAddress(address);
+    const pos = getManualLocationFallback(address);
 
     return NextResponse.json({
       success: true,
-      data: result,
+      provider: "local_dictionary",
+      data: {
+        formattedAddress: address,
+        location: { lat: pos.latitude, lng: pos.longitude },
+        isFallback: true,
+      },
     });
   } catch (err: any) {
     console.error("[API] Geocoding error:", err);
@@ -27,9 +32,9 @@ export async function GET(req: NextRequest) {
       {
         error: {
           code: "GEOCODE_ERROR",
-          message: err.message || "Failed to geocode address.",
-          provider: "google_maps",
-          retryable: true,
+          message: err.message || "Failed to resolve address.",
+          provider: "local_dictionary",
+          retryable: false,
         },
       },
       { status: 500 }

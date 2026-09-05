@@ -28,7 +28,7 @@ const DELIVERY: { lat: number; lng: number; label: string; address: string } = {
   address: 'अलंबाग, लखनऊ',
 };
 // Transporter live location (in real app: driven from Firebase RTDB)
-const TRANSPORTER_LIVE = { lat: 26.87, lng: 81.05 };
+const TRANSPORTER_LIVE = { lat: 26.87, lng: 81.05, updatedAt: Date.now() };
 
 export default function DeliveryTrackingPage() {
   const [mapKey, setMapKey] = useState(0);

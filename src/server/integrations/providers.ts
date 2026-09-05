@@ -1,5 +1,7 @@
 import { analyzeProduceImage, VisionAnalysisResult } from "../../lib/google/vision";
-import { geocodeAddress, calculateRouteEta, RouteResult, GeocodeResult } from "../../lib/google/maps";
+import { calculateRoute } from "../../lib/maps/routing";
+import { LatLng, RouteResult } from "../../lib/maps/types";
+import { getManualLocationFallback } from "../../lib/location/geolocation";
 import { transcribeAudio, STTResult } from "../../lib/sarvam/stt";
 import { generateSpeech, TTSResult, TTSRequest } from "../../lib/sarvam/tts";
 import { translateText, TranslateRequest, TranslateResult } from "../../lib/sarvam/translate";
@@ -10,12 +12,15 @@ export interface VisionProvider {
   analyzeProduce(imageSource: string): Promise<VisionAnalysisResult>;
 }
 
+export interface GeocodeResult {
+  formattedAddress: string;
+  location: LatLng;
+  placeId?: string;
+}
+
 export interface MapsProvider {
   geocode(address: string): Promise<GeocodeResult | null>;
-  calculateRoute(
-    origin: { lat: number; lng: number },
-    destination: { lat: number; lng: number }
-  ): Promise<RouteResult>;
+  calculateRoute(origin: LatLng, destination: LatLng): Promise<RouteResult>;
 }
 
 export interface SpeechToTextProvider {
@@ -41,16 +46,17 @@ export class GoogleVisionProviderImpl implements VisionProvider {
   }
 }
 
-export class GoogleMapsProviderImpl implements MapsProvider {
+export class OSRMMapsProviderImpl implements MapsProvider {
   async geocode(address: string): Promise<GeocodeResult | null> {
-    return geocodeAddress(address);
+    const pos = getManualLocationFallback(address);
+    return {
+      formattedAddress: address,
+      location: { lat: pos.latitude, lng: pos.longitude },
+    };
   }
 
-  async calculateRoute(
-    origin: { lat: number; lng: number },
-    destination: { lat: number; lng: number }
-  ): Promise<RouteResult> {
-    return calculateRouteEta(origin, destination);
+  async calculateRoute(origin: LatLng, destination: LatLng): Promise<RouteResult> {
+    return calculateRoute(origin, destination);
   }
 }
 
@@ -81,7 +87,7 @@ export class SarvamLanguageDetectorImpl implements LanguageDetectorProvider {
 // Global Provider Registry (KRISHISETU Provider Manager)
 export const activeProviders = {
   vision: new GoogleVisionProviderImpl(),
-  maps: new GoogleMapsProviderImpl(),
+  maps: new OSRMMapsProviderImpl(),
   stt: new SarvamSTTProviderImpl(),
   tts: new SarvamTTSProviderImpl(),
   translation: new SarvamTranslationProviderImpl(),

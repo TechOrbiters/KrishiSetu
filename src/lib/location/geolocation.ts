@@ -1,8 +1,8 @@
 /**
- * KRISHISETU — Geolocation Module
- * Primary: Browser Geolocation API (Permission-based)
+ * KRISHISETU — Browser Geolocation Module
+ * Primary: Native Browser Geolocation API (Permission-based navigator.geolocation)
  * Fallback: Manual Location Selector (Village / District / State)
- * Server Fallback: Google Geolocation API (Network-based estimation)
+ * Zero external geocoding network dependencies. Non-blocking.
  */
 
 export interface DevicePosition {
@@ -10,13 +10,14 @@ export interface DevicePosition {
   longitude: number;
   accuracyMeters: number;
   isFallback: boolean;
-  source: 'BROWSER_GPS' | 'GOOGLE_GEOLOCATION' | 'MANUAL_SELECTION';
+  source: 'BROWSER_GPS' | 'MANUAL_SELECTION';
+  errorDetails?: string;
 }
 
 export function getCurrentBrowserPosition(): Promise<DevicePosition> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
-      resolve(getManualLocationFallback());
+      resolve(getManualLocationFallback('Barabanki', 'Browser geolocation not supported'));
       return;
     }
 
@@ -31,22 +32,83 @@ export function getCurrentBrowserPosition(): Promise<DevicePosition> {
         });
       },
       (err) => {
-        console.warn('Browser geolocation denied or unavailable:', err.message);
-        resolve(getManualLocationFallback());
+        let errorDetails = 'Geolocation error';
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            errorDetails = 'Permission denied by user';
+            break;
+          case err.POSITION_UNAVAILABLE:
+            errorDetails = 'Position unavailable';
+            break;
+          case err.TIMEOUT:
+            errorDetails = 'Geolocation request timed out';
+            break;
+        }
+        console.warn('[Geolocation] Fallback triggered:', errorDetails);
+        resolve(getManualLocationFallback('Barabanki', errorDetails));
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
     );
   });
 }
 
-export function getManualLocationFallback(district: string = 'Barabanki'): DevicePosition {
-  if (district.toLowerCase().includes('lucknow')) {
+export function watchCurrentBrowserPosition(
+  onSuccess: (pos: DevicePosition) => void,
+  onError?: (err: string) => void
+): number | null {
+  if (typeof window === 'undefined' || !navigator.geolocation) {
+    if (onError) onError('Geolocation not supported');
+    return null;
+  }
+
+  return navigator.geolocation.watchPosition(
+    (pos) => {
+      onSuccess({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracyMeters: Math.round(pos.coords.accuracy),
+        isFallback: false,
+        source: 'BROWSER_GPS',
+      });
+    },
+    (err) => {
+      if (onError) onError(err.message);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+  );
+}
+
+export function stopWatchingPosition(watchId: number): void {
+  if (typeof window !== 'undefined' && navigator.geolocation && watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+  }
+}
+
+export function getManualLocationFallback(
+  district: string = 'Barabanki',
+  reason?: string
+): DevicePosition {
+  const norm = district.toLowerCase();
+
+  if (norm.includes('lucknow')) {
     return {
       latitude: 26.8467,
       longitude: 80.9462,
       accuracyMeters: 500,
       isFallback: true,
       source: 'MANUAL_SELECTION',
+      errorDetails: reason,
+    };
+  }
+
+  if (norm.includes('kanpur')) {
+    return {
+      latitude: 26.4499,
+      longitude: 80.3319,
+      accuracyMeters: 500,
+      isFallback: true,
+      source: 'MANUAL_SELECTION',
+      errorDetails: reason,
     };
   }
 
@@ -57,37 +119,6 @@ export function getManualLocationFallback(district: string = 'Barabanki'): Devic
     accuracyMeters: 1000,
     isFallback: true,
     source: 'MANUAL_SELECTION',
+    errorDetails: reason,
   };
-}
-
-// Server-side Google Geolocation API call (Network/Cell estimation)
-export async function getGoogleNetworkLocation(): Promise<DevicePosition> {
-  const apiKey = process.env.GOOGLE_GEOLOCATION_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    return getManualLocationFallback();
-  }
-
-  try {
-    const res = await fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ considerIp: true }),
-      signal: AbortSignal.timeout(4000),
-    });
-    const data = await res.json();
-
-    if (data.location) {
-      return {
-        latitude: data.location.lat,
-        longitude: data.location.lng,
-        accuracyMeters: Math.round(data.accuracy || 1000),
-        isFallback: false,
-        source: 'GOOGLE_GEOLOCATION',
-      };
-    }
-  } catch (err: any) {
-    console.warn('Google Geolocation API fallback:', err.message);
-  }
-
-  return getManualLocationFallback();
 }

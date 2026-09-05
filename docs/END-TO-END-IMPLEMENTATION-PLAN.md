@@ -227,7 +227,7 @@ Synchronized UI Response & Local Store Hydration
 ---
 
 ## 33. Security Architecture
-- Credential Isolation: `GOOGLE_VISION_API_KEY`, `SARVAM_API_KEY`, `GOOGLE_GEOLOCATION_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_PRIVATE_KEY` are kept server-side. Only `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is exposed to browser client components (restricted by HTTP Referrers).
+- Credential Isolation: `GOOGLE_VISION_API_KEY`, `SARVAM_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_PRIVATE_KEY` are kept server-side. `NEXT_PUBLIC_MAP_TILE_URL` and `OSRM_BASE_URL` configure the Open Map Stack (Leaflet + OSM + OSRM).
 - Input Validation: All API routes validate incoming payloads using Zod schemas.
 
 ---
