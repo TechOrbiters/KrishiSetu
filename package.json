@@ -10,7 +10,8 @@
     "test": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/domain-rules.test.ts",
     "test:backend": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/supabase-backend.test.ts",
     "test:firebase": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/firebase-integration.test.ts",
-    "test:thirdparty": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/third-party-integrations.test.ts"
+    "test:thirdparty": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/third-party-integrations.test.ts",
+    "test:live": "ts-node tests/live-api-verification.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
