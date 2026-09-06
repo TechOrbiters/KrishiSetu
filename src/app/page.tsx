@@ -11,7 +11,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 /* ========================================================================= */
 
 // Top Left Logo
-function KisanSetuLogo() {
+function KrishiSetuLogo() {
   return (
     <Link href="/" className="flex items-center gap-3 cursor-pointer group">
       {/* Agricultural wheat/leaf icon */}
@@ -230,8 +230,8 @@ export default function MasterLandingPage() {
           boxShadow: '0 1px 6px 0 rgba(0, 0, 0, 0.04)',
         }}
       >
-        {/* Left: KisanSetu Logo */}
-        <KisanSetuLogo />
+        {/* Left: KrishiSetu Logo */}
+        <KrishiSetuLogo />
 
         {/* Header Right Actions */}
         <div className="flex items-center gap-2.5">
@@ -526,7 +526,7 @@ export default function MasterLandingPage() {
                 >
                   खरीदार
                 </h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">सीधे खरीदें (Kisan Bazaar)</p>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">सीधे खरीदें (KrishiSetu Mandi)</p>
               </div>
             </div>
             <button

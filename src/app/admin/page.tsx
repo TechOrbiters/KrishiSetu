@@ -18,6 +18,8 @@ import {
   DollarSign,
   Activity,
   FileSpreadsheet,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { getApiUrl, getAuthHeaders } from '@/lib/api/client';
 
@@ -29,9 +31,10 @@ export default function AdminPortalPage() {
     }
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'listings' | 'analytics' | 'diagnostics'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'listings' | 'analytics' | 'diagnostics' | 'transporters'>('orders');
   const [orders, setOrders] = useState<any[]>([]);
   const [listings, setListings] = useState<any[]>([]);
+  const [transporters, setTransporters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -57,6 +60,13 @@ export default function AdminPortalPage() {
       const listingsJson = await listingsRes.json();
       if (listingsJson.success && Array.isArray(listingsJson.listings)) {
         setListings(listingsJson.listings);
+      }
+
+      // 3. Fetch transporters & logistics
+      const transportersRes = await fetch(getApiUrl('/api/transport/transporters'), { headers });
+      const transportersJson = await transportersRes.json();
+      if (transportersJson.success && Array.isArray(transportersJson.transporters)) {
+        setTransporters(transportersJson.transporters);
       }
     } catch (err: any) {
       console.error('Error fetching admin data:', err);
@@ -95,7 +105,7 @@ export default function AdminPortalPage() {
               </div>
               <div>
                 <span className="font-extrabold text-lg text-white tracking-tight block leading-tight">
-                  KisanSetu Admin Console
+                  KrishiSetu Admin Console
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium block">
                   Enterprise Platform Operations
@@ -129,10 +139,10 @@ export default function AdminPortalPage() {
         </div>
 
         {/* 2. SUB-BAR NAVIGATION */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-6 text-xs font-bold border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-6 text-xs font-bold border-t border-slate-800 overflow-x-auto">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'orders' ? 'border-purple-400 text-purple-300' : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
@@ -142,7 +152,7 @@ export default function AdminPortalPage() {
 
           <button
             onClick={() => setActiveTab('listings')}
-            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'listings' ? 'border-purple-400 text-purple-300' : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
@@ -151,8 +161,18 @@ export default function AdminPortalPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('transporters')}
+            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'transporters' ? 'border-purple-400 text-purple-300' : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            <span>Logistics & Transporters ({transporters.length})</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'analytics' ? 'border-purple-400 text-purple-300' : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
@@ -162,7 +182,7 @@ export default function AdminPortalPage() {
 
           <button
             onClick={() => setActiveTab('diagnostics')}
-            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'diagnostics' ? 'border-purple-400 text-purple-300' : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
@@ -421,6 +441,98 @@ export default function AdminPortalPage() {
                 <span className="font-bold text-emerald-800">Connected</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB 5: TRANSPORTERS & LOGISTICS OVERSIGHT */}
+        {activeTab === 'transporters' && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="font-black text-base text-slate-900">
+                  परिवहन भागीदार एवं बेड़ा प्रबंधन (Transporters & Logistics Oversight)
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  सत्यापित वाहन क्षमता, आरटीओ अनुपालन, और लाइव ड्यूटी उपलब्धता की निगरानी
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="bg-orange-50 text-orange-800 border border-orange-200 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-orange-600" />
+                  कुल {transporters.length} पंजीकृत वाहन
+                </span>
+              </div>
+            </div>
+
+            {/* Transporters List */}
+            {transporters.length === 0 ? (
+              <div className="text-center py-12 space-y-2">
+                <Truck className="w-12 h-12 text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-600">कोई ट्रांसपोर्टर पंजीकृत नहीं मिला।</p>
+              </div>
+            ) : (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 font-black text-slate-600">
+                    <tr>
+                      <th className="p-3.5">ट्रांसपोर्टर / नाम</th>
+                      <th className="p-3.5">प्राथमिक वाहन</th>
+                      <th className="p-3.5">क्षमता (किग्रा)</th>
+                      <th className="p-3.5">सेवा क्षेत्र / क्लस्टर</th>
+                      <th className="p-3.5">ड्यूटी स्थिति</th>
+                      <th className="p-3.5">सत्यापन स्थिति</th>
+                      <th className="p-3.5 text-right">रेटिंग</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {transporters.map((t, idx) => (
+                      <tr key={t.id || idx} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="p-3.5">
+                          <strong className="block text-slate-900 font-bold">{t.full_name || 'ट्रांसपोर्ट साथी'}</strong>
+                          <span className="text-[11px] text-slate-400 font-mono">{t.phone || 'मोबाइल उपलब्ध'}</span>
+                        </td>
+                        <td className="p-3.5">
+                          <strong className="block text-slate-900">{t.vehicle_type || 'Mini Truck'}</strong>
+                          <span className="text-[11px] font-mono text-orange-700 font-bold">{t.vehicle_number || 'UP32 TR 1001'}</span>
+                        </td>
+                        <td className="p-3.5">
+                          <span className="font-bold text-slate-900">{t.capacity_kg || 1000} kg</span>
+                        </td>
+                        <td className="p-3.5 text-slate-600">
+                          {t.location_name || 'लखनऊ - बाराबंकी कॉरिडोर'}
+                        </td>
+                        <td className="p-3.5">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                              t.availability !== false
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-slate-100 text-slate-500 border-slate-300'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                t.availability !== false ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                              }`}
+                            />
+                            <span>{t.availability !== false ? 'ड्यूटी ऑन (Online)' : 'ड्यूटी ऑफ'}</span>
+                          </span>
+                        </td>
+                        <td className="p-3.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                            <ShieldCheck className="w-3 h-3 text-blue-600" />
+                            सत्यापित (Approved)
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-right">
+                          <strong className="text-amber-600 font-black">★ {t.rating || '4.85'}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </main>

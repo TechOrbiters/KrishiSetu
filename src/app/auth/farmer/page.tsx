@@ -604,7 +604,7 @@ export default function FarmerAuthPage() {
                       बधाई हो, {fullName || 'किसान साथी'} जी!
                     </h2>
                     <p className="font-bold text-emerald-800 text-sm">
-                      आपका KisanSetu किसान खाता सक्रिय हो गया है।
+                      आपका KrishiSetu किसान खाता सक्रिय हो गया है।
                     </p>
                   </div>
 
@@ -623,7 +623,7 @@ export default function FarmerAuthPage() {
                     onClick={() => router.push('/farmer/dashboard')}
                     className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
                   >
-                    <span>KisanSetu डैशबोर्ड में प्रवेश करें</span>
+                    <span>KrishiSetu डैशबोर्ड में प्रवेश करें</span>
                     <ChevronRight className="w-4 h-4 stroke-[3]" />
                   </button>
                 </div>

@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
       dbUser = upsertedUser;
     }
 
-    // 4. Upsert farmer profile if farmer role
-    let farmerProfile: any = null;
+    // 4. Upsert role-specific profile
+    let roleProfile: any = null;
     if (finalRole === 'FARMER' || finalRole === 'FARMER_FPO') {
       const { data: prof, error: profErr } = await supabaseAdmin
         .from('farmer_profiles')
@@ -103,23 +103,81 @@ export async function POST(req: NextRequest) {
       if (profErr) {
         console.warn('[SUPABASE_PROFILE_UPSERT_NOTE]', profErr.message);
       }
-      farmerProfile = prof || {
+      roleProfile = prof || {
         user_id: dbUser.id,
         village: village || 'ग्राम बहरामघाट',
         district: district || 'बाराबंकी',
         state: state || 'उत्तर प्रदेश',
         verification_status: aadhaarLast4 ? 'VERIFIED' : 'PENDING',
       };
+    } else if (finalRole === 'TRANSPORTER') {
+      const vehicleType = body.vehicleType || body.vehicle_type || 'Mini Truck (Tata Ace)';
+      const vehicleNumber = body.vehicleNumber || body.vehicle_number || `UP32 TR ${cleaned.slice(-4)}`;
+      const capacityKg = Number(body.capacityKg || body.capacity_kg || 1000);
+
+      const { data: tpProf, error: tpErr } = await supabaseAdmin
+        .from('transporter_profiles')
+        .upsert(
+          {
+            user_id: dbUser.id,
+            full_name: finalName,
+            phone: cleaned,
+            vehicle_type: vehicleType,
+            vehicle_number: vehicleNumber,
+            capacity_kg: capacityKg,
+            availability: true,
+            rating: 4.8,
+            location_name: locationName,
+            latitude: 26.8467,
+            longitude: 80.9462,
+          },
+          { onConflict: 'user_id' }
+        )
+        .select()
+        .maybeSingle();
+
+      if (tpErr) {
+        console.warn('[SUPABASE_TRANSPORTER_PROFILE_NOTE]', tpErr.message);
+      }
+      roleProfile = tpProf || {
+        user_id: dbUser.id,
+        full_name: finalName,
+        phone: cleaned,
+        vehicle_type: vehicleType,
+        vehicle_number: vehicleNumber,
+        capacity_kg: capacityKg,
+        availability: true,
+        rating: 4.8,
+        location_name: locationName,
+      };
+
+      // Also create default vehicle entry in vehicles table if exists
+      try {
+        await supabaseAdmin.from('vehicles').upsert(
+          {
+            transporter_id: dbUser.id,
+            registration_number: vehicleNumber,
+            vehicle_type: vehicleType,
+            model: 'Tata Ace Gold',
+            capacity_kg: capacityKg,
+            is_active: true,
+            verification_status: 'APPROVED',
+          },
+          { onConflict: 'transporter_id,registration_number' }
+        );
+      } catch (e: any) {
+        // non-blocking
+      }
     }
 
-    console.log(`[DIRECT_AUTH_SUCCESS] User ${firebaseUid} authenticated directly (Zero OTP)`);
+    console.log(`[DIRECT_AUTH_SUCCESS] User ${firebaseUid} (${finalRole}) authenticated directly (Zero OTP)`);
 
     return NextResponse.json({
       success: true,
       customToken,
       firebaseUid,
       user: dbUser,
-      profile: farmerProfile,
+      profile: roleProfile,
       message: 'सफलतापूर्वक प्रमाणित (Authenticated successfully)',
     });
   } catch (err: any) {

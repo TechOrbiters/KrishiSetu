@@ -28,4 +28,5 @@ yarn-error.log*
 
 # Scratch & temporary development scripts
 scratch/
+*.tsbuildinfo
 

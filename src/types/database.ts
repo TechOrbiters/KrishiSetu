@@ -98,3 +98,79 @@ export interface DbPaymentLedger {
   status: PaymentStatus;
   created_at: string;
 }
+
+export interface DbTransporterProfile {
+  id: string;
+  user_id: string;
+  full_name: string;
+  phone: string;
+  vehicle_type: string;
+  vehicle_number: string;
+  capacity_kg: number;
+  availability: boolean;
+  rating: number;
+  location_name: string;
+  latitude?: number;
+  longitude?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbVehicle {
+  id: string;
+  transporter_id: string;
+  registration_number: string;
+  vehicle_type: string;
+  model?: string;
+  capacity_kg: number;
+  is_active: boolean;
+  verification_status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbShipment {
+  id: string;
+  order_id: string;
+  transporter_id?: string;
+  vehicle_id?: string;
+  status: ShipmentStatus;
+  pickup_address: string;
+  delivery_address: string;
+  pickup_lat: number;
+  pickup_lng: number;
+  delivery_lat: number;
+  delivery_lng: number;
+  delivery_otp?: string;
+  estimated_arrival?: string;
+  actual_arrival?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbShipmentTracking {
+  id: string;
+  shipment_id: string;
+  latitude: number;
+  longitude: number;
+  speed_kmh: number;
+  heading: number;
+  status: string;
+  notes?: string;
+  recorded_at: string;
+}
+
+export interface DbRating {
+  id: string;
+  order_id: string;
+  shipment_id?: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  rating: number;
+  review_text?: string;
+  punctuality_rating?: number;
+  handling_rating?: number;
+  communication_rating?: number;
+  created_at: string;
+}
+

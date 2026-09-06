@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     // 2. Query users with TRANSPORTER role
     const { data: dbUsers, error: userErr } = await supabaseAdmin
       .from('users')
-      .select('id, full_name, phone_number, role')
+      .select('id, full_name, phone, role')
       .eq('role', 'TRANSPORTER');
 
     if (!userErr && dbUsers && dbUsers.length > 0) {
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         id: u.id,
         user_id: u.id,
         full_name: u.full_name || 'ट्रांसपोर्ट पार्टनर',
-        phone: u.phone_number || '',
+        phone: u.phone || '',
         vehicle_type: 'Mini Truck',
         vehicle_number: `UP32 TR ${1000 + i}`,
         capacity_kg: 1000,

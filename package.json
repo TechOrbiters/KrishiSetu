@@ -17,6 +17,7 @@
     "test:step7": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/step7-delivery-workflow.test.ts",
     "test:step8": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/step8-payments-notifications.test.ts",
     "test:step9": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/step9-ai-integration.test.ts",
+    "test:transporter": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/transporter-portal-e2e.test.ts",
     "test:debug": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/step6-debug.ts",
     "test:backend": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/supabase-backend.test.ts",
     "test:firebase": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" tests/firebase-integration.test.ts",

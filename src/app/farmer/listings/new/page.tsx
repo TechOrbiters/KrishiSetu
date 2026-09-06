@@ -1053,7 +1053,7 @@ function WizardContent() {
                     <span>डिलीवरी चाहिए</span>
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    KisanSetu पास के परिवहनकर्ता ढूंढेगा और डिलीवरी कराएगा
+                    KrishiSetu पास के परिवहनकर्ता ढूंढेगा और डिलीवरी कराएगा
                   </p>
                 </div>
               </div>
@@ -1062,7 +1062,7 @@ function WizardContent() {
             {/* Green Protection Banner */}
             <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 font-semibold flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-              <span>सुरक्षित लेन-देन के लिए KisanSetu आपकी मदद करेगा।</span>
+              <span>सुरक्षित लेन-देन के लिए KrishiSetu आपकी मदद करेगा।</span>
             </div>
           </div>
 

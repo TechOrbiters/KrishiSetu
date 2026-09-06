@@ -18,21 +18,41 @@ import {
   Power,
   ChevronRight,
   Sparkles,
+  Star,
+  Bell,
+  User,
+  SlidersHorizontal,
+  Home,
 } from 'lucide-react';
 import { getApiUrl, getAuthHeaders } from '@/lib/api/client';
+import {
+  SmartMatchJob,
+  TransporterTrip,
+  TransporterEarningsSummary,
+  TransporterVehicle,
+} from '@/types/transporter';
 
-interface TransportJob {
-  id: string;
-  order_id: string;
-  status: 'REQUESTED' | 'ACCEPTED' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
-  fare_amount: number;
-  distance_km: number;
-  pickup_address?: string;
-  delivery_address?: string;
-  weight_kg?: number;
-  crop_name?: string;
-  created_at: string;
-}
+// Subcomponents
+import TransporterDashboard from '@/components/transporter/TransporterDashboard';
+import TransporterSmartMatch from '@/components/transporter/TransporterSmartMatch';
+import TransporterMyTrips from '@/components/transporter/TransporterMyTrips';
+import TransporterLiveTracking from '@/components/transporter/TransporterLiveTracking';
+import TransporterVehicles from '@/components/transporter/TransporterVehicles';
+import TransporterEarnings from '@/components/transporter/TransporterEarnings';
+import TransporterRatings from '@/components/transporter/TransporterRatings';
+import TransporterNotifications from '@/components/transporter/TransporterNotifications';
+import TransporterProfile from '@/components/transporter/TransporterProfile';
+
+type TabType =
+  | 'dashboard'
+  | 'available'
+  | 'trips'
+  | 'tracking'
+  | 'vehicles'
+  | 'earnings'
+  | 'ratings'
+  | 'notifications'
+  | 'profile';
 
 export default function TransporterPortalPage() {
   // Role persistence
@@ -42,64 +62,93 @@ export default function TransporterPortalPage() {
     }
   }, []);
 
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isOnline, setIsOnline] = useState(true);
-  const [activeTab, setActiveTab] = useState<'available' | 'active' | 'earnings'>('available');
-  const [jobs, setJobs] = useState<TransportJob[]>([]);
-  const [activeTrips, setActiveTrips] = useState<TransportJob[]>([]);
+  const [jobs, setJobs] = useState<SmartMatchJob[]>([]);
+  const [activeTrips, setActiveTrips] = useState<TransporterTrip[]>([]);
+  const [vehicles, setVehicles] = useState<TransporterVehicle[]>([]);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [earnings, setEarnings] = useState<TransporterEarningsSummary | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    loadTransportRequests();
+    loadAllTransporterData();
   }, []);
 
-  const loadTransportRequests = async () => {
+  const loadAllTransporterData = async () => {
     setLoading(true);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(getApiUrl('/api/transport/requests'), { headers });
-      const json = await res.json();
 
-      if (json.success && Array.isArray(json.requests)) {
-        // Separate into available and active
-        const available = json.requests
-          .filter((r: any) => r.status === 'REQUESTED' || r.status === 'BROADCAST')
-          .map((r: any) => ({
-            ...r,
-            weight_kg: r.orders?.quantity || 250,
-            crop_name: r.orders?.produce_listings?.crop_name || r.orders?.crop_name || 'ताज़ा उपज',
-            pickup_address: r.orders?.produce_listings?.location_name || r.pickup_address || 'फार्म / मंडी',
-            delivery_address: r.orders?.delivery_address || r.delivery_address || 'खरीदार गंतव्य',
-          }));
+      // Parallel fetching from backend APIs
+      const [jobsRes, tripsRes, earningsRes, profileRes, vehiclesRes] = await Promise.all([
+        fetch(getApiUrl('/api/transporters/jobs'), { headers }).then((r) => r.json()).catch(() => ({ jobs: [] })),
+        fetch(getApiUrl('/api/transporters/trips'), { headers }).then((r) => r.json()).catch(() => ({ trips: [] })),
+        fetch(getApiUrl('/api/transporters/earnings'), { headers }).then((r) => r.json()).catch(() => ({ summary: null })),
+        fetch(getApiUrl('/api/transporters/profile'), { headers }).then((r) => r.json()).catch(() => ({ profile: null })),
+        fetch(getApiUrl('/api/vehicles'), { headers }).then((r) => r.json()).catch(() => ({ vehicles: [] })),
+      ]);
 
-        const active = json.requests
-          .filter((r: any) => r.status === 'ACCEPTED' || r.status === 'IN_TRANSIT')
-          .map((r: any) => ({
-            ...r,
-            weight_kg: r.orders?.quantity || 300,
-            crop_name: r.orders?.produce_listings?.crop_name || r.orders?.crop_name || 'उपज लॉट',
-            pickup_address: r.orders?.produce_listings?.location_name || r.pickup_address || 'फार्म / मंडी',
-            delivery_address: r.orders?.delivery_address || r.delivery_address || 'खरीदार गंतव्य',
-          }));
-
-        setJobs(available);
-        setActiveTrips(active);
-      } else {
-        setJobs([]);
-        setActiveTrips([]);
+      if (jobsRes.success && Array.isArray(jobsRes.jobs)) {
+        setJobs(jobsRes.jobs);
+      }
+      if (tripsRes.success && Array.isArray(tripsRes.trips)) {
+        setActiveTrips(tripsRes.trips);
+      }
+      if (earningsRes.success && earningsRes.summary) {
+        setEarnings(earningsRes.summary);
+      }
+      if (profileRes.success && profileRes.profile) {
+        setProfile(profileRes.profile);
+        setIsOnline(profileRes.profile.availability !== false);
+      }
+      if (vehiclesRes.success && Array.isArray(vehiclesRes.vehicles)) {
+        setVehicles(vehiclesRes.vehicles);
+      } else if (profileRes.vehicles && Array.isArray(profileRes.vehicles)) {
+        setVehicles(profileRes.vehicles);
       }
     } catch (err: any) {
-      console.error('Error loading transport requests:', err);
-      setJobs([]);
-      setActiveTrips([]);
+      console.error('Error loading transporter portal data:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleAcceptJob = async (job: TransportJob) => {
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadAllTransporterData();
+  };
+
+  const handleToggleOnline = async () => {
+    const nextState = !isOnline;
+    setIsOnline(nextState);
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(getApiUrl('/api/transporters/availability'), {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ availability: nextState }),
+      });
+      setSuccessMsg(
+        nextState
+          ? 'ड्यूटी चालू: अब आपको नए SmartMatch ऑर्डर्स प्राप्त होंगे।'
+          : 'ड्यूटी बंद: आप वर्तमान में नए ऑर्डर्स के लिए ऑफलाइन हैं।'
+      );
+    } catch (err: any) {
+      console.error('Error toggling duty status:', err);
+      setIsOnline(!nextState);
+      setErrorMsg('ड्यूटी स्टेटस अपडेट करने में त्रुटि हुई।');
+    }
+  };
+
+  const handleAcceptJob = async (job: SmartMatchJob) => {
     setAcceptingId(job.id);
     setSuccessMsg('');
     setErrorMsg('');
@@ -110,53 +159,91 @@ export default function TransporterPortalPage() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          vehicle_capacity_kg: 1000,
+          vehicle_capacity_kg: profile?.capacity_kg || 1000,
         }),
       });
 
       const json = await res.json();
       if (res.ok && json.success) {
-        setSuccessMsg(`ट्रिप सफलतापूर्वक स्वीकार की गई! कुल कमाई: ₹${job.fare_amount}`);
-        // Move from available to active trips
+        setSuccessMsg(`ट्रिप सफलतापूर्वक स्वीकार की गई! अनुमानित कमाई: ₹${job.fare_amount} (100% ड्राइवर को)`);
         setJobs((prev) => prev.filter((j) => j.id !== job.id));
-        setActiveTrips((prev) => [{ ...job, status: 'ACCEPTED' }, ...prev]);
-        setActiveTab('active');
+        loadAllTransporterData();
+        setActiveTab('trips');
       } else {
-        setErrorMsg(json.error || 'ट्रिप स्वीकार करने में त्रुटि। कृपया पुनः प्रयास करें।');
+        setErrorMsg(json.error || 'ट्रिप स्वीकार करने में त्रुटि हुई। यह कार्य किसी अन्य ट्रांसपोर्टर द्वारा लिया जा चुका है।');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'त्रुटि हुई।');
+      setErrorMsg(err.message || 'नेटवर्क त्रुटि हुई।');
     } finally {
       setAcceptingId(null);
     }
   };
 
-  const handleUpdateTripStatus = async (tripId: string, newStatus: 'IN_TRANSIT' | 'COMPLETED') => {
+  const handleDeclineJob = async (jobId: string) => {
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(getApiUrl(`/api/transport/requests/${tripId}`), {
-        method: 'PATCH',
+      await fetch(getApiUrl(`/api/transport/requests/${jobId}/decline`), {
+        method: 'POST',
         headers,
-        body: JSON.stringify({ status: newStatus }),
       });
+      setJobs((prev) => prev.filter((j) => j.id !== jobId));
+      setSuccessMsg('कार्य सूची से हटा दिया गया।');
+    } catch (err: any) {
+      setErrorMsg('कार्य हटाने में त्रुटि।');
+    }
+  };
+
+  const handleUpdateTripAction = async (
+    tripId: string,
+    action: 'ARRIVED_AT_PICKUP' | 'CONFIRM_PICKUP' | 'START_TRANSIT' | 'ARRIVED_DESTINATION' | 'DELIVERED'
+  ) => {
+    try {
+      const headers = await getAuthHeaders();
+      let endpoint = `/api/transport/requests/${tripId}`;
+      let method = 'PATCH';
+      let body: any = {};
+
+      if (action === 'ARRIVED_AT_PICKUP') {
+        endpoint = `/api/shipments/${tripId}/pickup`;
+        method = 'POST';
+        body = { status: 'ARRIVED_AT_PICKUP' };
+      } else if (action === 'CONFIRM_PICKUP') {
+        endpoint = `/api/shipments/${tripId}/pickup`;
+        method = 'POST';
+        body = { status: 'PICKED_UP' };
+      } else if (action === 'START_TRANSIT') {
+        endpoint = `/api/shipments/${tripId}/start`;
+        method = 'POST';
+        body = {};
+      } else if (action === 'ARRIVED_DESTINATION') {
+        endpoint = `/api/shipments/${tripId}/arrive`;
+        method = 'POST';
+        body = {};
+      } else if (action === 'DELIVERED') {
+        endpoint = `/api/shipments/${tripId}/deliver`;
+        method = 'POST';
+        body = {};
+      }
+
+      const res = await fetch(getApiUrl(endpoint), {
+        method,
+        headers,
+        body: JSON.stringify(body),
+      });
+
       const json = await res.json();
       if (res.ok && json.success) {
-        if (newStatus === 'COMPLETED') {
-          const finishedTrip = activeTrips.find((t) => t.id === tripId);
-          setActiveTrips((prev) => prev.filter((t) => t.id !== tripId));
-          setSuccessMsg(`डिलीवरी सफलतापूर्वक पूरी हुई! ₹${finishedTrip?.fare_amount || 0} आपके खाते में जमा हो गए।`);
+        if (action === 'DELIVERED') {
+          setSuccessMsg('डिलीवरी सफलतापूर्वक पूर्ण हुई! 100% परिवहन शुल्क आपके खाते में रिलीज हो गया है।');
         } else {
-          setActiveTrips((prev) =>
-            prev.map((t) => (t.id === tripId ? { ...t, status: newStatus } : t))
-          );
-          setSuccessMsg('ट्रिप स्टेटस अपडेट: ट्रांजिट में (IN TRANSIT)');
+          setSuccessMsg(`ट्रिप स्थिति अपडेट सफल: ${action}`);
         }
+        loadAllTransporterData();
       } else {
-        setErrorMsg(json.error || 'स्टेटस अपडेट करने में त्रुटि हुई');
+        setErrorMsg(json.error || 'स्थिति अपडेट करने में त्रुटि हुई।');
       }
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'त्रुटि हुई');
+      setErrorMsg(err.message || 'नेटवर्क त्रुटि हुई।');
     }
   };
 
@@ -164,33 +251,39 @@ export default function TransporterPortalPage() {
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
       {/* 1. TOP HEADER */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          {/* Logo & Portal Identity */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black text-lg shadow-xs group-hover:scale-105 transition-transform">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-600 to-amber-600 flex items-center justify-center text-white font-black text-xl shadow-xs group-hover:scale-105 transition-transform">
                 <Truck className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-black text-xl text-orange-800 tracking-tight block leading-tight">
-                  Kisan Bazaar
+                <span className="font-black text-xl text-orange-700 tracking-tight block leading-tight">
+                  KrishiSetu
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold block">परिवहन साथी (Transporter Portal)</span>
+                <span className="text-[10px] text-slate-500 font-bold block">
+                  परिवहन साथी (Transporter Portal)
+                </span>
               </div>
             </Link>
 
             <span className="hidden sm:inline-block h-6 w-px bg-slate-200" />
-            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 font-semibold bg-slate-100 px-3 py-1 rounded-xl">
-              <span>वाहन: टाटा ऐस (1000 किग्रा क्षमता)</span>
+            <div className="hidden md:flex items-center gap-2 text-xs text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+              <span>{profile?.vehicle_type || 'टाटा ऐस (मिनी ट्रक)'}</span>
+              <span className="text-slate-400">•</span>
+              <span className="text-orange-700 font-mono">{profile?.vehicle_number || 'UP32 TR 1001'}</span>
             </div>
           </div>
 
-          {/* Right Status Toggle & Refresh */}
-          <div className="flex items-center gap-3">
+          {/* Right Action Bar */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Duty Status Button */}
             <button
-              onClick={() => setIsOnline(!isOnline)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
+              onClick={handleToggleOnline}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-black transition-all border shadow-2xs ${
                 isOnline
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                   : 'bg-slate-100 text-slate-500 border-slate-300'
               }`}
             >
@@ -199,66 +292,79 @@ export default function TransporterPortalPage() {
                   isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
                 }`}
               />
-              <span>{isOnline ? 'ड्यूटी ऑन (Online)' : 'ड्यूटी ऑफ (Offline)'}</span>
+              <span className="hidden sm:inline">
+                {isOnline ? 'ड्यूटी ऑन (Online)' : 'ड्यूटी ऑफ (Offline)'}
+              </span>
             </button>
 
+            {/* Notifications Button */}
             <button
-              onClick={loadTransportRequests}
-              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 transition-colors"
-              title="रिफ्रेश करें"
+              onClick={() => setActiveTab('notifications')}
+              className={`p-2 rounded-xl transition-colors relative ${
+                activeTab === 'notifications'
+                  ? 'bg-orange-100 text-orange-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+              title="सूचनाएं देखें"
             >
-              <RefreshCw className="w-4 h-4" />
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-orange-600 rounded-full animate-pulse" />
             </button>
 
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 transition-colors disabled:opacity-50"
+              title="डेटा रिफ्रेश करें"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-orange-600' : ''}`} />
+            </button>
+
+            {/* Home Portal Link */}
             <Link
               href="/"
-              className="text-xs font-bold px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors hidden sm:block"
+              className="text-xs font-bold px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors hidden lg:flex items-center gap-1.5"
             >
-              मुख्य पृष्ठ
+              <Home className="w-3.5 h-3.5" />
+              <span>मुख्य पृष्ठ</span>
             </Link>
           </div>
         </div>
 
-        {/* 2. SUB NAVIGATION TABS */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 border-t border-slate-100 flex gap-6 text-xs font-bold">
-          <button
-            onClick={() => setActiveTab('available')}
-            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === 'available'
-                ? 'border-orange-600 text-orange-700'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <span>🌾 उपलब्ध डिलीवरी (SmartMatch) ({jobs.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('active')}
-            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === 'active'
-                ? 'border-orange-600 text-orange-700'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <span>🚚 सक्रिय ट्रिप्स ({activeTrips.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('earnings')}
-            className={`py-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === 'earnings'
-                ? 'border-orange-600 text-orange-700'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <span>💰 कमाई विवरण (100% Payout)</span>
-          </button>
+        {/* 2. HORIZONTAL NAVIGATION BAR */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 border-t border-slate-100 flex gap-1 sm:gap-2 overflow-x-auto text-xs font-black no-scrollbar py-1">
+          {[
+            { key: 'dashboard', label: '📊 डैशबोर्ड' },
+            { key: 'available', label: `🌾 उपलब्ध डिलीवरी (${jobs.length})` },
+            { key: 'trips', label: `🚚 मेरी ट्रिप्स (${activeTrips.length})` },
+            { key: 'tracking', label: '🗺️ लाइव ट्रैकिंग' },
+            { key: 'vehicles', label: '🚛 वाहन बेड़ा' },
+            { key: 'earnings', label: '💰 कमाई (100% Payout)' },
+            { key: 'ratings', label: '⭐ रेटिंग व समीक्षा' },
+            { key: 'notifications', label: '🔔 सूचनाएं' },
+            { key: 'profile', label: '👤 प्रोफ़ाइल' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as TabType)}
+              className={`py-2.5 px-3 rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                activeTab === tab.key
+                  ? 'bg-orange-600 text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* 3. MAIN CONTENT CONTAINER */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Banner Alerts */}
+        {/* Banner Alert: Success */}
         {successMsg && (
-          <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-bold p-4 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+          <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs sm:text-sm font-bold p-4 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
               <span>{successMsg}</span>
@@ -269,8 +375,9 @@ export default function TransporterPortalPage() {
           </div>
         )}
 
+        {/* Banner Alert: Error */}
         {errorMsg && (
-          <div className="bg-red-50 border border-red-300 text-red-800 text-sm font-bold p-4 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+          <div className="bg-red-50 border border-red-300 text-red-900 text-xs sm:text-sm font-bold p-4 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
               <span>{errorMsg}</span>
@@ -281,271 +388,75 @@ export default function TransporterPortalPage() {
           </div>
         )}
 
-        {/* Top 4 KPI Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-            <span className="text-slate-400 text-xs font-semibold block">आज की कुल कमाई</span>
-            <div className="flex items-baseline gap-1">
-              <strong className="text-2xl font-black text-slate-900">₹1,990</strong>
-              <span className="text-[11px] text-emerald-600 font-bold">100% ड्राइवर को</span>
-            </div>
-            <span className="text-[10px] text-slate-400 block font-medium">3 पूर्ण ट्रिप्स से</span>
-          </div>
+        {/* TAB SWITCHING */}
+        {activeTab === 'dashboard' && (
+          <TransporterDashboard
+            isOnline={isOnline}
+            onToggleOnline={handleToggleOnline}
+            jobs={jobs}
+            activeTrips={activeTrips}
+            earnings={earnings}
+            onNavigateTab={(tab) => setActiveTab(tab as TabType)}
+            onAcceptJob={handleAcceptJob}
+            acceptingId={acceptingId}
+          />
+        )}
 
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-            <span className="text-slate-400 text-xs font-semibold block">सक्रिय ट्रिप</span>
-            <div className="flex items-baseline gap-1">
-              <strong className="text-2xl font-black text-orange-600">{activeTrips.length}</strong>
-              <span className="text-[11px] text-slate-500 font-bold">प्रगति पर</span>
-            </div>
-            <span className="text-[10px] text-slate-400 block font-medium">लाइव ट्रैकिंग जारी</span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-            <span className="text-slate-400 text-xs font-semibold block">ऑन-टाइम डिलीवरी दर</span>
-            <div className="flex items-baseline gap-1">
-              <strong className="text-2xl font-black text-emerald-700">98.8%</strong>
-              <span className="text-[11px] text-emerald-600 font-bold">★ 4.9</span>
-            </div>
-            <span className="text-[10px] text-slate-400 block font-medium">फ्रेशनेस विंडो के अंदर</span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-            <span className="text-slate-400 text-xs font-semibold block">प्लेटफ़ॉर्म कटौती</span>
-            <div className="flex items-baseline gap-1">
-              <strong className="text-2xl font-black text-blue-700">₹0</strong>
-              <span className="text-[11px] text-emerald-600 font-bold">0% Commission</span>
-            </div>
-            <span className="text-[10px] text-slate-400 block font-medium">नियम R-001 का पालन</span>
-          </div>
-        </div>
-
-        {/* TAB 1: AVAILABLE DELIVERIES */}
         {activeTab === 'available' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-extrabold text-slate-900">उपलब्ध डिलीवरी कार्य (SmartMatch)</h2>
-                <p className="text-xs text-slate-500 font-medium">
-                  आपके वाहन की क्षमता (1000 किग्रा) और रूट के अनुकूल नए ऑर्डर
-                </p>
-              </div>
-              <button onClick={loadTransportRequests} className="text-xs font-bold text-orange-600 hover:underline">
-                रिफ्रेश करें
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2].map((i) => (
-                  <div key={i} className="bg-white rounded-2xl p-5 border border-slate-200 animate-pulse h-32" />
-                ))}
-              </div>
-            ) : jobs.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 space-y-3">
-                <Truck className="w-12 h-12 text-slate-300 mx-auto" />
-                <h3 className="text-base font-bold text-slate-800">वर्तमान में कोई नई डिलीवरी उपलब्ध नहीं है</h3>
-                <p className="text-xs text-slate-500">नया ऑर्डर मिलते ही यहाँ स्वतः दिखाई देगा।</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {jobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs hover:shadow-xs transition-all space-y-4 flex flex-col justify-between"
-                  >
-                    <div className="space-y-3">
-                      {/* Top Job Line */}
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-orange-50 text-orange-800 text-xs font-extrabold px-2.5 py-1 rounded-md border border-orange-200">
-                            ★ बेस्ट मैच
-                          </span>
-                          <span className="text-xs text-slate-500 font-medium">{job.distance_km} किमी रूट</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs text-slate-400 block">आपकी कमाई</span>
-                          <strong className="text-xl font-black text-orange-700">₹{job.fare_amount}</strong>
-                        </div>
-                      </div>
-
-                      {/* Cargo details */}
-                      <div className="space-y-1">
-                        <h3 className="font-extrabold text-sm text-slate-900">{job.crop_name}</h3>
-                        <p className="text-xs text-slate-600 font-semibold">
-                          भार: <strong>{job.weight_kg} किग्रा</strong> (क्षमता में उपलब्ध)
-                        </p>
-                      </div>
-
-                      {/* Route details */}
-                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2 text-xs">
-                        <div className="flex items-start gap-2">
-                          <span className="text-emerald-600 font-bold text-sm">🟢</span>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] font-bold">पिक-अप (खेत / किसान):</span>
-                            <strong className="text-slate-800 font-semibold">{job.pickup_address}</strong>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-red-600 font-bold text-sm">🔴</span>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] font-bold">डिलीवरी गंतव्य (खरीदार):</span>
-                            <strong className="text-slate-800 font-semibold">{job.delivery_address}</strong>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* FreshRoute status */}
-                      <div className="flex items-center gap-1.5 text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 font-semibold">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>FreshRoute: फसल फ्रेशनेस सुरक्षित (ETA: 45 मिनट)</span>
-                      </div>
-                    </div>
-
-                    {/* Action */}
-                    <div className="pt-2">
-                      <button
-                        onClick={() => handleAcceptJob(job)}
-                        disabled={acceptingId === job.id}
-                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>{acceptingId === job.id ? 'स्वीकार किया जा रहा है...' : 'डिलीवरी स्वीकार करें (Accept)'}</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <TransporterSmartMatch
+            jobs={jobs}
+            loading={loading}
+            onRefresh={handleRefresh}
+            onAcceptJob={handleAcceptJob}
+            onDeclineJob={(job) => handleDeclineJob(job.id)}
+            acceptingId={acceptingId}
+            driverCapacityKg={profile?.capacity_kg || 1000}
+          />
         )}
 
-        {/* TAB 2: ACTIVE TRIPS */}
-        {activeTab === 'active' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-extrabold text-slate-900">मेरी सक्रिय ट्रिप्स (Active Trips)</h2>
-                <p className="text-xs text-slate-500 font-medium">वर्तमान में प्रगति पर ट्रिप्स और स्थिति अपडेट</p>
-              </div>
-            </div>
-
-            {activeTrips.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 space-y-3">
-                <Truck className="w-12 h-12 text-slate-300 mx-auto" />
-                <h3 className="text-base font-bold text-slate-800">कोई सक्रिय ट्रिप नहीं है</h3>
-                <p className="text-xs text-slate-500">उपलब्ध डिलीवरी टैब से नई ट्रिप स्वीकार करें।</p>
-                <button
-                  onClick={() => setActiveTab('available')}
-                  className="bg-orange-600 text-white text-xs font-bold px-4 py-2 rounded-xl"
-                >
-                  डिलीवरी देखें
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {activeTrips.map((trip) => (
-                  <div
-                    key={trip.id}
-                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                      <div>
-                        <span className="text-xs text-slate-400 font-bold block">ट्रिप आईडी: #{trip.id.slice(-8)}</span>
-                        <h3 className="font-extrabold text-base text-slate-900">{trip.crop_name}</h3>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-slate-400 block">कुल भाड़ा</span>
-                        <strong className="text-lg font-black text-orange-700">₹{trip.fare_amount}</strong>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
-                        <div>
-                          <span className="text-slate-400 block font-bold text-[10px]">पिक-अप पता:</span>
-                          <strong className="text-slate-800 font-semibold">{trip.pickup_address}</strong>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block font-bold text-[10px]">डिलीवरी गंतव्य:</span>
-                          <strong className="text-slate-800 font-semibold">{trip.delivery_address}</strong>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col justify-center gap-2">
-                        {trip.status === 'ACCEPTED' && (
-                          <button
-                            onClick={() => handleUpdateTripStatus(trip.id, 'IN_TRANSIT')}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors"
-                          >
-                            <Truck className="w-4 h-4" />
-                            <span>लोड उठा लिया - रास्ते में निकलें (Mark In Transit)</span>
-                          </button>
-                        )}
-
-                        {trip.status === 'IN_TRANSIT' && (
-                          <button
-                            onClick={() => handleUpdateTripStatus(trip.id, 'COMPLETED')}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>डिलीवरी पूर्ण हुई (Mark Delivered)</span>
-                          </button>
-                        )}
-
-                        {trip.status === 'COMPLETED' && (
-                          <div className="bg-emerald-50 text-emerald-800 text-xs font-bold p-3 rounded-xl border border-emerald-200 text-center">
-                            ✓ सफलतापूर्वक डिलीवर हो गया
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {activeTab === 'trips' && (
+          <TransporterMyTrips
+            trips={activeTrips}
+            loading={loading}
+            onRefresh={handleRefresh}
+            onUpdateTripStatus={handleUpdateTripAction}
+            onOpenLiveTracking={(trip) => {
+              setSelectedTripId(trip.id);
+              setActiveTab('tracking');
+            }}
+          />
         )}
 
-        {/* TAB 3: EARNINGS BREAKDOWN */}
+        {activeTab === 'tracking' && (
+          <TransporterLiveTracking
+            trips={activeTrips}
+            selectedTripId={selectedTripId}
+            onUpdateTripStatus={handleUpdateTripAction}
+          />
+        )}
+
+        {activeTab === 'vehicles' && (
+          <TransporterVehicles
+            vehicles={vehicles}
+            onRefresh={loadAllTransporterData}
+          />
+        )}
+
         {activeTab === 'earnings' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-extrabold text-slate-900">ड्राइवर पारदर्शी कमाई विवरण (Domain Rule R-001)</h2>
-              <p className="text-xs text-slate-500 font-medium">
-                किसान सेतु पर ट्रांसपोर्टर को डिलीवरी शुल्क का 100% भुगतान बिना किसी कमीशन कटौती के सीधे मिलता है।
-              </p>
-            </div>
+          <TransporterEarnings
+            earnings={earnings}
+            loading={loading}
+          />
+        )}
 
-            <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-              <div className="bg-slate-100 p-3 font-extrabold text-slate-700 grid grid-cols-4">
-                <span>विवरण / तारीख</span>
-                <span>दूरी (किमी)</span>
-                <span>भार (किग्रा)</span>
-                <span className="text-right">शुद्ध कमाई (₹)</span>
-              </div>
-              {[
-                { date: 'आज, 10:15 AM', desc: 'सूरतगंज → लखनऊ मंडी', km: 28, kg: 350, fare: 650 },
-                { date: 'कल, 04:30 PM', desc: 'बंकी → दुबग्गा मंडी', km: 36, kg: 500, fare: 820 },
-                { date: 'कल, 11:00 AM', desc: 'देवा शरीफ → चिनहट मंडी', km: 18, kg: 200, fare: 520 },
-              ].map((row, idx) => (
-                <div key={idx} className="p-3 border-t border-slate-100 grid grid-cols-4 text-slate-800 items-center">
-                  <div>
-                    <strong className="block text-slate-900">{row.desc}</strong>
-                    <span className="text-[10px] text-slate-400">{row.date}</span>
-                  </div>
-                  <span>{row.km} किमी</span>
-                  <span>{row.kg} किग्रा</span>
-                  <strong className="text-right text-emerald-700 font-extrabold">₹{row.fare}</strong>
-                </div>
-              ))}
-            </div>
+        {activeTab === 'ratings' && <TransporterRatings />}
 
-            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
-              <span className="font-extrabold text-emerald-900">इस सप्ताह की कुल शुद्ध कमाई:</span>
-              <strong className="text-lg font-black text-emerald-800">₹1,990</strong>
-            </div>
-          </div>
+        {activeTab === 'notifications' && (
+          <TransporterNotifications onNavigateTab={(tab) => setActiveTab(tab as TabType)} />
+        )}
+
+        {activeTab === 'profile' && (
+          <TransporterProfile onProfileUpdated={loadAllTransporterData} />
         )}
       </main>
     </div>

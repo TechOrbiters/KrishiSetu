@@ -185,13 +185,13 @@ export default function BuyerPortalPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-xs group-hover:scale-105 transition-transform">
-                KB
+                KS
               </div>
               <div>
                 <span className="font-black text-xl text-blue-800 tracking-tight block leading-tight">
-                  Kisan Bazaar
+                  KrishiSetu
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold block">किसान-क्रेता पोर्टल</span>
+                <span className="text-[10px] text-slate-500 font-bold block">खरीदार पोर्टल (Buyer Portal)</span>
               </div>
             </Link>
 
