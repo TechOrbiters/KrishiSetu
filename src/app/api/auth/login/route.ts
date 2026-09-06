@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createOrGetFirebaseUser, createFirebaseCustomToken } from '@/lib/firebase/admin';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+/**
+ * POST /api/auth/login
+ * Direct phone-based authentication (No OTP required).
+ * Creates or retrieves the Firebase user, generates a signed custom token,
+ * and synchronizes user & farmer profile state in Supabase PostgreSQL.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const {
       phone,
-      otp,
-      testToken,
-      verificationToken,
-      sessionInfo,
       fullName,
-      role,
+      role = 'FARMER',
       village,
       district,
       state,
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleaned = phone.replace(/\D/g, '').slice(-10);
+    const cleaned = String(phone).replace(/\D/g, '').slice(-10);
     if (cleaned.length !== 10) {
       return NextResponse.json(
         { success: false, error: 'कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें' },
@@ -34,19 +36,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // OTP verification has been removed as per user instruction. Authentication is now direct.
-    const finalName = fullName || 'किसान साथी';
+    const finalName = fullName?.trim() || 'किसान साथी';
     const finalRole = role || 'FARMER';
     const formattedPhone = `+91${cleaned}`;
 
-    // 2. Create or retrieve real user in Firebase Auth
+    // 1. Create or retrieve real user in Firebase Auth
     const fbUser = await createOrGetFirebaseUser(formattedPhone, finalName);
     const firebaseUid = fbUser.uid;
 
-    // 3. Generate signed Firebase custom token for client SDK sign-in
+    // 2. Generate signed Firebase custom token for client SDK sign-in
     const customToken = await createFirebaseCustomToken(firebaseUid, { role: finalRole });
 
-    // 4. Upsert user into Supabase users table
+    // 3. Upsert user into Supabase PostgreSQL users table
     const locationName =
       village && district ? `${village}, ${district}` : `${district || 'बाराबंकी'}, उत्तर प्रदेश`;
 
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
       dbUser = upsertedUser;
     }
 
-    // 5. Upsert farmer profile if farmer role
+    // 4. Upsert farmer profile if farmer role
     let farmerProfile: any = null;
     if (finalRole === 'FARMER' || finalRole === 'FARMER_FPO') {
       const { data: prof, error: profErr } = await supabaseAdmin
@@ -111,9 +112,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    console.log(
-      `[FIREBASE_REGISTER_SUCCESS] User ${firebaseUid} authenticated via direct phone auth (Zero OTP)`
-    );
+    console.log(`[DIRECT_AUTH_SUCCESS] User ${firebaseUid} authenticated directly (Zero OTP)`);
 
     return NextResponse.json({
       success: true,
@@ -121,11 +120,10 @@ export async function POST(req: NextRequest) {
       firebaseUid,
       user: dbUser,
       profile: farmerProfile,
-      verifiedVia: 'DIRECT_PHONE_AUTH',
-      testTokenUsed: false,
+      message: 'सफलतापूर्वक प्रमाणित (Authenticated successfully)',
     });
   } catch (err: any) {
-    console.error('[FIREBASE_VERIFY_ERROR]', err);
+    console.error('[DIRECT_AUTH_ERROR]', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
