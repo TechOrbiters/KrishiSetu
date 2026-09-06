@@ -246,14 +246,6 @@ export default function MasterLandingPage() {
             <span>किसान लॉगिन / पंजीकरण</span>
           </Link>
 
-          {/* Language Pill Dropdown */}
-          <div className="relative">
-            <button className="bg-white border border-slate-200 text-slate-800 text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs">
-              <span className="text-sm">🌐</span>
-              <span>भाषा: हिन्दी</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
-            </button>
-          </div>
           {/* Right: Language Selector */}
           <div className="relative">
             <button
@@ -288,6 +280,7 @@ export default function MasterLandingPage() {
               </div>
             )}
           </div>
+        </div>
       </header>
 
       {/* =================================================================== */}
@@ -469,13 +462,29 @@ export default function MasterLandingPage() {
         {/* 4 Role Selector Cards Grid (2x2) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
 
-          {/* 1. किसान (Farmer) Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-4">
+          {/* 1. किसान (Farmer) */}
+          <div
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+            style={{
+              borderRadius: '18px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
+            }}
+          >
             <div className="flex items-center gap-4">
-              <FarmerIcon />
+              <FarmerAvatar />
               <div>
-                <h3 className="font-extrabold text-xl text-[#15803D] leading-tight">किसान</h3>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">अपनी उपज बेचें</p>
+                <h3
+                  className="font-black leading-tight"
+                  style={{
+                    fontSize: '22px',
+                    color: '#15803D',
+                    fontFamily: "'Noto Sans Devanagari', sans-serif",
+                  }}
+                >
+                  किसान
+                </h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">अपनी उपज बेचें</p>
               </div>
             </div>
             <button
@@ -483,232 +492,145 @@ export default function MasterLandingPage() {
                 if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER');
                 router.push('/auth/farmer');
               }}
-              className="bg-[#15803D] hover:bg-[#166534] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: '#15803D',
+                borderRadius: '10px',
+                boxShadow: '0 2px 8px rgba(21, 128, 61, 0.32)',
+                whiteSpace: 'nowrap',
+              }}
             >
-              <span>प्रवेश करें</span>
-              <ArrowRight className="w-4 h-4" />
+              प्रवेश करें →
             </button>
           </div>
-          {/* 2x2 Grid Role Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
 
-            {/* 1. किसान (Farmer) */}
-            <div
-              className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+          {/* 2. खरीदार (Buyer) */}
+          <div
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+            style={{
+              borderRadius: '18px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <BuyerAvatar />
+              <div>
+                <h3
+                  className="font-black leading-tight"
+                  style={{
+                    fontSize: '22px',
+                    color: '#1D4ED8',
+                    fontFamily: "'Noto Sans Devanagari', sans-serif",
+                  }}
+                >
+                  खरीदार
+                </h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">सीधे खरीदें (Kisan Bazaar)</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER');
+                router.push('/buyer');
+              }}
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                borderRadius: '18px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
+                background: '#1D4ED8',
+                borderRadius: '10px',
+                boxShadow: '0 2px 8px rgba(29, 78, 216, 0.32)',
+                whiteSpace: 'nowrap',
               }}
             >
-              <div className="flex items-center gap-4">
-                <FarmerAvatar />
-                <div>
-                  <h3
-                    className="font-black leading-tight"
-                    style={{
-                      fontSize: '22px',
-                      color: '#15803D',
-                      fontFamily: "'Noto Sans Devanagari', sans-serif",
-                    }}
-                  >
-                    किसान
-                  </h3>
-                  <p className="text-sm text-slate-500 font-semibold mt-0.5">अपनी उपज बेचें</p>
-                </div>
-              </div>
-              <Link
-                href="/auth/farmer"
-                className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: '#15803D',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(21, 128, 61, 0.32)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                प्रवेश करें →
-              </Link>
-            </div>
-
-            {/* 2. खरीदार (Buyer) Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <BuyerIcon />
-                <div>
-                  <h3 className="font-extrabold text-xl text-[#1D4ED8] leading-tight">खरीदार</h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">सीधे खरीदें (Kisan Bazaar)</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER');
-                  router.push('/buyer');
-                }}
-                className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
-              >
-                <span>प्रवेश करें</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-            {/* 2. खरीदार (Buyer) */}
-            <div
-              className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
-              style={{
-                borderRadius: '18px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
-              }}
-            >
-              <div className="flex items-center gap-4">
-                <BuyerAvatar />
-                <div>
-                  <h3
-                    className="font-black leading-tight"
-                    style={{
-                      fontSize: '22px',
-                      color: '#1D4ED8',
-                      fontFamily: "'Noto Sans Devanagari', sans-serif",
-                    }}
-                  >
-                    खरीदार
-                  </h3>
-                  <p className="text-sm text-slate-500 font-semibold mt-0.5">सीधे खरीदें</p>
-                </div>
-              </div>
-              <button
-                onClick={() => router.push('/farmer/orders')}
-                className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: '#1D4ED8',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(29, 78, 216, 0.32)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                प्रवेश करें →
-              </button>
-            </div>
-
-            {/* 3. परिवहनकर्ता (Transporter) Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <TransporterIcon />
-                <div>
-                  <h3 className="font-extrabold text-xl text-[#EA580C] leading-tight">परिवहनकर्ता</h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें (100% Payout)</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER');
-                  router.push('/transporter');
-                }}
-                className="bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
-              >
-                <span>प्रवेश करें</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-            {/* 3. परिवहनकर्ता (Transporter) */}
-            <div
-              className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
-              style={{
-                borderRadius: '18px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
-              }}
-            >
-              <div className="flex items-center gap-4">
-                <TransporterAvatar />
-                <div>
-                  <h3
-                    className="font-black leading-tight"
-                    style={{
-                      fontSize: '22px',
-                      color: '#EA580C',
-                      fontFamily: "'Noto Sans Devanagari', sans-serif",
-                    }}
-                  >
-                    परिवहनकर्ता
-                  </h3>
-                  <p className="text-sm text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें</p>
-                </div>
-              </div>
-              <button
-                onClick={() => router.push('/farmer/delivery')}
-                className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: '#EA580C',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(234, 88, 12, 0.32)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                प्रवेश करें →
-              </button>
-            </div>
-
-            {/* 4. व्यवस्थापक (FPO / Admin) Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <AdminIcon />
-                <div>
-                  <h3 className="font-extrabold text-xl text-[#7C3AED] leading-tight">व्यवस्थापक</h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">Admin Operations Console</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN');
-                  router.push('/admin');
-                }}
-                className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
-              >
-                <span>प्रवेश करें</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-            {/* 4. व्यवस्थापक (Admin) */}
-            <div
-              className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
-              style={{
-                borderRadius: '18px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
-              }}
-            >
-              <div className="flex items-center gap-4">
-                <AdminAvatar />
-                <div>
-                  <h3
-                    className="font-black leading-tight"
-                    style={{
-                      fontSize: '22px',
-                      color: '#7C3AED',
-                      fontFamily: "'Noto Sans Devanagari', sans-serif",
-                    }}
-                  >
-                    व्यवस्थापक
-                  </h3>
-                  <p className="text-sm text-slate-500 font-semibold mt-0.5">प्लेटफॉर्म प्रबंधन करें</p>
-                </div>
-              </div>
-              <button
-                onClick={() => router.push('/farmer/fpo/members')}
-                className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: '#7C3AED',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.32)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                प्रवेश करें →
-              </button>
-            </div>
-
+              प्रवेश करें →
+            </button>
           </div>
+
+          {/* 3. परिवहनकर्ता (Transporter) */}
+          <div
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+            style={{
+              borderRadius: '18px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <TransporterAvatar />
+              <div>
+                <h3
+                  className="font-black leading-tight"
+                  style={{
+                    fontSize: '22px',
+                    color: '#EA580C',
+                    fontFamily: "'Noto Sans Devanagari', sans-serif",
+                  }}
+                >
+                  परिवहनकर्ता
+                </h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें (100% Payout)</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER');
+                router.push('/transporter');
+              }}
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: '#EA580C',
+                borderRadius: '10px',
+                boxShadow: '0 2px 8px rgba(234, 88, 12, 0.32)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              प्रवेश करें →
+            </button>
+          </div>
+
+          {/* 4. व्यवस्थापक (Admin) */}
+          <div
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+            style={{
+              borderRadius: '18px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <AdminAvatar />
+              <div>
+                <h3
+                  className="font-black leading-tight"
+                  style={{
+                    fontSize: '22px',
+                    color: '#7C3AED',
+                    fontFamily: "'Noto Sans Devanagari', sans-serif",
+                  }}
+                >
+                  व्यवस्थापक
+                </h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">Admin Operations Console</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN');
+                router.push('/admin');
+              }}
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: '#7C3AED',
+                borderRadius: '10px',
+                boxShadow: '0 2px 8px rgba(124, 58, 237, 0.32)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              प्रवेश करें →
+            </button>
+          </div>
+
+        </div>
 
           {/* Feature Benefits Strip */}
           <div
