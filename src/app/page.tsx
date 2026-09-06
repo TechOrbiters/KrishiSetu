@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -7,14 +7,12 @@ import { ChevronDown, Globe } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 /* ========================================================================= */
-/* SVG ICONS & ILLUSTRATIONS (PIXEL-MATCHED TO REFERENCE)                    */
+/* SVG ICONS & ILLUSTRATIONS                                                  */
 /* ========================================================================= */
 
-// Top Left Logo
-function KrishiSetuLogo() {
+function KisanSetuLogo() {
   return (
     <Link href="/" className="flex items-center gap-3 cursor-pointer group">
-      {/* Agricultural wheat/leaf icon */}
       <svg className="w-10 h-10 flex-shrink-0" viewBox="0 0 100 100" fill="none">
         <path d="M50 92C50 92 48 54 22 32C16 27 8 24 2 26C14 46 34 60 50 92Z" fill="#15803D" />
         <path d="M50 92C50 92 52 50 80 27C86 22 94 19 100 21C90 42 68 55 50 92Z" fill="#16A34A" />
@@ -28,7 +26,6 @@ function KrishiSetuLogo() {
   );
 }
 
-// Decorative leaf branches flanking 'आप कौन हैं?'
 function LeftLeafBranch() {
   return (
     <svg className="w-7 h-5 flex-shrink-0" viewBox="0 0 32 20" fill="none">
@@ -53,49 +50,32 @@ function RightLeafBranch() {
   );
 }
 
-// 1. Farmer Card Illustration
 function FarmerAvatar() {
   return (
     <div className="w-[84px] h-[84px] sm:w-[92px] sm:h-[92px] rounded-full bg-[#E6F4EA] flex items-center justify-center flex-shrink-0 border-2 border-[#CEEAD6] shadow-sm">
       <svg className="w-16 h-16 sm:w-[72px] sm:h-[72px]" viewBox="0 0 100 100" fill="none">
-        {/* Face & Neck */}
         <circle cx="50" cy="40" r="16" fill="#FBD38D" />
-        {/* White Pagri / Turban */}
         <path d="M28 34C28 20 38 12 50 12C62 12 72 20 72 34C66 28 58 26 50 26C42 26 34 28 28 34Z" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.8" />
-        <path d="M34 26C38 20 44 17 50 17C56 17 62 20 66 26" stroke="#E2E8F0" strokeWidth="1.5" />
-        {/* Mustache */}
         <path d="M42 45C46 48 50 47 50 47C50 47 54 48 58 45C60 44 62 47 58 49C54 51 50 48 50 48C50 48 46 51 42 49C38 47 40 44 42 45Z" fill="#1E293B" />
-        {/* Eyes */}
         <circle cx="44" cy="37" r="2" fill="#1E293B" />
         <circle cx="56" cy="37" r="2" fill="#1E293B" />
-        {/* Green Shirt / Overalls */}
         <path d="M24 82C24 62 34 58 50 58C66 58 76 62 76 82V92H24V82Z" fill="#15803D" />
-        <path d="M36 58L40 88M64 58L60 88" stroke="#166534" strokeWidth="3.5" strokeLinecap="round" />
-        {/* Golden Wheat Sheaf over shoulder */}
         <path d="M74 76L81 40" stroke="#D97706" strokeWidth="3" strokeLinecap="round" />
         <path d="M81 40C79 37 74 35 72 37C76 39 79 42 81 40Z" fill="#F59E0B" />
         <path d="M79 48C75 46 70 44 68 46C72 48 76 50 79 48Z" fill="#F59E0B" />
-        <path d="M83 45C85 42 88 41 89 43C87 45 84 46 83 45Z" fill="#F59E0B" />
       </svg>
     </div>
   );
 }
 
-// 2. Buyer Card Illustration
 function BuyerAvatar() {
   return (
     <div className="w-[84px] h-[84px] sm:w-[92px] sm:h-[92px] rounded-full bg-[#E8F0FE] flex items-center justify-center flex-shrink-0 border-2 border-[#C8D8FC] shadow-sm">
       <svg className="w-16 h-16 sm:w-[72px] sm:h-[72px]" viewBox="0 0 100 100" fill="none">
-        {/* Fresh Veggies in Cart */}
-        <circle cx="44" cy="44" r="8" fill="#EF4444" /> {/* Tomato */}
-        <circle cx="58" cy="42" r="9" fill="#22C55E" /> {/* Greens/Cabbage */}
-        <ellipse cx="51" cy="35" rx="7" ry="10" fill="#F59E0B" /> {/* Orange/Carrot */}
-        {/* Shopping Cart Body */}
+        <circle cx="44" cy="44" r="8" fill="#EF4444" />
+        <circle cx="58" cy="42" r="9" fill="#22C55E" />
+        <ellipse cx="51" cy="35" rx="7" ry="10" fill="#F59E0B" />
         <path d="M16 26H24L34 66H76L84 34H28" stroke="#2563EB" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" fill="#EFF6FF" />
-        {/* Grid lines on cart */}
-        <path d="M38 34L44 64M52 34L54 64M66 34L64 64" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" />
-        <path d="M26 44H80M30 54H77" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" />
-        {/* Cart Wheels */}
         <circle cx="40" cy="76" r="6.5" fill="#1E293B" />
         <circle cx="40" cy="76" r="2.5" fill="#94A3B8" />
         <circle cx="70" cy="76" r="6.5" fill="#1E293B" />
@@ -105,43 +85,32 @@ function BuyerAvatar() {
   );
 }
 
-// 3. Transporter Card Illustration
 function TransporterAvatar() {
   return (
     <div className="w-[84px] h-[84px] sm:w-[92px] sm:h-[92px] rounded-full bg-[#FEF3C7] flex items-center justify-center flex-shrink-0 border-2 border-[#FDE68A] shadow-sm">
       <svg className="w-16 h-16 sm:w-[72px] sm:h-[72px]" viewBox="0 0 100 100" fill="none">
-        {/* Cargo Container */}
         <rect x="14" y="32" width="46" height="32" rx="4" fill="#F59E0B" stroke="#D97706" strokeWidth="1.5" />
-        {/* Truck Cabin */}
         <path d="M60 42H76C79 42 82 45 82 48V64H60V42Z" fill="#EA580C" />
-        {/* Windshield */}
         <path d="M64 45H75L78 54H64V45Z" fill="#BAE6FD" opacity="0.9" />
-        {/* Wheels */}
         <circle cx="28" cy="68" r="8.5" fill="#1E293B" />
         <circle cx="28" cy="68" r="3.5" fill="#94A3B8" />
         <circle cx="70" cy="68" r="8.5" fill="#1E293B" />
         <circle cx="70" cy="68" r="3.5" fill="#94A3B8" />
-        {/* Bumper */}
-        <rect x="80" y="60" width="4" height="4" rx="1" fill="#CBD5E1" />
       </svg>
     </div>
   );
 }
 
-// 4. Admin Card Illustration
 function AdminAvatar() {
   return (
     <div className="w-[84px] h-[84px] sm:w-[92px] sm:h-[92px] rounded-full bg-[#F3E8FF] flex items-center justify-center flex-shrink-0 border-2 border-[#E9D5FF] shadow-sm">
       <svg className="w-16 h-16 sm:w-[72px] sm:h-[72px]" viewBox="0 0 100 100" fill="none">
-        {/* Pediment Roof */}
         <path d="M16 36L50 17L84 36H16Z" fill="#7C3AED" />
         <rect x="18" y="36" width="64" height="5" rx="1" fill="#6D28D9" />
-        {/* 4 Pillars */}
         <rect x="23" y="41" width="9" height="28" rx="2" fill="#8B5CF6" />
         <rect x="37" y="41" width="9" height="28" rx="2" fill="#8B5CF6" />
         <rect x="54" y="41" width="9" height="28" rx="2" fill="#8B5CF6" />
         <rect x="68" y="41" width="9" height="28" rx="2" fill="#8B5CF6" />
-        {/* Base Steps */}
         <rect x="16" y="69" width="68" height="5" rx="1" fill="#6D28D9" />
         <rect x="12" y="74" width="76" height="6" rx="1.5" fill="#5B21B6" />
       </svg>
@@ -149,7 +118,6 @@ function AdminAvatar() {
   );
 }
 
-// Feature Strip Icons
 function RupeeFeatureIcon() {
   return (
     <div className="w-11 h-11 rounded-full bg-white border-2 border-[#16A34A] flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -218,10 +186,7 @@ export default function MasterLandingPage() {
         color: '#1E293B',
       }}
     >
-
-      {/* =================================================================== */}
-      {/* 1. HEADER                                                           */}
-      {/* =================================================================== */}
+      {/* HEADER */}
       <header
         className="w-full bg-white sticky top-0 z-40 flex items-center justify-between px-6 sm:px-10 lg:px-14"
         style={{
@@ -230,10 +195,7 @@ export default function MasterLandingPage() {
           boxShadow: '0 1px 6px 0 rgba(0, 0, 0, 0.04)',
         }}
       >
-        {/* Left: KrishiSetu Logo */}
-        <KrishiSetuLogo />
-
-        {/* Header Right Actions */}
+        <KisanSetuLogo />
         <div className="flex items-center gap-2.5">
           <Link
             href="/auth/farmer"
@@ -245,8 +207,6 @@ export default function MasterLandingPage() {
             <span>👤</span>
             <span>किसान लॉगिन / पंजीकरण</span>
           </Link>
-
-          {/* Right: Language Selector */}
           <div className="relative">
             <button
               onClick={() => setLangMenuOpen(!langMenuOpen)}
@@ -257,12 +217,8 @@ export default function MasterLandingPage() {
               <span>भाषा: {languages.find(l => l.code === language)?.localName || 'हिन्दी'}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-
-            {/* Language Dropdown Menu */}
             {langMenuOpen && (
-              <div
-                className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50 animate-fade-in"
-              >
+              <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50">
                 {languages.map((l) => (
                   <button
                     key={l.code}
@@ -270,8 +226,7 @@ export default function MasterLandingPage() {
                       setLanguage(l.code);
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors ${language === l.code ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors ${language === l.code ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
                   >
                     <span>{l.localName}</span>
                     <span className="text-xs text-slate-400">{l.label}</span>
@@ -283,9 +238,7 @@ export default function MasterLandingPage() {
         </div>
       </header>
 
-      {/* =================================================================== */}
-      {/* 2. HERO SECTION                                                     */}
-      {/* =================================================================== */}
+      {/* HERO SECTION */}
       <section
         className="w-full relative overflow-hidden flex items-center justify-center"
         style={{
@@ -294,9 +247,7 @@ export default function MasterLandingPage() {
           borderBottom: '1px solid rgba(22, 163, 74, 0.08)',
         }}
       >
-        {/* Soft Background Halos & Agricultural Curves */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          {/* Left subtle halo */}
           <div
             className="absolute hidden md:block"
             style={{
@@ -308,8 +259,6 @@ export default function MasterLandingPage() {
               left: '6%',
             }}
           />
-
-          {/* Right Green Arc (matches reference image's thick curved green shape) */}
           <div
             className="absolute hidden lg:block"
             style={{
@@ -327,13 +276,10 @@ export default function MasterLandingPage() {
           />
         </div>
 
-        {/* LEFT: Farmer Image Layer (Farmer.jpg) - Preserving natural aspect ratio, NO object-fit: cover */}
+        {/* LEFT: Farmer Image */}
         <div
           className="hidden md:flex absolute left-0 bottom-0 top-0 items-end justify-start pointer-events-none select-none z-[2]"
-          style={{
-            maxWidth: '38%',
-            height: '100%',
-          }}
+          style={{ maxWidth: '38%', height: '100%' }}
         >
           <img
             src="/assets/kisan-setu/Farmer.jpg"
@@ -352,11 +298,8 @@ export default function MasterLandingPage() {
           />
         </div>
 
-        {/* CENTER: Hero Typography & Taglines */}
-        <div
-          className="relative z-10 w-full max-w-[620px] mx-auto text-center py-8 sm:py-10 px-4"
-        >
-          {/* Main Dominant Heading */}
+        {/* CENTER: Hero Text */}
+        <div className="relative z-10 w-full max-w-[620px] mx-auto text-center py-8 sm:py-10 px-4">
           <h1
             className="font-black leading-tight tracking-tight mb-3"
             style={{
@@ -371,8 +314,6 @@ export default function MasterLandingPage() {
             <span style={{ color: '#16A34A' }}>बाज़ार</span>
             <span style={{ color: '#1E293B' }}> तक</span>
           </h1>
-
-          {/* Green Sub-tagline */}
           <div
             className="flex items-center justify-center gap-3 flex-wrap mb-3 font-bold"
             style={{
@@ -387,8 +328,6 @@ export default function MasterLandingPage() {
             <span className="text-emerald-400 font-normal">•</span>
             <span>स्मार्ट डिलीवरी</span>
           </div>
-
-          {/* Description Text */}
           <p
             className="leading-relaxed mb-4 text-slate-700 font-medium"
             style={{
@@ -400,8 +339,6 @@ export default function MasterLandingPage() {
             किसानों को सीधे खरीदारों से जोड़ने वाला<br />
             सरल और भरोसेमंद डिजिटल बाज़ार।
           </p>
-
-          {/* Small green horizontal decorative pill */}
           <div
             className="mx-auto"
             style={{
@@ -413,13 +350,10 @@ export default function MasterLandingPage() {
           />
         </div>
 
-        {/* RIGHT: Vegetable Image Layer (Vegetable.jpg) - Preserving natural aspect ratio, NO object-fit: cover */}
+        {/* RIGHT: Vegetable Image */}
         <div
           className="hidden md:flex absolute right-0 bottom-0 top-0 items-end justify-end pointer-events-none select-none z-[2]"
-          style={{
-            maxWidth: '38%',
-            height: '100%',
-          }}
+          style={{ maxWidth: '38%', height: '100%' }}
         >
           <img
             src="/assets/kisan-setu/Vegetable.jpg"
@@ -439,12 +373,10 @@ export default function MasterLandingPage() {
         </div>
       </section>
 
-      {/* =================================================================== */}
-      {/* 3. MAIN SECTION: 'आप कौन हैं?' + 4 ROLE CARDS + FEATURE STRIP      */}
-      {/* =================================================================== */}
+      {/* MAIN CONTENT */}
       <main className="flex-1 max-w-[1180px] w-full mx-auto px-4 sm:px-6 lg:px-8 pb-8">
 
-        {/* 'आप कौन हैं?' Heading */}
+        {/* आप कौन हैं? */}
         <div className="text-center pt-6 pb-4">
           <h2
             className="inline-flex items-center gap-3 font-extrabold text-slate-800"
@@ -459,172 +391,89 @@ export default function MasterLandingPage() {
           </h2>
         </div>
 
-        {/* 4 Role Selector Cards Grid (2x2) */}
+        {/* 2x2 Role Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
 
-          {/* 1. किसान (Farmer) */}
+          {/* Farmer */}
           <div
             className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
-            style={{
-              borderRadius: '18px',
-              border: '1px solid #E2E8F0',
-              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
-            }}
+            style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <FarmerAvatar />
               <div>
-                <h3
-                  className="font-black leading-tight"
-                  style={{
-                    fontSize: '22px',
-                    color: '#15803D',
-                    fontFamily: "'Noto Sans Devanagari', sans-serif",
-                  }}
-                >
-                  किसान
-                </h3>
+                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#15803D', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>किसान</h3>
                 <p className="text-sm text-slate-500 font-semibold mt-0.5">अपनी उपज बेचें</p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER');
-                router.push('/auth/farmer');
-              }}
+            <Link
+              href="/auth/farmer"
+              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER'); }}
               className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: '#15803D',
-                borderRadius: '10px',
-                boxShadow: '0 2px 8px rgba(21, 128, 61, 0.32)',
-                whiteSpace: 'nowrap',
-              }}
+              style={{ background: '#15803D', borderRadius: '10px', boxShadow: '0 2px 8px rgba(21,128,61,0.32)', whiteSpace: 'nowrap' }}
             >
               प्रवेश करें →
-            </button>
+            </Link>
           </div>
 
-          {/* 2. खरीदार (Buyer) */}
+          {/* Buyer */}
           <div
             className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
-            style={{
-              borderRadius: '18px',
-              border: '1px solid #E2E8F0',
-              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
-            }}
+            style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <BuyerAvatar />
               <div>
-                <h3
-                  className="font-black leading-tight"
-                  style={{
-                    fontSize: '22px',
-                    color: '#1D4ED8',
-                    fontFamily: "'Noto Sans Devanagari', sans-serif",
-                  }}
-                >
-                  खरीदार
-                </h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">सीधे खरीदें (KrishiSetu Mandi)</p>
+                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#1D4ED8', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>खरीदार</h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">सीधे खरीदें</p>
               </div>
             </div>
             <button
-              onClick={() => {
-                if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER');
-                router.push('/buyer');
-              }}
+              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER'); router.push('/buyer'); }}
               className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: '#1D4ED8',
-                borderRadius: '10px',
-                boxShadow: '0 2px 8px rgba(29, 78, 216, 0.32)',
-                whiteSpace: 'nowrap',
-              }}
+              style={{ background: '#1D4ED8', borderRadius: '10px', boxShadow: '0 2px 8px rgba(29,78,216,0.32)', whiteSpace: 'nowrap' }}
             >
               प्रवेश करें →
             </button>
           </div>
 
-          {/* 3. परिवहनकर्ता (Transporter) */}
+          {/* Transporter */}
           <div
             className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
-            style={{
-              borderRadius: '18px',
-              border: '1px solid #E2E8F0',
-              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
-            }}
+            style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <TransporterAvatar />
               <div>
-                <h3
-                  className="font-black leading-tight"
-                  style={{
-                    fontSize: '22px',
-                    color: '#EA580C',
-                    fontFamily: "'Noto Sans Devanagari', sans-serif",
-                  }}
-                >
-                  परिवहनकर्ता
-                </h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें (100% Payout)</p>
+                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#EA580C', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>परिवहनकर्ता</h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें</p>
               </div>
             </div>
             <button
-              onClick={() => {
-                if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER');
-                router.push('/transporter');
-              }}
+              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER'); router.push('/transporter'); }}
               className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: '#EA580C',
-                borderRadius: '10px',
-                boxShadow: '0 2px 8px rgba(234, 88, 12, 0.32)',
-                whiteSpace: 'nowrap',
-              }}
+              style={{ background: '#EA580C', borderRadius: '10px', boxShadow: '0 2px 8px rgba(234,88,12,0.32)', whiteSpace: 'nowrap' }}
             >
               प्रवेश करें →
             </button>
           </div>
 
-          {/* 4. व्यवस्थापक (Admin) */}
+          {/* Admin */}
           <div
             className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
-            style={{
-              borderRadius: '18px',
-              border: '1px solid #E2E8F0',
-              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.04)',
-            }}
+            style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <AdminAvatar />
               <div>
-                <h3
-                  className="font-black leading-tight"
-                  style={{
-                    fontSize: '22px',
-                    color: '#7C3AED',
-                    fontFamily: "'Noto Sans Devanagari', sans-serif",
-                  }}
-                >
-                  व्यवस्थापक
-                </h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">Admin Operations Console</p>
+                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#7C3AED', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>व्यवस्थापक</h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">प्लेटफॉर्म प्रबंधन करें</p>
               </div>
             </div>
             <button
-              onClick={() => {
-                if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN');
-                router.push('/admin');
-              }}
+              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN'); router.push('/admin'); }}
               className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: '#7C3AED',
-                borderRadius: '10px',
-                boxShadow: '0 2px 8px rgba(124, 58, 237, 0.32)',
-                whiteSpace: 'nowrap',
-              }}
+              style={{ background: '#7C3AED', borderRadius: '10px', boxShadow: '0 2px 8px rgba(124,58,237,0.32)', whiteSpace: 'nowrap' }}
             >
               प्रवेश करें →
             </button>
@@ -632,67 +481,44 @@ export default function MasterLandingPage() {
 
         </div>
 
-          {/* Feature Benefits Strip */}
-          <div
-            className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-            style={{
-              background: '#F0FDF4',
-              border: '1px solid #DCFCE7',
-              borderRadius: '16px',
-              overflow: 'hidden',
-            }}
-          >
-            {/* 1. बेहतर दाम */}
-            <div
-              className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0"
-              style={{ borderColor: 'rgba(21, 128, 61, 0.12)' }}
-            >
-              <RupeeFeatureIcon />
-              <div>
-                <h4 className="font-extrabold text-sm text-slate-900 leading-tight">बेहतर दाम</h4>
-                <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">किसानों को उचित मूल्य</p>
-              </div>
-            </div>
-
-            {/* 2. सीधे संपर्क */}
-            <div
-              className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0"
-              style={{ borderColor: 'rgba(21, 128, 61, 0.12)' }}
-            >
-              <LinkFeatureIcon />
-              <div>
-                <h4 className="font-extrabold text-sm text-slate-900 leading-tight">सीधे संपर्क</h4>
-                <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">किसान से खरीदार तक सीधा जुड़ाव</p>
-              </div>
-            </div>
-
-            {/* 3. आसान डिलीवरी */}
-            <div
-              className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0"
-              style={{ borderColor: 'rgba(21, 128, 61, 0.12)' }}
-            >
-              <TruckFeatureIcon />
-              <div>
-                <h4 className="font-extrabold text-sm text-slate-900 leading-tight">आसान डिलीवरी</h4>
-                <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">स्मार्ट और समय पर डिलीवरी</p>
-              </div>
-            </div>
-
-            {/* 4. स्मार्ट समाधान */}
-            <div className="flex items-center gap-3.5 p-4 sm:p-5">
-              <RobotFeatureIcon />
-              <div>
-                <h4 className="font-extrabold text-sm text-slate-900 leading-tight">स्मार्ट समाधान</h4>
-                <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">AI आधारित बाजार और लॉजिस्टिक्स</p>
-              </div>
+        {/* Feature Strip */}
+        <div
+          className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+          style={{ background: '#F0FDF4', border: '1px solid #DCFCE7', borderRadius: '16px', overflow: 'hidden' }}
+        >
+          <div className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0" style={{ borderColor: 'rgba(21,128,61,0.12)' }}>
+            <RupeeFeatureIcon />
+            <div>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">बेहतर दाम</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">किसानों को उचित मूल्य</p>
             </div>
           </div>
+          <div className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0" style={{ borderColor: 'rgba(21,128,61,0.12)' }}>
+            <LinkFeatureIcon />
+            <div>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">सीधे संपर्क</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">किसान से खरीदार तक सीधा जुड़ाव</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0" style={{ borderColor: 'rgba(21,128,61,0.12)' }}>
+            <TruckFeatureIcon />
+            <div>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">आसान डिलीवरी</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">स्मार्ट और समय पर डिलीवरी</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3.5 p-4 sm:p-5">
+            <RobotFeatureIcon />
+            <div>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">स्मार्ट समाधान</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">AI आधारित बाजार और लॉजिस्टिक्स</p>
+            </div>
+          </div>
+        </div>
 
       </main>
 
-      {/* =================================================================== */}
-      {/* 4. BOTTOM TAGLINE FOOTER                                           */}
-      {/* =================================================================== */}
+      {/* FOOTER */}
       <footer
         className="w-full bg-white text-center py-3.5 flex items-center justify-center gap-2"
         style={{
