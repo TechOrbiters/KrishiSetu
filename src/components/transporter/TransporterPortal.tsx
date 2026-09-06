@@ -1,0 +1,917 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { GoogleMandiMap } from '../common/GoogleMandiMap';
+import { TransporterTrip } from '../../types';
+import {
+  Truck,
+  CheckCircle,
+  Clock,
+  MapPin,
+  TrendingUp,
+  AlertCircle,
+  Phone,
+  Shield,
+  Star,
+  Navigation,
+  Bot,
+  RotateCcw,
+  Sparkles,
+  ArrowRight,
+  LogOut,
+  Mic,
+  MicOff,
+  Volume2,
+  Radio,
+  Send,
+  Loader2,
+  Check,
+  Compass,
+  Menu,
+  X,
+  Award,
+  CreditCard,
+  Layers,
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { parseTransporterVoiceCommand, speakWithSarvamAI } from '../../lib/apiServices';
+import { TransporterSmartMatchView } from './TransporterSmartMatchView';
+import { TransporterMyTripsView } from './TransporterMyTripsView';
+import { TransporterEarningsView } from './TransporterEarningsView';
+import { TransporterRatingsView } from './TransporterRatingsView';
+import { useLanguage } from '../../context/LanguageContext';
+import { LanguageSelector } from '../common/LanguageSelector';
+
+export type TransporterNavTab = 'DASHBOARD' | 'SMARTMATCH' | 'MY_TRIPS' | 'EARNINGS' | 'RATINGS';
+
+interface TransporterPortalProps {
+  onBackToLanding: () => void;
+  availableTrips: TransporterTrip[];
+  setAvailableTrips: React.Dispatch<React.SetStateAction<TransporterTrip[]>>;
+  onOpenKrishiAI: () => void;
+  onAcceptJob?: (tripId: string) => Promise<void> | void;
+  onRejectJob?: (tripId: string) => Promise<void> | void;
+  onUpdateTripStatus?: (tripId: string, status: TransporterTrip['status']) => Promise<void> | void;
+  onUpdateTripLocation?: (tripId: string, location: { lat: number; lng: number; speedKmh?: number; address?: string }) => Promise<void> | void;
+}
+
+export const TransporterPortal: React.FC<TransporterPortalProps> = ({
+  onBackToLanding,
+  availableTrips,
+  setAvailableTrips,
+  onOpenKrishiAI,
+  onAcceptJob,
+  onRejectJob,
+  onUpdateTripStatus,
+  onUpdateTripLocation,
+}) => {
+  const { t } = useLanguage();
+  const [activeNavTab, setActiveNavTab] = useState<TransporterNavTab>('DASHBOARD');
+  const [isOnline, setIsOnline] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeStep, setActiveStep] = useState<number>(3); // Step 3 = In Progress / On Route
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+
+  // Voice Command Listener State (Sarvam AI)
+  const [isListening, setIsListening] = useState(false);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceFeedback, setVoiceFeedback] = useState<{
+    status?: string;
+    statusHindi?: string;
+    hindiFeedback?: string;
+    success?: boolean;
+  } | null>(null);
+  const [customCommandInput, setCustomCommandInput] = useState('');
+  const [isSpeakingAudio, setIsSpeakingAudio] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Dynamic active trip selection
+  const currentTrip =
+    (selectedTripId ? availableTrips.find((t) => t.id === selectedTripId) : null) ||
+    availableTrips.find((t) => t.status === 'IN_TRANSIT' || t.status === 'PICKED_UP' || t.status === 'ACCEPTED') ||
+    availableTrips.find((t) => t.id === 'trip-4') ||
+    availableTrips[0];
+
+  // Sync active step when trip status changes
+  useEffect(() => {
+    if (!currentTrip) return;
+    if (currentTrip.status === 'ACCEPTED') setActiveStep(1);
+    else if (currentTrip.status === 'PICKED_UP') setActiveStep(2);
+    else if (currentTrip.status === 'IN_TRANSIT') setActiveStep(3);
+    else if (currentTrip.status === 'DELIVERED') setActiveStep(4);
+  }, [currentTrip?.id, currentTrip?.status]);
+
+  // Dynamic transporter coordinates based on current active step
+  const getTransporterCoords = () => {
+    switch (activeStep) {
+      case 1:
+        return { lat: 26.9340, lng: 81.1910 };
+      case 2:
+        return { lat: 26.9284, lng: 81.1834 };
+      case 3:
+        return { lat: 26.8904, lng: 81.0623 };
+      case 4:
+        return { lat: 26.8524, lng: 80.9412 };
+      default:
+        return { lat: 26.8904, lng: 81.0623 };
+    }
+  };
+
+  const originCoords = currentTrip?.pickupCoords || {
+    lat: 26.9284,
+    lng: 81.1834,
+    label: currentTrip?.pickupLocation || 'बैजनाथपुर FPO फार्म (बाराबंकी)',
+  };
+
+  const destinationCoords = currentTrip?.dropCoords || {
+    lat: 26.8524,
+    lng: 80.9412,
+    label: currentTrip?.dropLocation || 'सीतापुर रोड नवीन गल्ला मंडी (लखनऊ)',
+  };
+
+  const liveTransporterLocation = {
+    lat: currentTrip?.currentLocation?.lat ?? getTransporterCoords().lat,
+    lng: currentTrip?.currentLocation?.lng ?? getTransporterCoords().lng,
+    driverName: currentTrip?.driverName || 'राज ट्रांसपोर्ट (राजेश कुमार)',
+    vehicleNumber: currentTrip?.vehicleNumber || 'UP 32 AB 1234',
+  };
+
+  const handleAcceptJobInternal = async (tripId: string) => {
+    if (onAcceptJob) {
+      await onAcceptJob(tripId);
+    } else {
+      setAvailableTrips((prev) =>
+        prev.map((t) => (t.id === tripId ? { ...t, status: 'ACCEPTED' } : t))
+      );
+    }
+    setSelectedTripId(tripId);
+    try {
+      confetti({ particleCount: 75, spread: 65, origin: { y: 0.6 } });
+    } catch (e) {}
+  };
+
+  const handleRejectJobInternal = async (tripId: string) => {
+    if (onRejectJob) {
+      await onRejectJob(tripId);
+    } else {
+      setAvailableTrips((prev) => prev.filter((t) => t.id !== tripId));
+    }
+  };
+
+  const handleAdvanceActiveTrip = async (newStatus: TransporterTrip['status'], stepNumber: number) => {
+    setActiveStep(stepNumber);
+    let targetLoc = { lat: 26.8904, lng: 81.0623, speedKmh: 42, address: 'लखनऊ-अयोध्या हाईवे NH-27' };
+    if (stepNumber === 1) targetLoc = { lat: 26.9340, lng: 81.1910, speedKmh: 0, address: 'बाराबंकी ट्रांसपोर्ट हब' };
+    if (stepNumber === 2) targetLoc = { lat: 26.9284, lng: 81.1834, speedKmh: 0, address: 'बैजनाथपुर फार्म गेट' };
+    if (stepNumber === 3) targetLoc = { lat: 26.8904, lng: 81.0623, speedKmh: 48, address: 'अयोध्या-लखनऊ हाईवे (जुगगौर के पास)' };
+    if (stepNumber === 4) targetLoc = { lat: 26.8524, lng: 80.9412, speedKmh: 0, address: 'सीतापुर रोड नवीन गल्ला मंडी गेट' };
+
+    if (currentTrip && onUpdateTripStatus) {
+      await onUpdateTripStatus(currentTrip.id, newStatus);
+      if (onUpdateTripLocation) {
+        await onUpdateTripLocation(currentTrip.id, targetLoc);
+      }
+    } else if (currentTrip) {
+      setAvailableTrips((prev) =>
+        prev.map((t) =>
+          t.id === currentTrip.id
+            ? {
+                ...t,
+                status: newStatus,
+                currentLocation: {
+                  ...targetLoc,
+                  lastUpdated: 'अभी-अभी',
+                },
+              }
+            : t
+        )
+      );
+    }
+    if (newStatus === 'DELIVERED') {
+      try {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      } catch (e) {}
+    }
+  };
+
+  const handleSimulateStepMovement = async () => {
+    if (!currentTrip) return;
+    const curLat = liveTransporterLocation.lat;
+    const curLng = liveTransporterLocation.lng;
+    const destLat = destinationCoords.lat;
+    const destLng = destinationCoords.lng;
+
+    const nextLat = Number((curLat + (destLat - curLat) * 0.25).toFixed(4));
+    const nextLng = Number((curLng + (destLng - curLng) * 0.25).toFixed(4));
+
+    const updatedLoc = {
+      lat: nextLat,
+      lng: nextLng,
+      speedKmh: Math.floor(Math.random() * 15) + 40,
+      address: 'लखनऊ-अयोध्या एक्सप्रेसवे किमी ' + Math.floor(Math.random() * 20 + 12),
+      lastUpdated: new Date().toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    };
+
+    if (onUpdateTripLocation) {
+      await onUpdateTripLocation(currentTrip.id, updatedLoc);
+    } else {
+      setAvailableTrips((prev) =>
+        prev.map((t) =>
+          t.id === currentTrip.id ? { ...t, currentLocation: updatedLoc } : t
+        )
+      );
+    }
+  };
+
+  const handleProcessVoiceCommand = async (commandText: string) => {
+    if (!commandText || !commandText.trim()) return;
+    setIsProcessingVoice(true);
+    setVoiceTranscript(commandText);
+    try {
+      const currentStatus = currentTrip ? currentTrip.status : 'IN_TRANSIT';
+      const result = await parseTransporterVoiceCommand(commandText, currentStatus);
+
+      setVoiceFeedback({
+        status: result.status,
+        statusHindi: result.statusHindi,
+        hindiFeedback: result.hindiFeedback,
+        success: true,
+      });
+
+      await handleAdvanceActiveTrip(result.status, result.stepNumber);
+
+      setIsSpeakingAudio(true);
+      try {
+        await speakWithSarvamAI(result.hindiFeedback, 'hi-IN');
+      } catch (audioErr) {
+        console.warn('Sarvam TTS audio note:', audioErr);
+      } finally {
+        setIsSpeakingAudio(false);
+      }
+    } catch (err: any) {
+      console.error('Voice command error:', err);
+      setVoiceFeedback({
+        status: undefined,
+        hindiFeedback: err.message || 'कमांड समझ नहीं आई। कृपया दोबारा बोलें (जैसे: फार्म पहुँच गया, लोड हो गया, डिलीवर हो गया)',
+        success: false,
+      });
+    } finally {
+      setIsProcessingVoice(false);
+    }
+  };
+
+  const startVoiceRecognition = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceFeedback({
+        status: undefined,
+        hindiFeedback: 'ब्राउज़र में सीधे माइक्रोफोन सपोर्ट उपलब्ध नहीं है। कृपया त्वरित वॉइस बटन पर क्लिक करें।',
+        success: false,
+      });
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'hi-IN';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setVoiceTranscript('');
+        setVoiceFeedback(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        const current = event.resultIndex;
+        const transcript = event.results[current][0].transcript;
+        setVoiceTranscript(transcript);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setVoiceTranscript((latest) => {
+          if (latest && latest.trim()) {
+            handleProcessVoiceCommand(latest);
+          }
+          return latest;
+        });
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (e) {
+      console.error('Failed to start speech recognition:', e);
+      setIsListening(false);
+    }
+  };
+
+  const stopVoiceRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  };
+
+  const handleReplayFeedback = async () => {
+    if (!voiceFeedback?.hindiFeedback) return;
+    setIsSpeakingAudio(true);
+    try {
+      await speakWithSarvamAI(voiceFeedback.hindiFeedback, 'hi-IN');
+    } catch (e) {
+      console.warn('Replay audio err:', e);
+    } finally {
+      setIsSpeakingAudio(false);
+    }
+  };
+
+  const availableCount = availableTrips.filter((t) => t.status === 'AVAILABLE').length;
+
+  return (
+    <div className="flex h-screen bg-slate-100 font-sans text-slate-800 antialiased overflow-hidden">
+      {/* Sidebar (Navigation shown in image) */}
+      <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex md:flex-col justify-between shrink-0 shadow-2xs z-20">
+        <div>
+          {/* Logo & Brand */}
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+                KS
+              </div>
+              <div>
+                <h1 className="font-extrabold text-sm text-slate-900 leading-tight">
+                  KrishiSetu
+                </h1>
+                <p className="text-[10px] font-bold text-amber-700 tracking-wide uppercase">
+                  ट्रांसपोर्टर पोर्टल
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onBackToLanding}
+              className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              title="पोर्टल से बाहर निकलें"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Transporter Profile Pill */}
+          <div className="p-3 mx-3 my-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-xs shrink-0">
+              🚚
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-bold text-xs text-slate-800 truncate">
+                Raj Transport (राजेश)
+              </div>
+              <div className="text-[10px] text-slate-500 truncate flex items-center gap-1">
+                <span>UP32 AB 1234</span>
+                <span className="text-[9px] bg-slate-200 text-slate-700 px-1 py-0.2 rounded font-semibold">
+                  Mini Truck
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar Nav (Matching 100% with image) */}
+          <nav className="px-3 space-y-1 overflow-y-auto text-xs font-medium">
+            <button
+              onClick={() => setActiveNavTab('DASHBOARD')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold transition-all ${
+                activeNavTab === 'DASHBOARD'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Truck className="w-4 h-4" />
+              <span>{t('dashboard')}</span>
+            </button>
+
+            {/* Feature 1 from image: उपलब्ध डिलीवरी (SmartMatch) */}
+            <button
+              onClick={() => setActiveNavTab('SMARTMATCH')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all ${
+                activeNavTab === 'SMARTMATCH'
+                  ? 'bg-amber-600 text-white font-bold shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>{t('availableTrips')}</span>
+              </div>
+              <span
+                className={`px-1.5 py-0.5 rounded-full font-bold text-[10px] ${
+                  activeNavTab === 'SMARTMATCH'
+                    ? 'bg-white text-amber-900'
+                    : 'bg-amber-100 text-amber-900'
+                }`}
+              >
+                {availableCount}
+              </span>
+            </button>
+
+            {/* Feature 2: activeDeliveries */}
+            <button
+              onClick={() => setActiveNavTab('MY_TRIPS')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold transition-all ${
+                activeNavTab === 'MY_TRIPS'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Navigation className="w-4 h-4" />
+              <span>{t('activeDeliveries')}</span>
+            </button>
+
+            {/* Feature 3: analytics */}
+            <button
+              onClick={() => setActiveNavTab('EARNINGS')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold transition-all ${
+                activeNavTab === 'EARNINGS'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>{t('analytics')}</span>
+            </button>
+
+            {/* Feature 4: profile */}
+            <button
+              onClick={() => setActiveNavTab('RATINGS')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold transition-all ${
+                activeNavTab === 'RATINGS'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Star className="w-4 h-4" />
+              <span>{t('profile')}</span>
+            </button>
+          </nav>
+        </div>
+
+        {/* Sidebar Bottom: AI साथी */}
+        <div className="p-3.5 mx-3 mb-3 bg-gradient-to-br from-amber-700 to-amber-800 text-white rounded-xl shadow-xs">
+          <div className="flex items-center gap-2 mb-1">
+            <Bot className="w-4 h-4 text-amber-200" />
+            <span className="text-xs font-bold">AI साथी आपकी मदद के लिए</span>
+          </div>
+          <p className="text-[11px] text-amber-100 leading-relaxed mb-2.5">
+            बेहतर कमाई और स्मार्ट ट्रिप के सुझाव तुरंत पाएं
+          </p>
+          <button
+            onClick={onOpenKrishiAI}
+            className="w-full py-1.5 bg-white text-amber-900 text-xs font-bold rounded-lg shadow-2xs transition-colors hover:bg-amber-50"
+          >
+            AI साथी से बात करें
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Topbar */}
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg bg-slate-100 text-slate-700"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                👋 नमस्ते, Raj Transport
+              </h2>
+              <p className="text-xs text-slate-500">
+                {activeNavTab === 'DASHBOARD' && 'आज आपके लिए ये बेहतरीन डिलीवरी के मौके हैं'}
+                {activeNavTab === 'SMARTMATCH' && 'उपलब्ध डिलीवरी व SmartTransport AI मैचिंग'}
+                {activeNavTab === 'MY_TRIPS' && 'लाइव GPS नेविगेशन व सक्रिय ट्रिप प्रबंधन'}
+                {activeNavTab === 'EARNINGS' && 'वित्तीय विवरण, किराया विश्लेषण व तत्काल निकासी'}
+                {activeNavTab === 'RATINGS' && 'आपकी 4.8★ रेटिंग और सत्यापित समीक्षाएं'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Duty Status Toggle (scr-004) */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-xs">
+              <span className="text-slate-600 font-medium">ड्यूटी:</span>
+              <button
+                type="button"
+                onClick={() => setIsOnline(!isOnline)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  isOnline ? 'bg-emerald-700' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    isOnline ? 'translate-x-4.5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className={`font-bold ${isOnline ? 'text-emerald-800' : 'text-slate-400'}`}>
+                {isOnline ? 'ऑनलाइन' : 'ऑफलाइन'}
+              </span>
+            </div>
+
+            {/* Language Selector */}
+            <LanguageSelector variant="light" showLabel={false} />
+
+            <button
+              onClick={onOpenKrishiAI}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AI असिस्टेंट</span>
+            </button>
+
+            <button
+              onClick={onBackToLanding}
+              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium"
+            >
+              {t('switchRole')}
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-b border-slate-200 p-3 space-y-1 shadow-md animate-fadeIn text-xs">
+            <button
+              onClick={() => {
+                setActiveNavTab('DASHBOARD');
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
+                activeNavTab === 'DASHBOARD' ? 'bg-amber-600 text-white' : 'text-slate-700'
+              }`}
+            >
+              <Truck className="w-4 h-4" />
+              <span>डैशबोर्ड</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveNavTab('SMARTMATCH');
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold ${
+                activeNavTab === 'SMARTMATCH' ? 'bg-amber-600 text-white' : 'text-slate-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-4 h-4" />
+                <span>उपलब्ध डिलीवरी (SmartMatch)</span>
+              </div>
+              <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[10px]">
+                {availableCount}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveNavTab('MY_TRIPS');
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
+                activeNavTab === 'MY_TRIPS' ? 'bg-amber-600 text-white' : 'text-slate-700'
+              }`}
+            >
+              <Navigation className="w-4 h-4" />
+              <span>मेरी ट्रिप्स (My Trips)</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveNavTab('EARNINGS');
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
+                activeNavTab === 'EARNINGS' ? 'bg-amber-600 text-white' : 'text-slate-700'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>आय / कमाई (Earnings)</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveNavTab('RATINGS');
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
+                activeNavTab === 'RATINGS' ? 'bg-amber-600 text-white' : 'text-slate-700'
+              }`}
+            >
+              <Star className="w-4 h-4" />
+              <span>रेटिंग और समीक्षा</span>
+            </button>
+          </div>
+        )}
+
+        {/* Content Body Router */}
+        <main className="p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+          {/* TAB 1: SMARTMATCH */}
+          {activeNavTab === 'SMARTMATCH' && (
+            <TransporterSmartMatchView
+              availableTrips={availableTrips}
+              onAcceptJob={handleAcceptJobInternal}
+              onRejectJob={handleRejectJobInternal}
+              onOpenKrishiAI={onOpenKrishiAI}
+            />
+          )}
+
+          {/* TAB 2: MY TRIPS */}
+          {activeNavTab === 'MY_TRIPS' && (
+            <TransporterMyTripsView
+              availableTrips={availableTrips}
+              setAvailableTrips={setAvailableTrips}
+              onOpenKrishiAI={onOpenKrishiAI}
+              onUpdateTripStatus={onUpdateTripStatus}
+              onUpdateTripLocation={onUpdateTripLocation}
+            />
+          )}
+
+          {/* TAB 3: EARNINGS */}
+          {activeNavTab === 'EARNINGS' && <TransporterEarningsView />}
+
+          {/* TAB 4: RATINGS */}
+          {activeNavTab === 'RATINGS' && <TransporterRatingsView />}
+
+          {/* TAB 0: DASHBOARD (Unified Executive Overview) */}
+          {activeNavTab === 'DASHBOARD' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left & Center Main Work Area (8 Cols) */}
+              <div className="lg:col-span-8 space-y-6">
+                {/* 1. Top Quick Metric Banner */}
+                <div className="bg-gradient-to-r from-amber-700 via-amber-800 to-emerald-900 text-white p-5 rounded-2xl shadow-sm space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span className="text-xs font-bold text-amber-200 uppercase">
+                          SmartMatch AI मैचिंग सक्रिय
+                        </span>
+                      </div>
+                      <div className="text-base sm:text-lg font-extrabold mt-0.5">
+                        {availableCount} नई डिलीवरी आपके मिनी ट्रक के लिए तैयार हैं
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveNavTab('SMARTMATCH')}
+                      className="px-3.5 py-1.5 bg-white text-amber-900 hover:bg-amber-50 rounded-xl text-xs font-bold shadow-2xs transition-all flex items-center gap-1"
+                    >
+                      <span>सभी डिलीवरी देखें ({availableCount})</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Active Trip Box (scr-004) */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md">
+                        {currentTrip?.orderCode || 'ORD-2026-9812'}
+                      </span>
+                      <span className="text-xs font-bold bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                        <span>रास्ते में (In Transit)</span>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setActiveNavTab('MY_TRIPS')}
+                      className="text-xs font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1"
+                    >
+                      <span>नेविगेशन मोड खोलें</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* 4-Step Stepper */}
+                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                    <button
+                      onClick={() => handleAdvanceActiveTrip('ACCEPTED', 1)}
+                      className={`p-2 rounded-lg border font-semibold transition-all ${
+                        activeStep >= 1
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                          : 'bg-slate-50 text-slate-400 border-slate-200'
+                      }`}
+                    >
+                      {activeStep >= 1 ? '✅' : '○'} एक्सेप्ट<br />
+                      <span className="text-[10px] font-normal">पुष्टि</span>
+                    </button>
+                    <button
+                      onClick={() => handleAdvanceActiveTrip('PICKED_UP', 2)}
+                      className={`p-2 rounded-lg border font-semibold transition-all ${
+                        activeStep >= 2
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-amber-400'
+                      }`}
+                    >
+                      {activeStep >= 2 ? '✅' : '○'} पिकअप<br />
+                      <span className="text-[10px] font-normal">FPO से</span>
+                    </button>
+                    <button
+                      onClick={() => handleAdvanceActiveTrip('IN_TRANSIT', 3)}
+                      className={`p-2 rounded-lg border font-semibold transition-all ${
+                        activeStep === 3
+                          ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                          : activeStep > 3
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-400'
+                      }`}
+                    >
+                      {activeStep === 3 ? '●' : activeStep > 3 ? '✅' : '○'} रास्ते में<br />
+                      <span className="text-[10px] font-normal">{activeStep === 3 ? 'सक्रिय' : 'ट्रांजिट'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleAdvanceActiveTrip('DELIVERED', 4)}
+                      className={`p-2 rounded-lg border font-semibold transition-all ${
+                        activeStep >= 4
+                          ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                          : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800'
+                      }`}
+                    >
+                      {activeStep >= 4 ? '🎉' : '○'} डिलीवर करें<br />
+                      <span className="text-[10px]">{activeStep >= 4 ? 'सम्पन्न' : 'अंतिम चरण'}</span>
+                    </button>
+                  </div>
+
+                  {/* Google Maps Live Snapshot */}
+                  <div className="rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
+                    <GoogleMandiMap
+                      origin={originCoords}
+                      destination={destinationCoords}
+                      transporterLocation={liveTransporterLocation}
+                      tripStatus={currentTrip?.status}
+                      height="300px"
+                      onLocationUpdate={(loc) => {
+                        if (onUpdateTripLocation && currentTrip) {
+                          onUpdateTripLocation(currentTrip.id, {
+                            lat: loc.lat,
+                            lng: loc.lng,
+                            address: 'लाइव डिवाइस GPS',
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Quick SmartMatch Preview (Top 2 Jobs) */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      <span>ताज़ा उपलब्ध नौकरियां (SmartMatch Preview)</span>
+                    </h3>
+                    <button
+                      onClick={() => setActiveNavTab('SMARTMATCH')}
+                      className="text-xs font-bold text-amber-800 hover:text-amber-900"
+                    >
+                      सभी देखें &rarr;
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {availableTrips
+                      .filter((t) => t.status === 'AVAILABLE')
+                      .slice(0, 2)
+                      .map((job) => (
+                        <div
+                          key={job.id}
+                          className="p-3.5 rounded-xl border border-slate-200 hover:border-amber-300 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                        >
+                          <div>
+                            <div className="font-bold text-slate-900">
+                              {job.produceName} ({job.quantityKg} kg)
+                            </div>
+                            <div className="text-slate-500 text-[11px] mt-0.5">
+                              📍 {job.pickupLocation} &rarr; 🏁 {job.dropLocation} ({job.distanceKm} km)
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-right">
+                              <div className="text-sm font-black text-amber-800">₹{job.fare}</div>
+                              <div className="text-[10px] text-emerald-700 font-bold">100% भुगतान</div>
+                            </div>
+                            <button
+                              onClick={() => handleAcceptJobInternal(job.id)}
+                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs"
+                            >
+                              स्वीकारें
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Rail (4 Cols) */}
+              <div className="lg:col-span-4 space-y-6">
+                {/* Feature 3 Quick Card: मेरी कमाई */}
+                <div
+                  onClick={() => setActiveNavTab('EARNINGS')}
+                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:border-amber-400 cursor-pointer transition-all space-y-3"
+                >
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>मेरी कमाई (इस महीने)</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-amber-700">₹42,850</div>
+                  <div className="grid grid-cols-3 gap-2 py-2 border-t border-slate-100 text-center text-xs">
+                    <div>
+                      <div className="font-bold text-slate-800">28</div>
+                      <div className="text-[10px] text-slate-400">कुल ट्रिप्स</div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-emerald-700">98%</div>
+                      <div className="text-[10px] text-slate-400">समय पर</div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-800">₹1,530</div>
+                      <div className="text-[10px] text-slate-400">औसत/ट्रिप</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feature 4 Quick Card: डिलीवरी परफॉरमेंस */}
+                <div
+                  onClick={() => setActiveNavTab('RATINGS')}
+                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:border-amber-400 cursor-pointer transition-all space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-800">डिलीवरी परफॉरमेंस</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full border-4 border-emerald-600 flex items-center justify-center font-bold text-emerald-800 text-sm">
+                      98%
+                    </div>
+                    <div className="text-xs space-y-0.5">
+                      <div className="font-bold text-slate-800">★ 4.8 आपकी रेटिंग</div>
+                      <div className="text-slate-400">128 ग्राहक समीक्षाएं</div>
+                      <div className="text-emerald-700 font-semibold">0 कैंसिल ट्रिप्स</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vehicle Capacity Progress */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-800">वाहन क्षमता</span>
+                    <span className="text-xs bg-slate-100 px-2 py-0.5 rounded font-mono text-slate-700 font-bold">
+                      Mini Truck
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    रजिस्ट्रेशन: <strong className="text-slate-700">UP32 AB 1234</strong>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold mb-1">
+                      <span>उपयोग में: 500 kg</span>
+                      <span className="text-slate-400">कुल: 1,000 kg</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="w-1/2 h-full bg-amber-500 rounded-full" />
+                    </div>
+                    <div className="text-[10px] text-emerald-600 font-medium mt-1">
+                      💡 500 kg क्षमता उपलब्ध है (पूलिंग संभव)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Driver Support */}
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-800">ड्राइवर सपोर्ट</div>
+                    <div className="text-slate-400 text-[11px]">24x7 सहायता उपलब्ध</div>
+                  </div>
+                  <a
+                    href="tel:1800123456"
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold flex items-center gap-1"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>कॉल करें</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+};
