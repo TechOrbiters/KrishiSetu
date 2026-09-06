@@ -17,9 +17,9 @@ export default function FPOMemberManagementPage() {
   const { fpoMembers, addFPOMember, user } = useFarmerStore();
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [name, setName] = useState<string>('');
-  const [village, setVillage] = useState<string>('बैजनाथपुर');
+  const [village, setVillage] = useState<string>('');
   const [contact, setContact] = useState<string>('');
-  const [crop, setCrop] = useState<string>('गेहूँ, आलू');
+  const [crop, setCrop] = useState<string>('');
 
   const handleCreate = () => {
     if (!name.trim()) return;
@@ -43,13 +43,13 @@ export default function FPOMemberManagementPage() {
           <div>
             <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 w-fit">
               <ShieldCheck className="w-4 h-4 text-purple-300" />
-              {user.fpoName || 'शर्मा एफपीओ (Sharma FPO)'}
+              {user.fpoName || 'किसान उत्पादक संगठन (FPO)'}
             </span>
             <h1 className="text-xl sm:text-2xl font-extrabold mt-2 leading-tight">
               FPO किसान सदस्य प्रबंधन (Member Management)
             </h1>
             <p className="text-xs text-purple-200 mt-1">
-              कुल {user.memberCount || 250} किसान सदस्य · {user.onTimePct || 98}% समयबद्धता रिकॉर्ड
+              कुल {fpoMembers.length || user.memberCount || 0} किसान सदस्य
             </p>
           </div>
 
@@ -81,20 +81,28 @@ export default function FPOMemberManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {fpoMembers.map((m) => (
-                  <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 font-bold text-slate-900">{m.name}</td>
-                    <td className="p-3 text-slate-600">{m.village}</td>
-                    <td className="p-3 text-slate-600">📞 {m.contact}</td>
-                    <td className="p-3 text-slate-800 font-semibold">{m.cropProduced}</td>
-                    <td className="p-3 font-bold text-brand-green">{m.totalHarvestKg} kg</td>
-                    <td className="p-3">
-                      <span className="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2.5 py-0.5 rounded-full">
-                        ● {m.status}
-                      </span>
+                {fpoMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-400">
+                      कोई सदस्य किसान नहीं मिला। ऊपर दिए गए बटन से नया सदस्य जोड़ें।
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  fpoMembers.map((m) => (
+                    <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-3 font-bold text-slate-900">{m.name}</td>
+                      <td className="p-3 text-slate-600">{m.village}</td>
+                      <td className="p-3 text-slate-600">📞 {m.contact}</td>
+                      <td className="p-3 text-slate-800 font-semibold">{m.cropProduced}</td>
+                      <td className="p-3 font-bold text-brand-green">{m.totalHarvestKg} kg</td>
+                      <td className="p-3">
+                        <span className="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2.5 py-0.5 rounded-full">
+                          ● {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

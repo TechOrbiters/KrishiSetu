@@ -51,7 +51,7 @@ export default function FPOInventoryPage() {
                 {listings.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-3 font-bold text-slate-900">
-                      LOT-{item.id.replace('prod_', '100')} ({item.cropNameHindi})
+                      LOT-{item.id.slice(0, 8).toUpperCase()} ({item.cropNameHindi})
                     </td>
                     <td className="p-3 font-semibold text-slate-800">{item.quantityKg} kg</td>
                     <td className="p-3 text-slate-600">{item.quantityKg - item.availableQtyKg} kg</td>

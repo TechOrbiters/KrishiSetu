@@ -45,7 +45,7 @@ export interface ProduceItem {
   locationDistrict: string;
   locationState: string;
   availability: 'TODAY' | 'TOMORROW' | 'SCHEDULED';
-  status: 'ACTIVE' | 'LOW_STOCK' | 'ORDER_RECEIVED' | 'EXPIRED' | 'SOLD_OUT';
+  status: 'ACTIVE' | 'LOW_STOCK' | 'ORDER_RECEIVED' | 'EXPIRED' | 'SOLD_OUT' | 'PAUSED' | 'INACTIVE';
   viewsCount: number;
   ordersCount: number;
   imageUrl: string;
@@ -56,6 +56,8 @@ export interface OrderItem {
   id: string;
   orderNumber: string;
   listingId: string;
+  buyerId?: string;
+  unitPrice?: number;
   cropNameHindi: string;
   cropNameEnglish: string;
   quantityKg: number;
@@ -67,7 +69,7 @@ export interface OrderItem {
   buyerLocation: string;
   buyerType: 'RETAILER' | 'HOTEL' | 'PROCESSOR' | 'CONSUMER';
   deliveryMode: 'DELIVERY_PARTNER' | 'SELF_PICKUP';
-  status: 'PLACED' | 'ACCEPTED' | 'SELF_PICKUP' | 'PACKED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
+  status: 'PLACED' | 'ACCEPTED' | 'SELF_PICKUP' | 'PACKED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED' | 'EXPIRED';
   createdAt: string;
   acceptDeadline: string; // 12h countdown
   transporterName?: string;

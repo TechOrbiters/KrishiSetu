@@ -1,26 +1,43 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CreditCard,
-  IndianRupee,
-  ShieldCheck,
-  TrendingUp,
   ArrowUpRight,
   Download,
-  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
-import { useFarmerStore } from '@/lib/store/farmerStore';
 import { formatINR } from '@/lib/domain/pricing';
+import { fetchPaymentLedger } from '@/lib/api/client';
 
 export default function PaymentsPage() {
-  const { orders } = useFarmerStore();
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    totalEarnings: 0,
+    pendingPayouts: 0,
+    totalTransactions: 0,
+    platformFee: 0,
+  });
+  const [ordersList, setOrdersList] = useState<any[]>([]);
 
-  const totalEarnings = orders.reduce((sum, o) => sum + o.productAmount, 0) + 12050;
-  const pendingPayouts = orders
-    .filter((o) => o.status === 'IN_TRANSIT' || o.status === 'ACCEPTED')
-    .reduce((sum, o) => sum + o.productAmount, 0);
+  const loadLedgerData = async () => {
+    setLoading(true);
+    const res = await fetchPaymentLedger();
+    if (res.success && res.data) {
+      if (res.data.summary) {
+        setSummary(res.data.summary);
+      }
+      if (Array.isArray(res.data.orders)) {
+        setOrdersList(res.data.orders);
+      }
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadLedgerData();
+  }, []);
 
   return (
     <FarmerLayout>
@@ -37,13 +54,23 @@ export default function PaymentsPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => alert('पेमेंट लेजर रिपोर्ट डाउनलोड की जा रही है...')}
-            className="bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            <span>रिपोर्ट डाउनलोड करें</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadLedgerData}
+              className="bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors"
+              title="Refresh ledger data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>रीफ्रेश</span>
+            </button>
+            <button
+              onClick={() => alert('पेमेंट लेजर रिपोर्ट डाउनलोड की जा रही है...')}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>रिपोर्ट डाउनलोड करें</span>
+            </button>
+          </div>
         </div>
 
         {/* Zero Transport Deduction Protection Banner */}
@@ -52,9 +79,9 @@ export default function PaymentsPage() {
             🛡️
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-sm text-emerald-300">100% पारदर्शी किसान आय गारंटी</h3>
+            <h3 className="font-bold text-sm text-emerald-300">100% पारदर्शी किसान आय गारंटी (MVP Zero Deduction)</h3>
             <p className="text-xs text-emerald-100 leading-relaxed">
-              KRISHISETU में किसान को उसकी उपज का पूरा तय मूल्य प्राप्त होता है। 
+              KRISHISETU में किसान को उसकी उपज का पूरा तय मूल्य (Quantity × Price) प्राप्त होता है। 
               परिवहन (Delivery Fee) का भुगतान खरीदार द्वारा अलग से किया जाता है। आपकी कमाई से ₹1 भी नहीं काटा जाता।
             </p>
           </div>
@@ -63,24 +90,24 @@ export default function PaymentsPage() {
         {/* 4 Revenue Summary KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-2xs space-y-1">
-            <span className="text-xs text-slate-400 font-medium block">इस माह की कुल कमाई</span>
-            <span className="text-2xl font-extrabold text-brand-green">{formatINR(totalEarnings)}</span>
+            <span className="text-xs text-slate-400 font-medium block">कुल प्राप्त कमाई (Settled)</span>
+            <span className="text-2xl font-extrabold text-brand-green">{formatINR(summary.totalEarnings)}</span>
             <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold">
               <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>↑ 18% पिछले माह से</span>
+              <span>100% प्रत्यक्ष खाता हस्तांतरण</span>
             </div>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-2xs space-y-1">
-            <span className="text-xs text-slate-400 font-medium block">लंबित भुगतान (Pending)</span>
-            <span className="text-2xl font-extrabold text-amber-600">{formatINR(pendingPayouts)}</span>
+            <span className="text-xs text-slate-400 font-medium block">लंबित भुगतान (Pending Escrow)</span>
+            <span className="text-2xl font-extrabold text-amber-600">{formatINR(summary.pendingPayouts)}</span>
             <span className="text-[11px] text-slate-400 block">डिलीवरी पूर्ण होने पर जारी</span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-2xs space-y-1">
-            <span className="text-xs text-slate-400 font-medium block">सफल लेन-देन</span>
-            <span className="text-2xl font-extrabold text-slate-900">24 ऑर्डर</span>
-            <span className="text-[11px] text-slate-400 block">100% समय पर भुगतान</span>
+            <span className="text-xs text-slate-400 font-medium block">कुल लेन-देन</span>
+            <span className="text-2xl font-extrabold text-slate-900">{summary.totalTransactions} ऑर्डर</span>
+            <span className="text-[11px] text-slate-400 block">समय पर भुगतान रिकॉर्ड</span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-2xs space-y-1">
@@ -96,44 +123,56 @@ export default function PaymentsPage() {
             लेन-देन इतिहास (Transaction Ledger)
           </h2>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                  <th className="p-3">ऑर्डर आईडी</th>
-                  <th className="p-3">दिनांक</th>
-                  <th className="p-3">खरीदार</th>
-                  <th className="p-3">फसल व मात्रा</th>
-                  <th className="p-3">फसल मूल्य (Farmer Payout)</th>
-                  <th className="p-3">परिवहन शुल्क (Buyer Paid)</th>
-                  <th className="p-3">स्थिति</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {orders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-900">#{ord.orderNumber}</td>
-                    <td className="p-3 text-slate-500">{new Date(ord.createdAt).toLocaleDateString('hi-IN')}</td>
-                    <td className="p-3 font-medium text-slate-800">{ord.buyerName} ({ord.buyerLocation})</td>
-                    <td className="p-3 text-slate-800">{ord.cropNameHindi} ({ord.quantityKg} kg)</td>
-                    <td className="p-3 font-extrabold text-brand-green text-sm">{formatINR(ord.productAmount)}</td>
-                    <td className="p-3 text-slate-600">{formatINR(ord.deliveryCharge)} (Paid by Buyer)</td>
-                    <td className="p-3">
-                      <span
-                        className={`font-bold px-2.5 py-1 rounded-full text-[10px] ${
-                          ord.status === 'DELIVERED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {ord.status === 'DELIVERED' ? '✓ खाते में जमा (Settled)' : '⏳ एस्क्रौ में सुरक्षित'}
-                      </span>
-                    </td>
+          {loading ? (
+            <div className="py-8 text-center text-slate-500 font-medium text-xs">
+              लेजर डेटा लोड हो रहा है...
+            </div>
+          ) : ordersList.length === 0 ? (
+            <div className="py-8 text-center text-slate-500 font-medium text-xs">
+              कोई लेन-देन रिकॉर्ड उपलब्ध नहीं है।
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <th className="p-3">ऑर्डर आईडी</th>
+                    <th className="p-3">दिनांक</th>
+                    <th className="p-3">फसल व मात्रा</th>
+                    <th className="p-3">फसल मूल्य (Farmer Payout)</th>
+                    <th className="p-3">परिवहन शुल्क (Paid by Buyer)</th>
+                    <th className="p-3">स्थिति</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {ordersList.map((ord) => {
+                    const productAmount = Number(ord.product_amount || (ord.quantity * ord.unit_price) || 0);
+                    const deliveryCharge = Number(ord.delivery_fee || 0);
+                    return (
+                      <tr key={ord.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3 font-bold text-slate-900">#{ord.order_number || ord.id.slice(0, 8)}</td>
+                        <td className="p-3 text-slate-500">{new Date(ord.created_at || Date.now()).toLocaleDateString('hi-IN')}</td>
+                        <td className="p-3 text-slate-800">{ord.produce_listings?.crop_name || ord.crop_name || 'उपज'} ({ord.quantity} kg)</td>
+                        <td className="p-3 font-extrabold text-brand-green text-sm">{formatINR(productAmount)}</td>
+                        <td className="p-3 text-slate-600">{formatINR(deliveryCharge)} (Paid by Buyer)</td>
+                        <td className="p-3">
+                          <span
+                            className={`font-bold px-2.5 py-1 rounded-full text-[10px] ${
+                              ord.status === 'DELIVERED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {ord.status === 'DELIVERED' ? '✓ खाते में जमा (Settled)' : '⏳ एस्क्रौ में सुरक्षित'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </FarmerLayout>

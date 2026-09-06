@@ -6,15 +6,15 @@ CREATE OR REPLACE FUNCTION accept_transport_request(
     p_transporter_id UUID
 ) RETURNS BOOLEAN AS $$
 DECLARE
-    v_status transport_status;
+    v_status text;
 BEGIN
     -- Acquire ROW LOCK on transport request
-    SELECT status INTO v_status
+    SELECT status::text INTO v_status
     FROM transport_requests
     WHERE id = p_request_id
     FOR UPDATE;
 
-    IF v_status IS NULL OR v_status NOT IN ('REQUESTED', 'BROADCAST') THEN
+    IF v_status IS NULL OR (v_status <> 'REQUESTED' AND v_status <> 'BROADCAST') THEN
         -- Already accepted by another driver or cancelled
         RETURN FALSE;
     END IF;
@@ -28,4 +28,4 @@ BEGIN
 
     RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

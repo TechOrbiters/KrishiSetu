@@ -12,16 +12,27 @@ import {
   Plus,
   Mic,
   MessageSquare,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
 import { getMarketPriceSummary } from '@/lib/api/client';
 import { MarketPriceSummaryCard } from '@/lib/types/market';
+import { useFarmerListings } from '@/lib/hooks/useFarmerListings';
+import { useFarmerOrders } from '@/lib/hooks/useFarmerOrders';
 
 export default function FarmerDashboard() {
-  const [showOverlay, setShowOverlay] = useState(false);
   const [marketSummaries, setMarketSummaries] = useState<MarketPriceSummaryCard[]>([]);
+  const { listings, loading: listingsLoading } = useFarmerListings();
+  const { orders, loading: ordersLoading } = useFarmerOrders();
+
+  const totalEarnings = orders
+    .filter((o) => o.status === 'DELIVERED' || o.status === 'ACCEPTED' || o.status === 'IN_TRANSIT')
+    .reduce((sum, o) => sum + (o.productAmount || 0), 0);
+
+  const totalQuantitySold = orders
+    .filter((o) => o.status === 'DELIVERED' || o.status === 'ACCEPTED' || o.status === 'IN_TRANSIT')
+    .reduce((sum, o) => sum + (o.quantityKg || 0), 0);
+
+  const totalOrdersCount = orders.length;
 
   useEffect(() => {
     getMarketPriceSummary().then((res) => {
@@ -34,30 +45,6 @@ export default function FarmerDashboard() {
   return (
     <FarmerLayout>
       <div className="relative space-y-5 max-w-[1000px] mx-auto select-none">
-        
-        {/* ======================================================== */}
-        {/* DEV OVERLAY MODE TOGGLE (Reference Screenshot Alignment)   */}
-        {/* ======================================================== */}
-        <div className="fixed bottom-16 sm:bottom-4 right-4 z-50 bg-slate-900/90 backdrop-blur-md text-white text-xs px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-700">
-          <button
-            onClick={() => setShowOverlay(!showOverlay)}
-            className="flex items-center gap-1.5 font-bold hover:text-emerald-400 transition-colors"
-          >
-            {showOverlay ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
-            <span>{showOverlay ? 'Hide Overlay' : 'Compare Reference Overlay'}</span>
-          </button>
-        </div>
-
-        {/* Development Overlay Image (50% Opacity) */}
-        {showOverlay && (
-          <div className="absolute inset-0 z-40 pointer-events-none opacity-50 overflow-hidden rounded-2xl border-2 border-red-500">
-            <img
-              src="/assets/kisan-setu/reference-dashboard.jpg"
-              alt="Reference Dashboard"
-              className="w-full h-auto object-top"
-            />
-          </div>
-        )}
 
         {/* ======================================================== */}
         {/* 1. FULL-WIDTH HERO BANNER                                 */}
@@ -166,109 +153,52 @@ export default function FarmerDashboard() {
 
               {/* Crop Listing Items List */}
               <div className="divide-y divide-slate-100">
-                
-                {/* Crop Item 1: Wheat */}
-                <div className="py-3 flex items-center justify-between hover:bg-slate-50/80 px-1 rounded-xl transition-all">
-                  <div className="flex items-center gap-3.5">
-                    <img
-                      src="/assets/kisan-setu/wheat.png"
-                      alt="गेहूँ"
-                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
-                    />
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-slate-900">
-                          गेहूँ <span className="text-slate-500 font-semibold text-xs">(Wheat)</span>
-                        </h4>
+                {listings.slice(0, 3).map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/farmer/listings`}
+                    className="py-3 flex items-center justify-between hover:bg-slate-50/80 px-1 rounded-xl transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <img
+                        src={item.imageUrl || '/assets/kisan-setu/wheat.png'}
+                        alt={item.cropNameHindi}
+                        className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
+                      />
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-slate-900">
+                            {item.cropNameHindi} <span className="text-slate-500 font-semibold text-xs">({item.cropNameEnglish})</span>
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-600 font-medium">
+                          {item.availableQtyKg} kg <span className="mx-1 text-slate-300">•</span> ₹{item.askingPricePerKg} / kg
+                        </p>
                       </div>
-                      <p className="text-xs text-slate-600 font-medium">
-                        500 kg <span className="mx-1 text-slate-300">•</span> ₹22 / kg
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-1 rounded-full border border-emerald-200/80">
-                      सक्रिय
-                    </span>
-
-                    <div className="text-right hidden sm:block">
-                      <span className="font-bold text-xs text-slate-900 block">12 ऑर्डर</span>
-                      <span className="text-[10px] text-slate-400 font-medium">आज अपडेट किया</span>
                     </div>
 
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
-                  </div>
-                </div>
+                    <div className="flex items-center gap-4">
+                      <span
+                        className={`text-xs px-2.5 py-1 rounded-full border font-bold ${
+                          item.status === 'ACTIVE'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                            : item.status === 'LOW_STOCK'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {item.status === 'ACTIVE' ? 'सक्रिय' : item.status === 'LOW_STOCK' ? 'कम स्टॉक' : 'निष्क्रिय'}
+                      </span>
 
-                {/* Crop Item 2: Potato */}
-                <div className="py-3 flex items-center justify-between hover:bg-slate-50/80 px-1 rounded-xl transition-all">
-                  <div className="flex items-center gap-3.5">
-                    <img
-                      src="/assets/kisan-setu/potato.png"
-                      alt="आलू"
-                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
-                    />
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-slate-900">
-                          आलू <span className="text-slate-500 font-semibold text-xs">(Potato)</span>
-                        </h4>
+                      <div className="text-right hidden sm:block">
+                        <span className="font-bold text-xs text-slate-900 block">{item.ordersCount || 0} ऑर्डर</span>
+                        <span className="text-[10px] text-slate-400 font-medium">ग्रेड {item.grade}</span>
                       </div>
-                      <p className="text-xs text-slate-600 font-medium">
-                        300 kg <span className="mx-1 text-slate-300">•</span> ₹18 / kg
-                      </p>
+
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-1 rounded-full border border-emerald-200/80">
-                      सक्रिय
-                    </span>
-
-                    <div className="text-right hidden sm:block">
-                      <span className="font-bold text-xs text-slate-900 block">8 ऑर्डर</span>
-                      <span className="text-[10px] text-slate-400 font-medium">आज अपडेट किया</span>
-                    </div>
-
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
-                  </div>
-                </div>
-
-                {/* Crop Item 3: Tomato */}
-                <div className="py-3 flex items-center justify-between hover:bg-slate-50/80 px-1 rounded-xl transition-all">
-                  <div className="flex items-center gap-3.5">
-                    <img
-                      src="/assets/kisan-setu/tomato.png"
-                      alt="टमाटर"
-                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
-                    />
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-slate-900">
-                          टमाटर <span className="text-slate-500 font-semibold text-xs">(Tomato)</span>
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 font-medium">
-                        200 kg <span className="mx-1 text-slate-300">•</span> ₹24 / kg
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="bg-amber-50 text-amber-700 font-bold text-xs px-2.5 py-1 rounded-full border border-amber-200/80">
-                      कम स्टॉक
-                    </span>
-
-                    <div className="text-right hidden sm:block">
-                      <span className="font-bold text-xs text-slate-900 block">5 ऑर्डर</span>
-                      <span className="text-[10px] text-slate-400 font-medium">1 दिन पहले अपडेट किया</span>
-                    </div>
-
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
-                  </div>
-                </div>
-
+                  </Link>
+                ))}
               </div>
 
               {/* Dashed Add Button */}
@@ -287,7 +217,7 @@ export default function FarmerDashboard() {
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="font-extrabold text-base text-slate-900">
-                  हाल के ऑर्डर
+                  हाल के ऑर्डर ({orders.length})
                 </h3>
                 <Link
                   href="/farmer/orders"
@@ -297,50 +227,53 @@ export default function FarmerDashboard() {
                 </Link>
               </div>
 
-              {/* Order 1 */}
-              <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs text-slate-700">ऑर्डर #ORD1234</span>
-                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                      पूरा
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-medium">20 मई 2024, 10:30 AM</p>
-                  <p className="text-xs font-bold text-slate-900 pt-0.5">
-                    गेहूँ <span className="text-slate-400 font-normal">•</span> 200 kg
-                  </p>
-                  <p className="text-[11px] text-slate-500 font-medium">कृषि भंडार ट्रेडर्स, लखनऊ</p>
-                </div>
+              {/* Orders List */}
+              <div className="space-y-2.5">
+                {orders.slice(0, 3).map((ord) => (
+                  <Link
+                    key={ord.id}
+                    href={`/farmer/orders`}
+                    className="p-3.5 bg-slate-50/80 hover:bg-slate-100/80 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4 transition-all"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-700">#{ord.orderNumber}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            ord.status === 'DELIVERED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : ord.status === 'IN_TRANSIT'
+                              ? 'bg-sky-100 text-sky-800'
+                              : ord.status === 'ACCEPTED'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {ord.status === 'DELIVERED'
+                            ? 'पूरा'
+                            : ord.status === 'IN_TRANSIT'
+                            ? 'डिलीवरी में'
+                            : ord.status === 'ACCEPTED'
+                            ? 'स्वीकार'
+                            : 'नया ऑर्डर'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-medium">{new Date(ord.createdAt).toLocaleDateString('hi-IN')}</p>
+                      <p className="text-xs font-bold text-slate-900 pt-0.5">
+                        {ord.cropNameHindi} <span className="text-slate-400 font-normal">•</span> {ord.quantityKg} kg
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-medium">{ord.buyerName}</p>
+                    </div>
 
-                <div className="text-right space-y-1">
-                  <span className="text-base font-black text-slate-900 block">₹4,400</span>
-                  <span className="text-[11px] text-slate-500 font-medium block">डिलीवरी: 22 मई</span>
-                  <ChevronRight className="w-4 h-4 text-slate-400 inline-block ml-auto mt-1" />
-                </div>
-              </div>
-
-              {/* Order 2 */}
-              <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs text-slate-700">ऑर्डर #ORD1233</span>
-                    <span className="bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                      डिलीवरी पर
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-medium">19 मई 2024, 04:15 PM</p>
-                  <p className="text-xs font-bold text-slate-900 pt-0.5">
-                    आलू <span className="text-slate-400 font-normal">•</span> 100 kg
-                  </p>
-                  <p className="text-[11px] text-slate-500 font-medium">फूड प्लाजा, कानपुर</p>
-                </div>
-
-                <div className="text-right space-y-1">
-                  <span className="text-base font-black text-slate-900 block">₹1,800</span>
-                  <span className="text-[11px] text-slate-500 font-medium block">डिलीवरी: 21 मई</span>
-                  <ChevronRight className="w-4 h-4 text-slate-400 inline-block ml-auto mt-1" />
-                </div>
+                    <div className="text-right space-y-1">
+                      <span className="text-base font-black text-emerald-800 block">₹{ord.productAmount.toLocaleString('en-IN')}</span>
+                      <span className="text-[10px] text-slate-400 font-medium block">
+                        {ord.deliveryMode === 'SELF_PICKUP' ? 'स्वयं पिकअप' : 'डिलीवरी पार्टनर'}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-slate-400 inline-block ml-auto mt-1" />
+                    </div>
+                  </Link>
+                ))}
               </div>
 
               {/* View All Orders Button */}
@@ -348,7 +281,7 @@ export default function FarmerDashboard() {
                 href="/farmer/orders"
                 className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center transition-colors"
               >
-                मेरे सभी ऑर्डर देखें
+                मेरे सभी ऑर्डर देखें ({orders.length})
               </Link>
             </div>
 
@@ -372,7 +305,7 @@ export default function FarmerDashboard() {
 
               <div>
                 <span className="text-3xl font-black text-slate-900 tracking-tight block">
-                  ₹28,450
+                  ₹{totalEarnings.toLocaleString('en-IN')}
                 </span>
                 <span className="text-xs text-slate-500 font-semibold block">कुल कमाई</span>
               </div>
@@ -380,9 +313,9 @@ export default function FarmerDashboard() {
               {/* Green Highlight Box with Bar Chart */}
               <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-100 flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-slate-600 font-semibold block">पिछले माह से</span>
+                  <span className="text-[11px] text-slate-600 font-semibold block">उपज बिक्री स्थिति</span>
                   <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
-                    ↑ 18% ज्यादा
+                    {totalOrdersCount > 0 ? 'सक्रिय व्यापार' : 'उपज लिस्ट करें'}
                   </span>
                 </div>
 
@@ -400,11 +333,11 @@ export default function FarmerDashboard() {
               <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                 <div>
                   <span className="text-[11px] text-slate-500 font-medium block">कुल बिक्री</span>
-                  <span className="text-sm font-black text-slate-900">1,350 kg</span>
+                  <span className="text-sm font-black text-slate-900">{totalQuantitySold.toLocaleString('en-IN')} kg</span>
                 </div>
                 <div>
                   <span className="text-[11px] text-slate-500 font-medium block">कुल ऑर्डर</span>
-                  <span className="text-sm font-black text-slate-900">24</span>
+                  <span className="text-sm font-black text-slate-900">{totalOrdersCount}</span>
                 </div>
               </div>
             </div>

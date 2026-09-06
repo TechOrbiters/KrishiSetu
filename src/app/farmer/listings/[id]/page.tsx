@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -17,35 +17,78 @@ import {
   Share2,
   X,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
 import { useFarmerStore } from '@/lib/store/farmerStore';
 import { ListingStatusBadge } from '@/components/ui/ListingStatusBadge';
 import { FreshnessTimer } from '@/components/ui/FreshnessTimer';
 import { formatINR } from '@/lib/domain/pricing';
+import { fetchListingById, updateFarmerListing, pauseFarmerListing, deleteFarmerListing } from '@/lib/api/client';
+import { ProduceItem } from '@/lib/seedData';
 
 export default function ListingDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { getListingById, orders, pauseListing, updateListing } = useFarmerStore();
+  const { getListingById, orders, refreshListings, deleteListing } = useFarmerStore();
 
-  const listing = getListingById(id);
+  const storeListing = getListingById(id);
+  const [listing, setListing] = useState<ProduceItem | null>(storeListing || null);
+  const [loading, setLoading] = useState<boolean>(!storeListing);
 
   // Edit Modal State
   const [isEditing, setIsEditing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
-    cropNameHindi: listing?.cropNameHindi || '',
-    cropNameEnglish: listing?.cropNameEnglish || '',
-    askingPricePerKg: listing?.askingPricePerKg || 0,
-    availableQtyKg: listing?.availableQtyKg || 0,
-    quantityKg: listing?.quantityKg || 0,
-    grade: listing?.grade || 'A',
-    status: listing?.status || 'ACTIVE',
-    locationVillage: listing?.locationVillage || '',
-    locationDistrict: listing?.locationDistrict || '',
+    cropNameHindi: '',
+    cropNameEnglish: '',
+    askingPricePerKg: 0,
+    availableQtyKg: 0,
+    quantityKg: 0,
+    grade: 'A',
+    status: 'ACTIVE',
+    locationVillage: '',
+    locationDistrict: '',
   });
+
+  useEffect(() => {
+    async function loadData() {
+      if (!id) return;
+      const res = await fetchListingById(id);
+      if (res.success && res.data) {
+        setListing(res.data);
+      }
+      setLoading(false);
+    }
+    loadData();
+  }, [id]);
+
+  useEffect(() => {
+    if (listing) {
+      setEditForm({
+        cropNameHindi: listing.cropNameHindi,
+        cropNameEnglish: listing.cropNameEnglish,
+        askingPricePerKg: listing.askingPricePerKg,
+        availableQtyKg: listing.availableQtyKg,
+        quantityKg: listing.quantityKg,
+        grade: listing.grade,
+        status: listing.status,
+        locationVillage: listing.locationVillage,
+        locationDistrict: listing.locationDistrict,
+      });
+    }
+  }, [listing]);
+
+  if (loading) {
+    return (
+      <FarmerLayout>
+        <div className="text-center py-16 bg-white rounded-2xl p-6 border border-slate-200">
+          <p className="text-xs text-slate-500 font-medium">लोड हो रहा है...</p>
+        </div>
+      </FarmerLayout>
+    );
+  }
 
   if (!listing) {
     return (
@@ -63,23 +106,63 @@ export default function ListingDetailsPage() {
 
   const linkedOrders = orders.filter((o) => o.listingId === listing.id);
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateListing(listing.id, {
+    const res = await updateFarmerListing(listing.id, {
+      crop_name: editForm.cropNameHindi,
       cropNameHindi: editForm.cropNameHindi,
       cropNameEnglish: editForm.cropNameEnglish,
-      askingPricePerKg: Number(editForm.askingPricePerKg),
+      price_per_kg: Number(editForm.askingPricePerKg),
+      quantity: Number(editForm.quantityKg),
       availableQtyKg: Number(editForm.availableQtyKg),
-      quantityKg: Number(editForm.quantityKg),
       grade: editForm.grade as any,
       status: editForm.status as any,
-      locationVillage: editForm.locationVillage,
-      locationDistrict: editForm.locationDistrict,
+      location_name: `${editForm.locationVillage}, ${editForm.locationDistrict}`,
     });
 
+    if (res.success && res.data) {
+      setListing((prev) => prev ? {
+        ...prev,
+        ...editForm,
+        grade: editForm.grade as 'A' | 'B' | 'C',
+        status: editForm.status as any,
+        askingPricePerKg: Number(editForm.askingPricePerKg),
+        quantityKg: Number(editForm.quantityKg),
+      } : null);
+      setToastMessage('लिस्टिंग विवरण सफलतापूर्वक अपडेट किया गया!');
+      if (refreshListings) refreshListings();
+    } else {
+      setToastMessage(`त्रुटि: ${res.error || 'अपडेट विफल'}`);
+    }
+
     setIsEditing(false);
-    setToastMessage('लिस्टिंग विवरण सफलतापूर्वक अपडेट किया गया!');
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleTogglePause = async () => {
+    const res = await pauseFarmerListing(listing.id, listing.status);
+    if (res.success) {
+      const newStatus = (listing.status === 'PAUSED' || listing.status === 'INACTIVE' ? 'ACTIVE' : 'PAUSED') as any;
+      setListing((prev) => prev ? { ...prev, status: newStatus } : null);
+      setToastMessage(`लिस्टिंग स्थिति बदलकर ${newStatus} की गई!`);
+      if (refreshListings) refreshListings();
+    } else {
+      setToastMessage(`त्रुटि: ${res.error || 'स्थिति बदलने में विफल'}`);
+    }
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('क्या आप सचमुच इस लिस्टिंग को हटाना चाहते हैं?')) return;
+    const res = await deleteFarmerListing(listing.id);
+    if (res.success) {
+      if (deleteListing) deleteListing(listing.id);
+      if (refreshListings) refreshListings();
+      router.push('/farmer/listings');
+    } else {
+      setToastMessage(`त्रुटि: ${res.error || 'हटाने में विफल'}`);
+      setTimeout(() => setToastMessage(null), 4000);
+    }
   };
 
   return (
@@ -133,11 +216,19 @@ export default function ListingDetailsPage() {
             </button>
 
             <button
-              onClick={() => pauseListing(listing.id)}
+              onClick={handleTogglePause}
               className="bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1"
             >
               <PauseCircle className="w-4 h-4" />
-              <span>{listing.status === 'EXPIRED' ? 'सक्रिय करें' : 'पॉज़ करें'}</span>
+              <span>{listing.status === 'PAUSED' || listing.status === 'INACTIVE' ? 'सक्रिय करें' : 'पॉज़ करें'}</span>
+            </button>
+
+            <button
+              onClick={handleDelete}
+              className="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>हटाएं</span>
             </button>
 
             <Link

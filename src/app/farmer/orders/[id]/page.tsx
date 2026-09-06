@@ -17,6 +17,7 @@ import { FarmerLayout } from '@/components/layout/FarmerLayout';
 import { useFarmerStore } from '@/lib/store/farmerStore';
 import { ListingStatusBadge } from '@/components/ui/ListingStatusBadge';
 import { formatINR } from '@/lib/domain/pricing';
+import { acceptFarmerOrder, rejectFarmerOrder } from '@/lib/api/client';
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -38,6 +39,16 @@ export default function OrderDetailsPage() {
       </FarmerLayout>
     );
   }
+
+  const handleAcceptOrder = async () => {
+    acceptOrder(order.id);
+    await acceptFarmerOrder(order.id);
+  };
+
+  const handleRejectOrder = async () => {
+    rejectOrder(order.id);
+    await rejectFarmerOrder(order.id);
+  };
 
   return (
     <FarmerLayout>
@@ -62,13 +73,13 @@ export default function OrderDetailsPage() {
           {order.status === 'PLACED' && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => acceptOrder(order.id)}
+                onClick={handleAcceptOrder}
                 className="bg-brand-green text-white font-bold text-xs px-4 py-2 rounded-xl hover:bg-brand-deep shadow-xs"
               >
                 ✓ स्वीकार करें
               </button>
               <button
-                onClick={() => rejectOrder(order.id)}
+                onClick={handleRejectOrder}
                 className="bg-white text-red-600 font-bold text-xs px-3 py-2 rounded-xl border border-slate-200 hover:bg-red-50"
               >
                 ✕ रद्द करें

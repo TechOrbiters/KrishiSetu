@@ -18,46 +18,126 @@ import {
   Globe,
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
+import { useFarmerStore } from '@/lib/store/farmerStore';
+import { LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function MyProfilePage() {
+  const router = useRouter();
+  const { user, logout, updateUserProfile } = useFarmerStore();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/auth/farmer');
+  };
+
+  const [isEditingPersonal, setIsEditingPersonal] = React.useState(false);
+  const [isEditingLocation, setIsEditingLocation] = React.useState(false);
+  const [personalForm, setPersonalForm] = React.useState({
+    fullName: user.fullName || '',
+    fatherOrSpouseName: user.fatherOrSpouseName || '',
+    phone: user.phone || '',
+    dob: user.dob || '',
+    gender: user.gender || 'पुरुष',
+  });
+  const [locationForm, setLocationForm] = React.useState({
+    village: user.village || '',
+    postOffice: user.postOffice || '',
+    district: user.district || '',
+    state: user.state || '',
+    pincode: user.pincode || '',
+  });
+  const [saveSuccess, setSaveSuccess] = React.useState('');
+
+  React.useEffect(() => {
+    setPersonalForm({
+      fullName: user.fullName || '',
+      fatherOrSpouseName: user.fatherOrSpouseName || '',
+      phone: user.phone || '',
+      dob: user.dob || '',
+      gender: user.gender || 'पुरुष',
+    });
+    setLocationForm({
+      village: user.village || '',
+      postOffice: user.postOffice || '',
+      district: user.district || '',
+      state: user.state || '',
+      pincode: user.pincode || '',
+    });
+  }, [user]);
+
+  const handleSavePersonal = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUserProfile(personalForm);
+    setIsEditingPersonal(false);
+    setSaveSuccess('व्यक्तिगत जानकारी सफलतापूर्वक अपडेट की गई!');
+    setTimeout(() => setSaveSuccess(''), 3000);
+  };
+
+  const handleSaveLocation = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUserProfile(locationForm);
+    setIsEditingLocation(false);
+    setSaveSuccess('स्थान विवरण सफलतापूर्वक अपडेट किया गया!');
+    setTimeout(() => setSaveSuccess(''), 3000);
+  };
+
   return (
     <FarmerLayout>
       <div className="space-y-6 max-w-5xl mx-auto pb-8">
+        {saveSuccess && (
+          <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-bold px-4 py-3 rounded-xl flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <span>{saveSuccess}</span>
+          </div>
+        )}
 
         {/* Profile Hero Card */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center gap-6">
-          {/* Avatar with Camera Icon */}
-          <div className="relative">
-            <img
-              src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300"
-              alt="रामेश जी"
-              className="w-28 h-28 rounded-full object-cover border-4 border-slate-100 shadow-sm"
-            />
-            <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center border-2 border-white shadow-xs hover:bg-emerald-700">
-              <Camera className="w-4 h-4" />
-            </button>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            {/* Avatar with Camera Icon */}
+            <div className="relative">
+              <img
+                src={user.avatarUrl || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300"}
+                alt={user.fullName || 'किसान प्रोफाइल'}
+                className="w-28 h-28 rounded-full object-cover border-4 border-slate-100 shadow-sm"
+              />
+              <button 
+                title="फोटो बदलें"
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center border-2 border-white shadow-xs hover:bg-emerald-700">
+                <Camera className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Profile Basic Information */}
+            <div className="space-y-2 text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h2 className="text-2xl font-extrabold text-slate-900">{user.fullName || 'किसान साथी'}</h2>
+                <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  {user.verificationStatus === 'VERIFIED' ? 'सत्यापित किसान' : 'सत्यापन प्रक्रियाधीन'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-center sm:justify-start gap-1.5 text-slate-600 text-sm font-semibold">
+                <span>📞</span>
+                <span>+91 {user.phone || '9876543210'}</span>
+              </div>
+
+              <div className="flex items-center justify-center sm:justify-start gap-1.5 text-slate-500 text-xs font-medium">
+                <span>📍</span>
+                <span>{user.village || 'ग्राम बहरामघाट'}, {user.district || 'बाराबंकी'}, {user.state || 'उत्तर प्रदेश'}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Profile Basic Information */}
-          <div className="space-y-2 text-center sm:text-left">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <h2 className="text-2xl font-extrabold text-slate-900">रामेश जी</h2>
-              <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                सत्यापित किसान
-              </span>
-            </div>
-
-            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-slate-600 text-sm font-semibold">
-              <span>📞</span>
-              <span>98765 43210</span>
-            </div>
-
-            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-slate-500 text-xs font-medium">
-              <span>📅</span>
-              <span>पंजीकरण तिथि: 20 मई 2024</span>
-            </div>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-extrabold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 transition-colors shadow-2xs"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>लॉगआउट करें</span>
+          </button>
         </div>
 
         {/* Tab Navigation Line */}
@@ -78,7 +158,9 @@ export default function MyProfilePage() {
                 <User className="w-4 h-4 text-emerald-700" />
                 <span>व्यक्तिगत जानकारी</span>
               </div>
-              <button className="text-xs font-bold text-emerald-700 hover:underline">
+              <button 
+                onClick={() => setIsEditingPersonal(true)}
+                className="text-xs font-bold text-emerald-700 hover:underline">
                 संपादित करें
               </button>
             </div>
@@ -86,23 +168,23 @@ export default function MyProfilePage() {
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">पूरा नाम</span>
-                <strong className="text-slate-900 font-semibold">रामेश जी</strong>
+                <strong className="text-slate-900 font-semibold">{user.fullName || 'किसान साथी'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">पिता / पति का नाम</span>
-                <strong className="text-slate-900 font-semibold">श्याम लाल</strong>
+                <strong className="text-slate-900 font-semibold">{user.fatherOrSpouseName || 'श्याम लाल'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">मोबाइल नंबर</span>
-                <strong className="text-slate-900 font-semibold">98765 43210</strong>
+                <strong className="text-slate-900 font-semibold">+91 {user.phone || '9876543210'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1 pt-2">
                 <span className="text-slate-500 font-medium">जन्म तिथि</span>
-                <strong className="text-slate-900 font-semibold">15/06/1985</strong>
+                <strong className="text-slate-900 font-semibold">{user.dob || '15/06/1985'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">लिंग</span>
-                <strong className="text-slate-900 font-semibold">पुरुष</strong>
+                <strong className="text-slate-900 font-semibold">{user.gender || 'पुरुष'}</strong>
               </div>
             </div>
           </div>
@@ -114,7 +196,9 @@ export default function MyProfilePage() {
                 <MapPin className="w-4 h-4 text-emerald-700" />
                 <span>स्थान विवरण</span>
               </div>
-              <button className="text-xs font-bold text-emerald-700 hover:underline">
+              <button 
+                onClick={() => setIsEditingLocation(true)}
+                className="text-xs font-bold text-emerald-700 hover:underline">
                 संपादित करें
               </button>
             </div>
@@ -122,27 +206,183 @@ export default function MyProfilePage() {
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">गाँव / शहर</span>
-                <strong className="text-slate-900 font-semibold">बैजनापुर</strong>
+                <strong className="text-slate-900 font-semibold">{user.village || 'बैजनापुर'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">पोस्ट ऑफिस</span>
-                <strong className="text-slate-900 font-semibold">बैजनापुर</strong>
+                <strong className="text-slate-900 font-semibold">{user.postOffice || 'बैजनापुर'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">जिला</span>
-                <strong className="text-slate-900 font-semibold">बाराबंकी</strong>
+                <strong className="text-slate-900 font-semibold">{user.district || 'बाराबंकी'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">राज्य</span>
-                <strong className="text-slate-900 font-semibold">उत्तर प्रदेश</strong>
+                <strong className="text-slate-900 font-semibold">{user.state || 'उत्तर प्रदेश'}</strong>
               </div>
               <div className="grid grid-cols-2 py-1">
                 <span className="text-slate-500 font-medium">पिन कोड</span>
-                <strong className="text-slate-900 font-semibold">221204</strong>
+                <strong className="text-slate-900 font-semibold">{user.pincode || '221204'}</strong>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Modal: Edit Personal Info */}
+        {isEditingPersonal && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">व्यक्तिगत जानकारी संपादित करें</h3>
+              <form onSubmit={handleSavePersonal} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">पूरा नाम</label>
+                  <input
+                    type="text"
+                    required
+                    value={personalForm.fullName}
+                    onChange={(e) => setPersonalForm({ ...personalForm, fullName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">पिता / पति का नाम</label>
+                  <input
+                    type="text"
+                    value={personalForm.fatherOrSpouseName}
+                    onChange={(e) => setPersonalForm({ ...personalForm, fatherOrSpouseName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">मोबाइल नंबर</label>
+                  <input
+                    type="tel"
+                    required
+                    value={personalForm.phone}
+                    onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">जन्म तिथि</label>
+                    <input
+                      type="text"
+                      placeholder="DD/MM/YYYY"
+                      value={personalForm.dob}
+                      onChange={(e) => setPersonalForm({ ...personalForm, dob: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">लिंग</label>
+                    <select
+                      value={personalForm.gender}
+                      onChange={(e) => setPersonalForm({ ...personalForm, gender: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="पुरुष">पुरुष</option>
+                      <option value="महिला">महिला</option>
+                      <option value="अन्य">अन्य</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingPersonal(false)}
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-semibold hover:bg-slate-50"
+                  >
+                    रद्द करें
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold shadow-xs"
+                  >
+                    सहेजें (Save)
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Edit Location Info */}
+        {isEditingLocation && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">स्थान विवरण संपादित करें</h3>
+              <form onSubmit={handleSaveLocation} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">गाँव / शहर</label>
+                  <input
+                    type="text"
+                    required
+                    value={locationForm.village}
+                    onChange={(e) => setLocationForm({ ...locationForm, village: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">पोस्ट ऑफिस</label>
+                  <input
+                    type="text"
+                    value={locationForm.postOffice}
+                    onChange={(e) => setLocationForm({ ...locationForm, postOffice: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">जिला</label>
+                    <input
+                      type="text"
+                      required
+                      value={locationForm.district}
+                      onChange={(e) => setLocationForm({ ...locationForm, district: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">राज्य</label>
+                    <input
+                      type="text"
+                      required
+                      value={locationForm.state}
+                      onChange={(e) => setLocationForm({ ...locationForm, state: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">पिन कोड</label>
+                  <input
+                    type="text"
+                    required
+                    value={locationForm.pincode}
+                    onChange={(e) => setLocationForm({ ...locationForm, pincode: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="flex items-center justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingLocation(false)}
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-semibold hover:bg-slate-50"
+                  >
+                    रद्द करें
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold shadow-xs"
+                  >
+                    सहेजें (Save)
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Card 3: पहचान सत्यापन */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">

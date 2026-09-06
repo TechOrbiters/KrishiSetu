@@ -199,13 +199,27 @@ export default function MasterLandingPage() {
       <header className="w-full bg-white border-b border-slate-100 px-6 sm:px-12 py-3.5 flex items-center justify-between shadow-2xs sticky top-0 z-30">
         <KisanSetuLogo />
 
-        {/* Language Pill Dropdown */}
-        <div className="relative">
-          <button className="bg-white border border-slate-200 text-slate-800 text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs">
-            <span className="text-sm">🌐</span>
-            <span>भाषा: हिन्दी</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
-          </button>
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/auth/farmer"
+            onClick={() => {
+              if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER');
+            }}
+            className="text-xs font-bold text-[#15803D] bg-[#E6F4EA] hover:bg-[#CEEAD6] px-3.5 py-1.5 rounded-xl border border-[#CEEAD6] transition-colors shadow-2xs flex items-center gap-1.5"
+          >
+            <span>👤</span>
+            <span>किसान लॉगिन / पंजीकरण</span>
+          </Link>
+
+          {/* Language Pill Dropdown */}
+          <div className="relative">
+            <button className="bg-white border border-slate-200 text-slate-800 text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs">
+              <span className="text-sm">🌐</span>
+              <span>भाषा: हिन्दी</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -289,13 +303,16 @@ export default function MasterLandingPage() {
                   <p className="text-xs text-slate-500 font-semibold mt-0.5">अपनी उपज बेचें</p>
                 </div>
               </div>
-              <Link
-                href="/auth/farmer"
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER');
+                  router.push('/auth/farmer');
+                }}
                 className="bg-[#15803D] hover:bg-[#166534] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
               >
                 <span>प्रवेश करें</span>
                 <ArrowRight className="w-4 h-4" />
-              </Link>
+              </button>
             </div>
 
             {/* 2. खरीदार (Buyer) Card */}
@@ -304,11 +321,14 @@ export default function MasterLandingPage() {
                 <BuyerIcon />
                 <div>
                   <h3 className="font-extrabold text-xl text-[#1D4ED8] leading-tight">खरीदार</h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">सीधे खरीदें</p>
+                  <p className="text-xs text-slate-500 font-semibold mt-0.5">सीधे खरीदें (Kisan Bazaar)</p>
                 </div>
               </div>
               <button
-                onClick={() => router.push('/farmer/orders')}
+                onClick={() => {
+                  if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER');
+                  router.push('/buyer');
+                }}
                 className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
               >
                 <span>प्रवेश करें</span>
@@ -322,11 +342,14 @@ export default function MasterLandingPage() {
                 <TransporterIcon />
                 <div>
                   <h3 className="font-extrabold text-xl text-[#EA580C] leading-tight">परिवहनकर्ता</h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें</p>
+                  <p className="text-xs text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें (100% Payout)</p>
                 </div>
               </div>
               <button
-                onClick={() => router.push('/farmer/delivery')}
+                onClick={() => {
+                  if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER');
+                  router.push('/transporter');
+                }}
                 className="bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
               >
                 <span>प्रवेश करें</span>
@@ -340,11 +363,14 @@ export default function MasterLandingPage() {
                 <AdminIcon />
                 <div>
                   <h3 className="font-extrabold text-xl text-[#7C3AED] leading-tight">व्यवस्थापक</h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">प्लेटफ़ॉर्म प्रबंधन करें</p>
+                  <p className="text-xs text-slate-500 font-semibold mt-0.5">Admin Operations Console</p>
                 </div>
               </div>
               <button
-                onClick={() => router.push('/farmer/fpo/members')}
+                onClick={() => {
+                  if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN');
+                  router.push('/admin');
+                }}
                 className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors flex-shrink-0 shadow-xs"
               >
                 <span>प्रवेश करें</span>

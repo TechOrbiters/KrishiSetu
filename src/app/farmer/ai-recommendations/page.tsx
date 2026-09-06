@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ChevronRight,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
 import {
@@ -21,16 +22,59 @@ import {
   computeMarketPilotAdvice,
 } from '@/lib/domain/aiEngine';
 import { formatINR } from '@/lib/domain/pricing';
+import { fetchDemandSense, fetchSellSmart, fetchMarketPilot } from '@/lib/api/client';
 
 export default function AIRecommendationsPage() {
   const [selectedCrop, setSelectedCrop] = useState<string>('Tomato');
   const [quantityKg, setQuantityKg] = useState<number>(500);
   const [askingPrice, setAskingPrice] = useState<number>(24);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const demandSense = computeDemandSense(selectedCrop, 'Lucknow');
+  const [demandSense, setDemandSense] = useState<any>(() => computeDemandSense('Tomato', 'Lucknow'));
+  const [sellSmartData, setSellSmartData] = useState<any>(() => ({
+    sellingOptions: computeSellSmartOptions('Tomato', 500, 24),
+  }));
+  const [marketPilot, setMarketPilot] = useState<any>(() => computeMarketPilotAdvice('Tomato', 24));
   const matches = computeSmartMatch(askingPrice, quantityKg, selectedCrop);
-  const sellSmartOptions = computeSellSmartOptions(selectedCrop, quantityKg, askingPrice);
-  const marketPilot = computeMarketPilotAdvice(selectedCrop, 24);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadRealAiRecommendations() {
+      setIsLoading(true);
+      try {
+        const [dsRes, ssRes, mpRes] = await Promise.all([
+          fetchDemandSense(selectedCrop, 'Barabanki'),
+          fetchSellSmart(selectedCrop, quantityKg, askingPrice, 'Barabanki'),
+          fetchMarketPilot(selectedCrop, 24, quantityKg, 'Barabanki'),
+        ]);
+
+        if (isMounted) {
+          if (dsRes.success && dsRes.data?.forecast) {
+            setDemandSense({
+              ...dsRes.data.forecast,
+              confidencePct: dsRes.data.confidence,
+              fallbackUsed: dsRes.data.fallbackUsed,
+            });
+          }
+          if (ssRes.success && ssRes.data?.sellingOptions) {
+            setSellSmartData(ssRes.data);
+          }
+          if (mpRes.success && mpRes.data?.action) {
+            setMarketPilot(mpRes.data);
+          }
+        }
+      } catch (err) {
+        console.warn('AI fetch fallback triggered:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadRealAiRecommendations();
+    return () => { isMounted = false; };
+  }, [selectedCrop, quantityKg, askingPrice]);
+
+  const sellSmartOptions = sellSmartData.sellingOptions || computeSellSmartOptions(selectedCrop, quantityKg, askingPrice);
 
   return (
     <FarmerLayout>
@@ -152,7 +196,7 @@ export default function AIRecommendationsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {sellSmartOptions.map((opt) => (
+            {sellSmartOptions.map((opt: any) => (
               <div
                 key={opt.id}
                 className={`p-4 rounded-xl border transition-all relative ${
@@ -172,12 +216,12 @@ export default function AIRecommendationsPage() {
                 <div className="mt-3 pt-3 border-t border-slate-100">
                   <span className="text-[11px] text-slate-400 block">अनुमानित किसान आय (Farmer Revenue)</span>
                   <span className="text-xl font-extrabold text-brand-green">
-                    {formatINR(opt.estimatedRevenue.farmerRevenue)}
+                    {formatINR(opt.farmerRevenue || opt.estimatedRevenue?.farmerRevenue || 0)}
                   </span>
                 </div>
 
                 <div className="mt-2 text-[11px] text-slate-500 space-y-1">
-                  {opt.whyThisOption.map((reason, i) => (
+                  {(opt.whyThisOption || []).map((reason: string, i: number) => (
                     <div key={i} className="flex items-center gap-1 text-slate-700">
                       <CheckCircle className="w-3 h-3 text-emerald-600 flex-shrink-0" />
                       <span>{reason}</span>

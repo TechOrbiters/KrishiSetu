@@ -1,17 +1,25 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { firebaseAuth } from '../firebase/client';
+import { getFirebaseBearerToken, logoutFirebase } from '../firebase/authClient';
+import {
+  fetchFarmerProfile,
+  fetchFarmerListings,
+  fetchFarmerOrders,
+  acceptFarmerOrder,
+  rejectFarmerOrder,
+  updateFarmerListing,
+  deleteFarmerListing,
+  pauseFarmerListing,
+} from '../api/client';
 import {
   UserProfile,
   ProduceItem,
   OrderItem,
   MarketPriceItem,
   FPOMemberItem,
-  INITIAL_USER,
-  INITIAL_PRODUCE,
-  INITIAL_ORDERS,
-  INITIAL_MARKET_PRICES,
-  INITIAL_FPO_MEMBERS,
 } from '../seedData';
 
 interface FarmerStoreContextType {
@@ -23,28 +31,132 @@ interface FarmerStoreContextType {
   notificationsCount: number;
   isOffline: boolean;
   toggleEntityKind: () => void;
-  addListing: (listing: Omit<ProduceItem, 'id' | 'farmerId' | 'viewsCount' | 'ordersCount' | 'updatedAt'>) => string;
-  updateListing: (id: string, updates: Partial<ProduceItem>) => void;
-  deleteListing: (id: string) => void;
-  pauseListing: (id: string) => void;
-  acceptOrder: (orderId: string) => void;
-  rejectOrder: (orderId: string) => void;
+  addListing: (listing: any) => string;
+  updateListing: (id: string, updates: Partial<ProduceItem>) => Promise<void> | void;
+  deleteListing: (id: string) => Promise<void> | void;
+  pauseListing: (id: string) => Promise<void> | void;
+  acceptOrder: (orderId: string) => void | Promise<void>;
+  rejectOrder: (orderId: string) => void | Promise<void>;
   addFPOMember: (member: Omit<FPOMemberItem, 'id' | 'joinedDate'>) => void;
   aggregateFPOLot: (memberIds: string[], crop: string) => void;
+  updateUserProfile: (updates: Partial<UserProfile>) => void;
+  loadProfileFromSupabase: () => Promise<void>;
+  refreshListings: () => Promise<void>;
+  logout: () => Promise<void>;
   getListingById: (id: string) => ProduceItem | undefined;
   getOrderById: (id: string) => OrderItem | undefined;
 }
 
+const EMPTY_USER: UserProfile = {
+  id: '',
+  fullName: 'किसान साथी',
+  fatherOrSpouseName: '',
+  phone: '',
+  dob: '',
+  gender: 'पुरुष',
+  role: 'FARMER_FPO',
+  entityKind: 'farmer',
+  verificationStatus: 'PENDING',
+  aadhaarLast4: '',
+  registrationDate: new Date().toISOString(),
+  avatarUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300',
+  village: 'ग्राम बहरामघाट',
+  postOffice: '',
+  district: 'बाराबंकी',
+  state: 'उत्तर प्रदेश',
+  pincode: '225001',
+  fpoName: '',
+  memberCount: 0,
+  onTimePct: 100,
+};
+
 const FarmerStoreContext = createContext<FarmerStoreContextType | undefined>(undefined);
 
 export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile>(INITIAL_USER);
-  const [listings, setListings] = useState<ProduceItem[]>(INITIAL_PRODUCE);
-  const [orders, setOrders] = useState<OrderItem[]>(INITIAL_ORDERS);
-  const [marketPrices] = useState<MarketPriceItem[]>(INITIAL_MARKET_PRICES);
-  const [fpoMembers, setFpoMembers] = useState<FPOMemberItem[]>(INITIAL_FPO_MEMBERS);
-  const [notificationsCount] = useState<number>(3);
+  const [user, setUser] = useState<UserProfile>(EMPTY_USER);
+  const [listings, setListings] = useState<ProduceItem[]>([]);
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [marketPrices] = useState<MarketPriceItem[]>([]);
+  const [fpoMembers, setFpoMembers] = useState<FPOMemberItem[]>([]);
+  const [notificationsCount] = useState<number>(0);
   const [isOffline] = useState<boolean>(false);
+
+  const loadProfileFromSupabase = async () => {
+    try {
+      const res = await fetchFarmerProfile();
+      if (res.success && res.data?.user) {
+        setUser((prev) => {
+          const merged = { ...prev, ...res.data!.user };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('krishi_user_profile', JSON.stringify(merged));
+          }
+          return merged;
+        });
+      }
+    } catch (err) {
+      console.warn('Profile load note:', err);
+    }
+  };
+
+  const refreshListings = async () => {
+    try {
+      const res = await fetchFarmerListings();
+      if (res.success && Array.isArray(res.data)) {
+        setListings(res.data);
+      }
+    } catch (err) {
+      console.warn('refreshListings error:', err);
+    }
+  };
+
+  const loadDataFromSupabase = async () => {
+    try {
+      await loadProfileFromSupabase();
+      const [listingsRes, ordersRes] = await Promise.all([
+        fetchFarmerListings(),
+        fetchFarmerOrders(),
+      ]);
+      if (listingsRes.success && Array.isArray(listingsRes.data)) {
+        setListings(listingsRes.data);
+      }
+      if (ordersRes.success && Array.isArray(ordersRes.data)) {
+        setOrders(ordersRes.data);
+      }
+    } catch (err) {
+      console.warn('Store hydration note:', err);
+    }
+  };
+
+  const logout = async () => {
+    await logoutFirebase();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('krishi_user_profile');
+    }
+    setUser(EMPTY_USER);
+    setListings([]);
+    setOrders([]);
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('krishi_user_profile');
+      if (cached) {
+        try {
+          setUser(JSON.parse(cached));
+        } catch (e) {}
+      }
+      loadDataFromSupabase();
+
+      if (firebaseAuth && typeof onAuthStateChanged === 'function') {
+        const unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser) => {
+          if (fbUser) {
+            await loadDataFromSupabase();
+          }
+        });
+        return () => unsubscribe();
+      }
+    }
+  }, []);
 
   const toggleEntityKind = () => {
     setUser((prev) => ({
@@ -53,41 +165,59 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }));
   };
 
-  const addListing = (
-    newListingData: Omit<ProduceItem, 'id' | 'farmerId' | 'viewsCount' | 'ordersCount' | 'updatedAt'>
-  ): string => {
-    const id = `prod_${Date.now()}`;
+  const addListing = (newListingData: any): string => {
+    const id = newListingData.id || crypto.randomUUID();
     const newListing: ProduceItem = {
       ...newListingData,
       id,
-      farmerId: user.id,
-      viewsCount: 1,
-      ordersCount: 0,
-      updatedAt: 'अभी अभी',
+      farmerId: newListingData.farmerId || user.id,
+      viewsCount: newListingData.viewsCount || 0,
+      ordersCount: newListingData.ordersCount || 0,
+      updatedAt: newListingData.updatedAt || new Date().toISOString(),
     };
-    setListings((prev) => [newListing, ...prev]);
+    setListings((prev) => [newListing, ...prev.filter((item) => item.id !== id)]);
     return id;
   };
 
-  const updateListing = (id: string, updates: Partial<ProduceItem>) => {
+  const updateListing = async (id: string, updates: Partial<ProduceItem>) => {
     setListings((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates, updatedAt: 'अभी अपडेट' } : item))
+      prev.map((item) => (item.id === id ? { ...item, ...updates, updatedAt: new Date().toISOString() } : item))
     );
+    try {
+      await updateFarmerListing(id, updates);
+      await refreshListings();
+    } catch (e) {
+      console.warn('Update listing sync note:', e);
+    }
   };
 
-  const deleteListing = (id: string) => {
+  const deleteListing = async (id: string) => {
     setListings((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await deleteFarmerListing(id);
+      await refreshListings();
+    } catch (e) {
+      console.warn('Delete listing sync note:', e);
+    }
   };
 
-  const pauseListing = (id: string) => {
+  const pauseListing = async (id: string) => {
+    const current = listings.find((l) => l.id === id);
+    const newStatus = current?.status === 'PAUSED' || current?.status === 'INACTIVE' ? 'ACTIVE' : 'PAUSED';
     setListings((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, status: item.status === 'EXPIRED' ? 'ACTIVE' : 'EXPIRED' } : item
+        item.id === id ? { ...item, status: newStatus } : item
       )
     );
+    try {
+      await pauseFarmerListing(id, current?.status || 'ACTIVE');
+      await refreshListings();
+    } catch (e) {
+      console.warn('Pause listing sync note:', e);
+    }
   };
 
-  const acceptOrder = (orderId: string) => {
+  const acceptOrder = async (orderId: string) => {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
@@ -95,23 +225,33 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
           return {
             ...ord,
             status: isDelivery ? 'IN_TRANSIT' : 'ACCEPTED',
-            transporterName: isDelivery ? 'संदीप कुमार' : undefined,
-            transporterPhone: isDelivery ? '98123 45678' : undefined,
-            vehicleDetails: isDelivery ? 'UP32 AB 1234 (छोटा ट्रक)' : undefined,
-            trackingEta: isDelivery ? '03:30 PM (2घं 10मि)' : undefined,
-            distanceKm: isDelivery ? 24 : 0,
-            freshnessRemainingHours: 20,
           };
         }
         return ord;
       })
     );
+
+    try {
+      await acceptFarmerOrder(orderId);
+      const res = await fetchFarmerOrders();
+      if (res.success && res.data) setOrders(res.data);
+    } catch (e) {
+      console.warn('Accept order API sync note:', e);
+    }
   };
 
-  const rejectOrder = (orderId: string) => {
+  const rejectOrder = async (orderId: string) => {
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, status: 'CANCELLED' } : ord))
     );
+
+    try {
+      await rejectFarmerOrder(orderId);
+      const res = await fetchFarmerOrders();
+      if (res.success && res.data) setOrders(res.data);
+    } catch (e) {
+      console.warn('Reject order API sync note:', e);
+    }
   };
 
   const addFPOMember = (member: Omit<FPOMemberItem, 'id' | 'joinedDate'>) => {
@@ -149,6 +289,16 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   };
 
+  const updateUserProfile = (updates: Partial<UserProfile>) => {
+    setUser((prev) => {
+      const merged = { ...prev, ...updates };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('krishi_user_profile', JSON.stringify(merged));
+      }
+      return merged;
+    });
+  };
+
   const getListingById = (id: string) => listings.find((l) => l.id === id);
   const getOrderById = (id: string) => orders.find((o) => o.id === id);
 
@@ -171,6 +321,10 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
         rejectOrder,
         addFPOMember,
         aggregateFPOLot,
+        updateUserProfile,
+        loadProfileFromSupabase,
+        refreshListings,
+        logout,
         getListingById,
         getOrderById,
       }}

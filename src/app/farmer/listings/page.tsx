@@ -19,12 +19,21 @@ import {
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
 import { useFarmerStore } from '@/lib/store/farmerStore';
+import { useFarmerListings } from '@/lib/hooks/useFarmerListings';
 import { ListingStatusBadge } from '@/components/ui/ListingStatusBadge';
 import { FreshnessTimer } from '@/components/ui/FreshnessTimer';
 import { ProduceItem } from '@/lib/seedData';
 
 export default function MyListingsPage() {
-  const { listings, deleteListing, pauseListing, updateListing } = useFarmerStore();
+  const { listings, deleteListing, pauseListing, updateListing, loading, error, refetch } = useFarmerListings();
+  const { orders } = useFarmerStore();
+
+  const totalViews = listings.reduce((sum, item) => sum + (item.viewsCount || 0), 0);
+  const totalOrdersCount = orders.length;
+  const totalSalesValue = orders
+    .filter((o) => o.status === 'DELIVERED')
+    .reduce((sum, o) => sum + (o.productAmount || 0), 0);
+
   const [activeTab, setActiveTab] = useState<'ALL' | 'ACTIVE' | 'LOW_STOCK' | 'EXPIRED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -70,24 +79,29 @@ export default function MyListingsPage() {
     });
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingListing) return;
 
-    updateListing(editingListing.id, {
+    const res = await updateListing(editingListing.id, {
+      crop_name: editForm.cropNameHindi,
       cropNameHindi: editForm.cropNameHindi,
       cropNameEnglish: editForm.cropNameEnglish,
-      askingPricePerKg: Number(editForm.askingPricePerKg),
+      price_per_kg: Number(editForm.askingPricePerKg),
+      quantity: Number(editForm.quantityKg),
       availableQtyKg: Number(editForm.availableQtyKg),
-      quantityKg: Number(editForm.quantityKg),
       grade: editForm.grade,
       status: editForm.status,
       locationVillage: editForm.locationVillage,
       locationDistrict: editForm.locationDistrict,
     });
 
+    if (res && res.success === false) {
+      setToastMessage(`त्रुटि: ${res.error || 'अपडेट नहीं हो सका'}`);
+    } else {
+      setToastMessage(`"${editForm.cropNameHindi}" लिस्टिंग सफलतापूर्वक अपडेट की गई!`);
+    }
     setEditingListing(null);
-    setToastMessage(`"${editForm.cropNameHindi}" लिस्टिंग सफलतापूर्वक अपडेट की गई!`);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -102,8 +116,8 @@ export default function MyListingsPage() {
             : item.status === 'EXPIRED' || item.status === 'SOLD_OUT';
 
     const matchesSearch =
-      item.cropNameHindi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.cropNameEnglish.toLowerCase().includes(searchQuery.toLowerCase());
+      (item.cropNameHindi || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.cropNameEnglish || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesTab && matchesSearch;
   });
@@ -159,7 +173,7 @@ export default function MyListingsPage() {
             </div>
             <div>
               <span className="text-xs text-slate-400 font-medium block">कुल व्यू (7 दिन)</span>
-              <span className="text-lg font-extrabold text-slate-900">245 बार</span>
+              <span className="text-lg font-extrabold text-slate-900">{totalViews} बार</span>
             </div>
           </div>
 
@@ -169,7 +183,7 @@ export default function MyListingsPage() {
             </div>
             <div>
               <span className="text-xs text-slate-400 font-medium block">कुल ऑर्डर</span>
-              <span className="text-lg font-extrabold text-slate-900">8 ऑर्डर</span>
+              <span className="text-lg font-extrabold text-slate-900">{totalOrdersCount} ऑर्डर</span>
             </div>
           </div>
 
@@ -179,7 +193,7 @@ export default function MyListingsPage() {
             </div>
             <div>
               <span className="text-xs text-slate-400 font-medium block">कुल बिक्री मूल्य</span>
-              <span className="text-lg font-extrabold text-emerald-700">₹28,450</span>
+              <span className="text-lg font-extrabold text-emerald-700">₹{totalSalesValue.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>
@@ -319,7 +333,7 @@ export default function MyListingsPage() {
                     </Link>
 
                     <button
-                      onClick={() => pauseListing(item.id)}
+                      onClick={() => pauseListing(item.id, item.status)}
                       className="bg-white text-slate-700 hover:bg-slate-100 font-bold text-xs p-2 rounded-xl border border-slate-200 transition-colors"
                       title="पॉज़ / सक्रिय करें"
                     >

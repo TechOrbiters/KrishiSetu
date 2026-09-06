@@ -25,3 +25,7 @@ yarn-error.log*
 # IDE / System
 .DS_Store
 *.pem
+
+# Scratch & temporary development scripts
+scratch/
+

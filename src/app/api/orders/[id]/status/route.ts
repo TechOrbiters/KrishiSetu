@@ -51,6 +51,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         .eq('id', orderId);
     }
 
+    // Invariant R-012: On farmer acceptance of a delivery order, auto-create transport request
+    if (newStatus === 'ACCEPTED' && order && order.delivery_method !== 'SELF_PICKUP') {
+      const fareAmount = Number(order.delivery_fee || 500);
+      const distanceKm = Number(order.distance_km || 15);
+
+      const { error: transportErr } = await supabaseAdmin
+        .from('transport_requests')
+        .insert({
+          order_id: order.id,
+          fare_amount: fareAmount,
+          distance_km: distanceKm,
+          status: 'REQUESTED',
+          created_at: new Date().toISOString(),
+        });
+
+      if (transportErr) {
+        console.warn('Transport request auto-creation note:', transportErr.message);
+      }
+    }
+
     // If order is CANCELLED or EXPIRED, restore inventory back to listing
     if ((newStatus === 'CANCELLED' || newStatus === 'EXPIRED') && order) {
       await supabaseAdmin.rpc('restore_listing_quantity', {

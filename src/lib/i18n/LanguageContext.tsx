@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+const LANG_STORAGE_KEY = 'krishisetu_language';
 
 export type LanguageCode = 'hi' | 'en' | 'ta' | 'te' | 'mr';
 
@@ -55,7 +57,28 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<LanguageCode>('hi');
+  const [language, setLanguageState] = useState<LanguageCode>('hi');
+
+  // Read persisted language on client mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LANG_STORAGE_KEY) as LanguageCode | null;
+      if (stored && languages.some((l) => l.code === stored)) {
+        setLanguageState(stored);
+      }
+    } catch {
+      // localStorage unavailable in SSR / private browsing — silent fallback
+    }
+  }, []);
+
+  const setLanguage = (lang: LanguageCode) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, lang);
+    } catch {
+      // silent
+    }
+  };
 
   const t = (key: string): string => {
     return translations[language]?.[key] || translations['hi']?.[key] || key;

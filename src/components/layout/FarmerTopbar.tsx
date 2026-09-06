@@ -1,14 +1,45 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Sun, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MapPin, Sun, Cloud, CloudRain, CloudLightning, CloudFog, ChevronDown } from 'lucide-react';
 import { useFarmerStore } from '@/lib/store/farmerStore';
+import { fetchWeatherData, WeatherData } from '@/lib/api/client';
+
+function getWeatherIcon(condition?: string) {
+  const cond = condition?.toLowerCase() || '';
+  if (cond.includes('rain') || cond.includes('drizzle')) {
+    return <CloudRain className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 fill-blue-100 flex-shrink-0" />;
+  }
+  if (cond.includes('thunder')) {
+    return <CloudLightning className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 fill-amber-100 flex-shrink-0" />;
+  }
+  if (cond.includes('cloud')) {
+    return <Cloud className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 fill-slate-100 flex-shrink-0" />;
+  }
+  if (cond.includes('fog') || cond.includes('mist') || cond.includes('haze')) {
+    return <CloudFog className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 flex-shrink-0" />;
+  }
+  return <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-amber-100 flex-shrink-0" />;
+}
 
 export const FarmerTopbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, notificationsCount } = useFarmerStore();
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchWeatherData().then((res) => {
+      if (isMounted && res.success && res.data) {
+        setWeather(res.data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const getPageTitle = () => {
     if (pathname.includes('/profile'))       return 'मेरा प्रोफाइल';
@@ -76,9 +107,14 @@ export const FarmerTopbar: React.FC = () => {
         </button>
 
         {/* Weather Widget Pill */}
-        <div className="bg-white border border-slate-200 text-slate-800 text-xs font-semibold px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl flex items-center gap-1.5 shadow-2xs">
-          <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-amber-100 flex-shrink-0" />
-          <span className="font-extrabold text-xs sm:text-sm text-slate-900">32°C</span>
+        <div 
+          className="bg-white border border-slate-200 text-slate-800 text-xs font-semibold px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl flex items-center gap-1.5 shadow-2xs transition-all hover:bg-slate-50 cursor-default"
+          title={weather ? `${weather.city}: ${weather.conditionHindi} (${weather.condition}) | आर्द्रता: ${weather.humidity}% | हवा: ${weather.windSpeed} km/h` : 'मौसम लोड हो रहा है...'}
+        >
+          {getWeatherIcon(weather?.condition)}
+          <span className="font-extrabold text-xs sm:text-sm text-slate-900">
+            {weather ? `${weather.temp}°C` : '32°C'}
+          </span>
         </div>
 
         {/* Notification Bell Badge */}
@@ -94,3 +130,4 @@ export const FarmerTopbar: React.FC = () => {
     </header>
   );
 };
+

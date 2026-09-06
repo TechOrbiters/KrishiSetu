@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyFirebaseToken } from './firebaseAdmin';
 
-export type UserRole = 'FARMER' | 'BUYER' | 'TRANSPORTER' | 'FPO_ADMIN';
+export type UserRole = 'FARMER' | 'BUYER' | 'TRANSPORTER' | 'FPO_ADMIN' | 'FARMER_FPO' | 'ADMIN';
 
 export interface AuthenticatedUser {
   uid: string;
@@ -24,20 +24,27 @@ export async function authenticateRequest(req: NextRequest, allowedRoles?: UserR
   const token = authHeader.split('Bearer ')[1];
   try {
     const decoded = await verifyFirebaseToken(token);
+    const role: UserRole = (decoded as any).role || 'FARMER_FPO';
     const user: AuthenticatedUser = {
       uid: decoded.uid,
       phone: decoded.phone_number || '+910000000000',
-      role: (decoded as any).role || 'FARMER',
+      role,
       isDemo: (decoded as any).isDemo,
     };
 
-    if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-      return {
-        errorResponse: NextResponse.json(
-          { success: false, error: `Forbidden: Role '${user.role}' is not authorized for this endpoint` },
-          { status: 403 }
-        ),
-      };
+    if (allowedRoles && allowedRoles.length > 0) {
+      const isAllowed = allowedRoles.includes(role) || 
+        (allowedRoles.includes('FARMER') && (role === 'FARMER_FPO' || role === 'FARMER')) ||
+        (allowedRoles.includes('FARMER_FPO') && (role === 'FARMER' || role === 'FARMER_FPO'));
+        
+      if (!isAllowed) {
+        return {
+          errorResponse: NextResponse.json(
+            { success: false, error: `Forbidden: Role '${role}' is not authorized for this endpoint` },
+            { status: 403 }
+          ),
+        };
+      }
     }
 
     return { user };
