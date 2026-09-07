@@ -184,30 +184,28 @@ export class MarketPriceService {
 
     lastSyncTimestamp = new Date().toISOString();
 
-    // Persist to Supabase PostgreSQL table `market_prices` (if available)
+    // Persist to Supabase PostgreSQL table `market_prices` (aligned schema)
     try {
       const dbPayload = newRecords.map((r) => ({
-        commodity: r.commodity,
-        variety: r.variety,
-        grade: r.grade,
-        state: r.state,
+        crop_name: r.commodity,
         district: r.district,
-        market: r.market,
-        min_price: r.minPrice,
-        max_price: r.maxPrice,
-        modal_price: r.modalPrice,
-        unit: r.unit,
-        price_date: r.priceDate,
-        source: r.source,
-        fetched_at: r.fetchedAt,
+        mandi_name: r.market,
+        modal_price_per_kg: r.pricePerKg,
+        min_price_per_kg: Math.round((r.minPrice / 100) * 10) / 10,
+        max_price_per_kg: Math.round((r.maxPrice / 100) * 10) / 10,
+        recorded_at: r.priceDate,
       }));
 
-      await supabaseAdmin.from('market_prices').upsert(dbPayload, {
-        onConflict: 'state,district,market,commodity,variety,price_date',
-        ignoreDuplicates: false,
-      });
+      if (dbPayload.length > 0) {
+        const { error: dbError } = await supabaseAdmin
+          .from('market_prices')
+          .insert(dbPayload);
+        if (dbError) {
+          console.warn('[MarketPriceService] Supabase insert warning:', dbError.message);
+        }
+      }
     } catch (dbErr: any) {
-      console.warn('[MarketPriceService] Supabase upsert notice:', dbErr.message);
+      console.warn('[MarketPriceService] Supabase sync notice:', dbErr.message);
     }
 
     return {
@@ -233,7 +231,7 @@ export class MarketPriceService {
 
     let filtered = [...memoryStore];
 
-    if (filters.state && filters.state !== 'सभी राज्य') {
+    if (filters.state && filters.state !== 'सभी राज्य' && filters.state !== 'ALL') {
       const st = filters.state.toLowerCase();
       filtered = filtered.filter((r) => r.state.toLowerCase().includes(st));
     }
@@ -248,11 +246,32 @@ export class MarketPriceService {
       filtered = filtered.filter((r) => r.market.toLowerCase().includes(mkt));
     }
 
-    if (filters.commodity && filters.commodity !== 'सभी फसलें') {
+    if (filters.commodity && filters.commodity !== 'सभी फसलें' && filters.commodity !== 'ALL') {
       const cmd = filters.commodity.toLowerCase();
       filtered = filtered.filter(
         (r) => r.commodity.toLowerCase().includes(cmd) || cmd.includes(r.commodity.toLowerCase())
       );
+    }
+
+    // If specific filter resulted in 0 matches in memoryStore, try dynamic live fetch
+    if (filtered.length === 0 && (filters.district || filters.commodity)) {
+      const liveFetch = await activeDataGovProvider.fetchPrices({
+        state: filters.state || 'Uttar Pradesh',
+        district: filters.district,
+        commodity: filters.commodity,
+        limit: filters.limit || 50,
+      });
+      if (liveFetch.success && liveFetch.records.length > 0) {
+        for (const rec of liveFetch.records) {
+          const idx = memoryStore.findIndex((m) => m.id === rec.id);
+          if (idx >= 0) {
+            memoryStore[idx] = rec;
+          } else {
+            memoryStore.unshift(rec);
+          }
+        }
+        filtered = liveFetch.records;
+      }
     }
 
     const limit = filters.limit || 20;
@@ -278,21 +297,28 @@ export class MarketPriceService {
   async getSummaryCards(): Promise<MarketPriceSummaryCard[]> {
     const { prices } = await this.getMarketPrices({ limit: 50 });
 
-    const keyCrops = [
-      { name: 'Wheat', hindi: 'गेहूँ', img: CROP_IMAGES.wheat },
-      { name: 'Potato', hindi: 'आलू', img: CROP_IMAGES.potato },
-      { name: 'Paddy(Common)', hindi: 'धान (साधारण)', img: CROP_IMAGES.paddy },
-      { name: 'Mustard', hindi: 'सरसों', img: CROP_IMAGES.mustard },
+    const targetCrops = [
+      { key: 'wheat', hindi: 'गेहूँ', img: CROP_IMAGES.wheat },
+      { key: 'potato', hindi: 'आलू', img: CROP_IMAGES.potato },
+      { key: 'paddy', hindi: 'धान (साधारण)', img: CROP_IMAGES.paddy },
+      { key: 'mustard', hindi: 'सरसों', img: CROP_IMAGES.mustard },
+      { key: 'tomato', hindi: 'टमाटर', img: CROP_IMAGES.tomato },
+      { key: 'onion', hindi: 'प्याज', img: CROP_IMAGES.onion },
+      { key: 'garlic', hindi: 'लहसुन', img: CROP_IMAGES.garlic },
+      { key: 'gram', hindi: 'चना', img: CROP_IMAGES.gram },
     ];
 
     const cards: MarketPriceSummaryCard[] = [];
+    const usedCropKeys = new Set<string>();
 
-    for (const cropObj of keyCrops) {
-      const match = prices.find((p) =>
-        p.commodity.toLowerCase().includes(cropObj.name.toLowerCase())
-      ) || prices[0];
+    for (const cropObj of targetCrops) {
+      if (cards.length >= 4) break;
+      const match = prices.find(
+        (p) => p.commodity.toLowerCase().includes(cropObj.key) && !usedCropKeys.has(cropObj.key)
+      );
 
       if (match) {
+        usedCropKeys.add(cropObj.key);
         const modalPrice = match.modalPrice;
         const changeVal = match.change ?? 20;
         const trend = changeVal >= 0 ? 'UP' : 'DOWN';
@@ -300,7 +326,7 @@ export class MarketPriceService {
 
         cards.push({
           crop: cropObj.hindi,
-          mandi: match.market || 'लखनऊ मंडी',
+          mandi: match.market || `${match.district || 'लखनऊ'} मंडी`,
           modalPrice,
           minPrice: match.minPrice,
           maxPrice: match.maxPrice,
@@ -308,9 +334,38 @@ export class MarketPriceService {
           changeText: `${trend === 'UP' ? '↑' : '↓'} ${Math.abs(changeVal)} (${trendPercent}%)`,
           trend,
           trendPercent,
-          cropImage: cropObj.img,
+          cropImage: cropObj.img || match.cropImage || CROP_IMAGES.wheat,
           updatedAt: match.rawArrivalDate || 'आज',
         });
+      }
+    }
+
+    // If fewer than 4 cards matched target list, fill with any top distinct commodities from prices
+    if (cards.length < 4) {
+      for (const p of prices) {
+        if (cards.length >= 4) break;
+        const commLower = p.commodity.toLowerCase();
+        if (!usedCropKeys.has(commLower)) {
+          usedCropKeys.add(commLower);
+          const modalPrice = p.modalPrice;
+          const changeVal = p.change ?? 15;
+          const trend = changeVal >= 0 ? 'UP' : 'DOWN';
+          const trendPercent = Math.round((Math.abs(changeVal) / modalPrice) * 10000) / 100;
+
+          cards.push({
+            crop: p.commodity,
+            mandi: p.market || `${p.district || 'मंडी'} APMC`,
+            modalPrice,
+            minPrice: p.minPrice,
+            maxPrice: p.maxPrice,
+            pricePerKg: p.pricePerKg,
+            changeText: `${trend === 'UP' ? '↑' : '↓'} ${Math.abs(changeVal)} (${trendPercent}%)`,
+            trend,
+            trendPercent,
+            cropImage: p.cropImage || CROP_IMAGES.wheat,
+            updatedAt: p.rawArrivalDate || 'आज',
+          });
+        }
       }
     }
 
@@ -323,6 +378,10 @@ const CROP_IMAGES: Record<string, string> = {
   potato: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&q=80&w=100',
   paddy: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=100',
   mustard: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&q=80&w=100',
+  tomato: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=100',
+  onion: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?auto=format&fit=crop&q=80&w=100',
+  garlic: 'https://images.unsplash.com/photo-1608686207856-001b95cf60ca?auto=format&fit=crop&q=80&w=100',
+  gram: 'https://images.unsplash.com/photo-1515543904379-3d757afe72e3?auto=format&fit=crop&q=80&w=100',
 };
 
 export const activeMarketService = new MarketPriceService();

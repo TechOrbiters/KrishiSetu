@@ -200,7 +200,7 @@ export function parseIntentFromTranscript(text: string): ExtractedIntent {
  */
 export async function transcribeAudio(
   audioBufferOrBase64: Buffer | string,
-  model = "saaras:v4"
+  model = "saaras:v3"
 ): Promise<STTResult> {
   const formData = new FormData();
 

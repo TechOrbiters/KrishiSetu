@@ -411,7 +411,7 @@ export function computeMarketPilotAdvice(
 /* REAL DATABASE-BACKED AI ENGINES FOR STEP 9                                */
 /* ========================================================================= */
 
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { supabaseAdmin } from '../supabase/server';
 
 export async function computeDemandSenseReal(crop: string, location = 'Barabanki') {
   const cropQuery = (crop || 'Tomato').trim().toLowerCase();

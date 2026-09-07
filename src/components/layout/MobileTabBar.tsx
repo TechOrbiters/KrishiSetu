@@ -11,11 +11,11 @@ export const MobileTabBar: React.FC = () => {
   const { t } = useLanguage();
 
   const tabs = [
-    { href: '/farmer/dashboard', label: 'डैशबोर्ड', icon: LayoutDashboard },
-    { href: '/farmer/listings', label: 'मेरी उपज', icon: Sprout },
-    { href: '/farmer/listings/new', label: 'बोलकर लिस्ट', icon: Mic, isFAB: true },
-    { href: '/farmer/orders', label: 'ऑर्डर', icon: ShoppingBag },
-    { href: '/farmer/profile', label: 'प्रोफाइल', icon: User },
+    { href: '/farmer/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { href: '/farmer/listings', label: t('nav.listings'), icon: Sprout },
+    { href: '/farmer/listings/new', label: t('voiceListing'), icon: Mic, isFAB: true },
+    { href: '/farmer/orders', label: t('nav.orders'), icon: ShoppingBag },
+    { href: '/farmer/profile', label: t('nav.profile'), icon: User },
   ];
 
   return (

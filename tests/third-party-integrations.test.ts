@@ -130,7 +130,7 @@ async function runThirdPartyTests() {
     const intentResult = parseIntentFromTranscript(transcript);
     if (
       intentResult.intent === "CREATE_LISTING" &&
-      intentResult.crop === "Tomato" &&
+      (intentResult.crop === "Tomato" || intentResult.crop === "टमाटर") &&
       intentResult.quantity === 500 &&
       intentResult.unit === "kg"
     ) {

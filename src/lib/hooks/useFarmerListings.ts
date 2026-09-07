@@ -7,6 +7,7 @@ import {
   pauseFarmerListing,
 } from '../api/client';
 import { ProduceItem } from '../seedData';
+import { logisticsSync } from '../realtime/logisticsSync';
 
 export function useFarmerListings(farmerId?: string) {
   const [listings, setListings] = useState<ProduceItem[]>([]);
@@ -29,6 +30,7 @@ export function useFarmerListings(farmerId?: string) {
     setError(null);
     const res = await createFarmerListing(payload);
     if (res.success) {
+      logisticsSync.broadcast('LISTING_CREATED', { listing: res.data || payload });
       await refetch();
     } else {
       setError(res.error || 'नई उपज जोड़ने में विफल');
@@ -40,6 +42,7 @@ export function useFarmerListings(farmerId?: string) {
     setError(null);
     const res = await updateFarmerListing(id, updates);
     if (res.success) {
+      logisticsSync.broadcast('LISTING_CREATED', { listing: { id, ...updates } });
       await refetch();
     } else {
       setError(res.error || 'उपज अपडेट करने में विफल');
@@ -51,6 +54,7 @@ export function useFarmerListings(farmerId?: string) {
     setError(null);
     const res = await pauseFarmerListing(id, currentStatus);
     if (res.success) {
+      logisticsSync.broadcast('LISTING_CREATED', { listing: { id, status: currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' } });
       await refetch();
     } else {
       setError(res.error || 'स्टेटस बदलने में विफल');
@@ -62,6 +66,7 @@ export function useFarmerListings(farmerId?: string) {
     setError(null);
     const res = await deleteFarmerListing(id);
     if (res.success) {
+      logisticsSync.broadcast('LISTING_CREATED', { deletedId: id });
       await refetch();
     } else {
       setError(res.error || 'उपज हटाने में विफल');
@@ -71,6 +76,14 @@ export function useFarmerListings(farmerId?: string) {
 
   useEffect(() => {
     refetch();
+
+    const unsubscribe = logisticsSync.subscribe((event) => {
+      if (['LISTING_CREATED'].includes(event.type)) {
+        refetch();
+      }
+    });
+
+    return () => unsubscribe();
   }, [refetch]);
 
   return {

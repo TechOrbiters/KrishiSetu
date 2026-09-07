@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Sun, Cloud, CloudRain, CloudLightning, CloudFog, ChevronDown } from 'lucide-react';
 import { useFarmerStore } from '@/lib/store/farmerStore';
 import { fetchWeatherData, WeatherData } from '@/lib/api/client';
+import { LanguageSelector } from '../common/LanguageSelector';
 
 function getWeatherIcon(condition?: string) {
   const cond = condition?.toLowerCase() || '';
@@ -116,6 +117,9 @@ export const FarmerTopbar: React.FC = () => {
             {weather ? `${weather.temp}°C` : '32°C'}
           </span>
         </div>
+
+        {/* Language Selector Pill */}
+        <LanguageSelector variant="light" showLabel={false} />
 
         {/* Notification Bell Badge */}
         <button className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs flex-shrink-0" aria-label={`${notificationsCount} notifications`}>

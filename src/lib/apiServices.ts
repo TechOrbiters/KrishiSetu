@@ -82,12 +82,14 @@ export async function speakWithSarvamAI(
       currentAudio = null;
     }
 
+    const resolvedSpeaker = (speaker.includes('-') || speaker.length === 2) ? 'aditya' : speaker;
+
     const res = await fetch('/api/sarvam/text-to-speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text,
-        speaker,
+        speaker: resolvedSpeaker,
         target_language_code: 'hi-IN',
       }),
     });

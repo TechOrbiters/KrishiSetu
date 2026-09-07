@@ -18,6 +18,7 @@ import {
   ChevronRight,
   HelpCircle,
 } from 'lucide-react';
+import { LanguageSelector } from '@/components/common/LanguageSelector';
 
 export default function FarmerAuthPage() {
   const router = useRouter();
@@ -51,6 +52,10 @@ export default function FarmerAuthPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-3 sm:p-6 select-none font-sans antialiased">
+      {/* Language Switcher Bar */}
+      <div className="w-full max-w-md flex justify-end mb-3">
+        <LanguageSelector variant="light" showLabel={false} />
+      </div>
 
       {/* Container Box */}
       <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden flex flex-col min-h-[620px]">

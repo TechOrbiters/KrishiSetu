@@ -5,7 +5,7 @@ export interface TranslateRequest {
   sourceLanguageCode?: string;
   targetLanguageCode: string;
   speakerGender?: "Male" | "Female";
-  mode?: "formal" | "colloquial";
+  mode?: "formal" | "modern-colloquial" | "classic-colloquial" | "code-mixed" | "colloquial";
 }
 
 export interface TranslateResult {
@@ -20,7 +20,7 @@ export interface TranslateResult {
  * Static UI strings must use local dictionary i18n instead of calling this API.
  */
 export async function translateText(req: TranslateRequest): Promise<TranslateResult> {
-  const { input, sourceLanguageCode = "auto", targetLanguageCode, mode = "colloquial" } = req;
+  const { input, sourceLanguageCode = "auto", targetLanguageCode, mode = "formal" } = req;
 
   if (!input || input.trim().length === 0) {
     return {
@@ -31,15 +31,23 @@ export async function translateText(req: TranslateRequest): Promise<TranslateRes
     };
   }
 
+  let resolvedSource = sourceLanguageCode;
+  if (!resolvedSource || resolvedSource === "auto") {
+    const isDevanagari = /[\u0900-\u097F]/.test(input);
+    resolvedSource = isDevanagari ? "hi-IN" : "en-IN";
+  }
+
   // If source and target match, return input directly without external call
-  if (sourceLanguageCode === targetLanguageCode) {
+  if (resolvedSource === targetLanguageCode) {
     return {
       translatedText: input,
-      sourceLanguageCode,
+      sourceLanguageCode: resolvedSource,
       targetLanguageCode,
       fallbackUsed: false,
     };
   }
+
+  const resolvedMode = mode === "colloquial" ? "modern-colloquial" : (mode || "formal");
 
   try {
     const data = await sarvamFetch<{
@@ -49,9 +57,9 @@ export async function translateText(req: TranslateRequest): Promise<TranslateRes
     }>("/translate", {
       body: {
         input,
-        source_language_code: sourceLanguageCode === "auto" ? undefined : sourceLanguageCode,
+        source_language_code: resolvedSource,
         target_language_code: targetLanguageCode,
-        mode,
+        mode: resolvedMode,
         model: "mayura:v1",
       },
     });

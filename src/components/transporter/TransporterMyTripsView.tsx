@@ -40,7 +40,7 @@ interface TransporterMyTripsViewProps {
 }
 
 export const TransporterMyTripsView: React.FC<TransporterMyTripsViewProps> = ({
-  availableTrips,
+  availableTrips = [],
   setAvailableTrips,
   onOpenKrishiAI,
   onUpdateTripStatus,
@@ -49,6 +49,9 @@ export const TransporterMyTripsView: React.FC<TransporterMyTripsViewProps> = ({
   const [tripsTab, setTripsTab] = useState<'CURRENT' | 'UPCOMING' | 'COMPLETED'>('CURRENT');
   const [activeStep, setActiveStep] = useState<number>(3); // Step 3 = In Progress / On Route
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+
+  // Safe trips list
+  const tripsList = Array.isArray(availableTrips) ? availableTrips : [];
 
   // Proof of delivery modal
   const [showPodModal, setShowPodModal] = useState(false);
@@ -69,12 +72,11 @@ export const TransporterMyTripsView: React.FC<TransporterMyTripsViewProps> = ({
   const [isSpeakingAudio, setIsSpeakingAudio] = useState(false);
   const recognitionRef = useRef<any>(null);
 
-  // Dynamic active trip selection
+  // Dynamic active trip selection - pure real-time, no mock fallback
   const currentTrip =
-    (selectedTripId ? availableTrips.find((t) => t.id === selectedTripId) : null) ||
-    availableTrips.find((t) => t.status === 'IN_TRANSIT' || t.status === 'PICKED_UP' || t.status === 'ACCEPTED') ||
-    availableTrips.find((t) => t.id === 'trip-4') ||
-    availableTrips[0];
+    (selectedTripId ? tripsList.find((t) => t.id === selectedTripId) : null) ||
+    tripsList.find((t) => t.status === 'IN_TRANSIT' || t.status === 'PICKED_UP' || t.status === 'ACCEPTED') ||
+    null;
 
   // Sync active step when trip status changes
   useEffect(() => {
@@ -298,43 +300,9 @@ export const TransporterMyTripsView: React.FC<TransporterMyTripsViewProps> = ({
     }
   };
 
-  // Mock trips for upcoming and completed
-  const upcomingTrips = availableTrips.filter((t) => t.status === 'ACCEPTED' || t.status === 'PICKED_UP');
-  const completedTrips = [
-    {
-      id: 'comp-1',
-      orderCode: 'ORD-2026-9812',
-      produceName: 'टमाटर (देसी लाल)',
-      quantityKg: 600,
-      pickupLocation: 'बाराबंकी FPO फार्म',
-      dropLocation: 'नवीन गल्ला मंडी (लखनऊ)',
-      fare: 850,
-      deliveredAt: 'आज 09:30 AM',
-      rating: 5,
-    },
-    {
-      id: 'comp-2',
-      orderCode: 'ORD-2026-9784',
-      produceName: 'आलू (चिपसोना)',
-      quantityKg: 1200,
-      pickupLocation: 'मोहनलालगंज क्लस्टर',
-      dropLocation: 'आलमबाग मंडी',
-      fare: 1450,
-      deliveredAt: 'कल 05:15 PM',
-      rating: 5,
-    },
-    {
-      id: 'comp-3',
-      orderCode: 'ORD-2026-9650',
-      produceName: 'हरी मिर्च व धनिया',
-      quantityKg: 400,
-      pickupLocation: 'बख्शी का तालाब',
-      dropLocation: 'दुबग्गा फल-सब्जी मंडी',
-      fare: 650,
-      deliveredAt: '2 दिन पहले',
-      rating: 4.8,
-    },
-  ];
+  // Trips for upcoming and completed strictly from real availableTrips
+  const upcomingTrips = tripsList.filter((t) => t.status === 'ACCEPTED' || t.status === 'PICKED_UP');
+  const completedTrips = tripsList.filter((t) => t.status === 'DELIVERED');
 
   return (
     <div className="space-y-6" id="transporter-mytrips-container">
@@ -386,8 +354,9 @@ export const TransporterMyTripsView: React.FC<TransporterMyTripsViewProps> = ({
       </div>
 
       {/* View 1: CURRENT ACTIVE TRIP */}
-      {tripsTab === 'CURRENT' && currentTrip && (
-        <div className="space-y-6">
+      {tripsTab === 'CURRENT' && (
+        currentTrip ? (
+          <div className="space-y-6">
           {/* Active Trip Header Card */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -755,6 +724,17 @@ export const TransporterMyTripsView: React.FC<TransporterMyTripsViewProps> = ({
             </div>
           </div>
         </div>
+      ) : (
+          <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3">
+            <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-2xl">
+              🚚
+            </div>
+            <h3 className="text-base font-extrabold text-slate-800">वर्तमान में कोई सक्रिय ट्रिप नहीं है</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              जब आप किसी नए डिलीवरी अनुरोध को स्वीकार करेंगे, तो उसका लाइव GPS नेविगेशन, स्थिति अपडेट और मार्ग ट्रैकिंग यहाँ सक्रिय होगी।
+            </p>
+          </div>
+        )
       )}
 
       {/* View 2: UPCOMING TRIPS */}
@@ -803,31 +783,41 @@ export const TransporterMyTripsView: React.FC<TransporterMyTripsViewProps> = ({
           <div className="bg-white p-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
             पूर्ण की गई सफल डिलीवरी ({completedTrips.length})
           </div>
-          <div className="space-y-3">
-            {completedTrips.map((trip) => (
-              <div key={trip.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-slate-800">{trip.orderCode}</span>
-                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>डिलीवर्ड ({trip.deliveredAt})</span>
-                    </span>
+          {completedTrips.length === 0 ? (
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-2">
+              <div className="text-3xl">📦</div>
+              <div className="font-bold text-slate-800 text-sm">कोई पूर्ण की गई ट्रिप नहीं है</div>
+              <p className="text-xs text-slate-500">
+                सफलतापूर्वक डिलीवर की गई ट्रिप्स और डिजिटल POD यहाँ रिकॉर्ड होंगे।
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {completedTrips.map((trip) => (
+                <div key={trip.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800">{trip.orderCode}</span>
+                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>डिलीवर संपन्न</span>
+                      </span>
+                    </div>
+                    <div className="text-sm font-black text-emerald-700">₹{trip.fare} (भुगतान संपन्न)</div>
                   </div>
-                  <div className="text-sm font-black text-emerald-700">₹{trip.fare} (भुगतान संपन्न)</div>
+                  <div className="font-bold text-slate-800 text-sm">{trip.produceName} ({trip.quantityKg} kg)</div>
+                  <div className="text-xs text-slate-600">📍 {trip.pickupLocation} &rarr; 🏁 {trip.dropLocation}</div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+                    <span className="flex items-center gap-1 text-amber-600 font-bold">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      <span>5.0 ★ ग्राहक समीक्षा</span>
+                    </span>
+                    <span className="text-emerald-700 font-semibold">100% समय पर डिलीवरी</span>
+                  </div>
                 </div>
-                <div className="font-bold text-slate-800 text-sm">{trip.produceName} ({trip.quantityKg} kg)</div>
-                <div className="text-xs text-slate-600">📍 {trip.pickupLocation} &rarr; 🏁 {trip.dropLocation}</div>
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
-                  <span className="flex items-center gap-1 text-amber-600 font-bold">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span>{trip.rating} ★ ग्राहक समीक्षा</span>
-                  </span>
-                  <span className="text-emerald-700 font-semibold">100% समय पर डिलीवरी</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

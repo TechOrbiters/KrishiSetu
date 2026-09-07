@@ -3,7 +3,7 @@ import { authenticateRequest } from '@/lib/auth/middleware';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
-  const { user, errorResponse } = await authenticateRequest(req, ['FARMER', 'FARMER_FPO', 'FPO_ADMIN', 'BUYER', 'TRANSPORTER']);
+  const { user, errorResponse } = await authenticateRequest(req, ['FARMER', 'FARMER_FPO', 'FPO_ADMIN', 'BUYER', 'TRANSPORTER', 'ADMIN']);
   if (errorResponse) return errorResponse;
 
   try {
@@ -16,28 +16,40 @@ export async function GET(req: NextRequest) {
 
     if (userError || !dbUser) {
       // Auto-bootstrap user if record doesn't exist yet in Supabase
+      const defaultName = 
+        user!.role === 'BUYER' ? 'Buyer Partner' :
+        user!.role === 'TRANSPORTER' ? 'Transporter Partner' :
+        user!.role === 'ADMIN' ? 'Platform Administrator' :
+        'Farmer Partner';
+
+      const userRole = user!.role === 'FARMER_FPO' ? 'FARMER' : user!.role;
+
       const { data: newUser } = await supabaseAdmin
         .from('users')
         .upsert({
           firebase_uid: user!.uid,
           phone: user!.phone,
-          full_name: 'Farmer Partner',
-          role: 'FARMER',
+          full_name: defaultName,
+          role: userRole,
           location_name: 'Barabanki, UP',
         }, { onConflict: 'firebase_uid' })
         .select()
         .single();
 
-      const { data: newProfile } = await supabaseAdmin
-        .from('farmer_profiles')
-        .upsert({
-          user_id: newUser ? newUser.id : user!.uid,
-          village: 'Barabanki',
-          district: 'Barabanki',
-          state: 'Uttar Pradesh',
-        }, { onConflict: 'user_id' })
-        .select()
-        .single();
+      let newProfile = null;
+      if (user!.role === 'FARMER' || user!.role === 'FARMER_FPO') {
+        const { data: prof } = await supabaseAdmin
+          .from('farmer_profiles')
+          .upsert({
+            user_id: newUser ? newUser.id : user!.uid,
+            village: 'Barabanki',
+            district: 'Barabanki',
+            state: 'Uttar Pradesh',
+          }, { onConflict: 'user_id' })
+          .select()
+          .single();
+        newProfile = prof;
+      }
 
       return NextResponse.json({
         success: true,
@@ -45,8 +57,8 @@ export async function GET(req: NextRequest) {
           id: user!.uid,
           firebase_uid: user!.uid,
           phone: user!.phone,
-          full_name: 'Farmer Partner',
-          role: 'FARMER_FPO',
+          full_name: defaultName,
+          role: user!.role,
         },
         profile: newProfile || {
           village: 'Barabanki',
@@ -73,7 +85,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { user, errorResponse } = await authenticateRequest(req, ['FARMER', 'FARMER_FPO', 'FPO_ADMIN']);
+  const { user, errorResponse } = await authenticateRequest(req, ['FARMER', 'FARMER_FPO', 'FPO_ADMIN', 'BUYER', 'TRANSPORTER', 'ADMIN']);
   if (errorResponse) return errorResponse;
 
   try {
@@ -100,7 +112,7 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     let updatedProfile = null;
-    if (existingUser?.id) {
+    if (existingUser?.id && (user!.role === 'FARMER' || user!.role === 'FARMER_FPO')) {
       const profileUpdates: any = {};
       if (village) profileUpdates.village = village;
       if (district) profileUpdates.district = district;

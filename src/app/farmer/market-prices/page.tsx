@@ -24,12 +24,24 @@ export default function MarketPricesPage() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>('आज, AGMARKNET');
 
+  const mandiOptions = [
+    { label: 'लखनऊ, उत्तर प्रदेश', district: 'Lucknow' },
+    { label: 'बाराबंकी, उत्तर प्रदेश', district: 'Barabanki' },
+    { label: 'सीतापुर, उत्तर प्रदेश', district: 'Sitapur' },
+    { label: 'कानपुर, उत्तर प्रदेश', district: 'Kanpur' },
+    { label: 'सभी मंडी (उत्तर प्रदेश)', district: '' },
+  ];
+
   const fetchMarketData = async () => {
     setIsLoading(true);
     try {
+      const selectedMandiObj = mandiOptions.find((m) => m.label === selectedMandi);
+      const district = selectedMandiObj?.district || undefined;
+
       // 1. Fetch Mandi Table Records
       const res = await getMarketPrices({
         state: 'Uttar Pradesh',
+        district,
         commodity: selectedCrop === 'सभी फसलें' ? undefined : selectedCrop,
         limit: 50,
       });
@@ -77,6 +89,7 @@ export default function MarketPricesPage() {
     'Mustard',
     'Tomato',
     'Onion',
+    'Garlic',
     'Gram',
   ];
 
@@ -108,19 +121,21 @@ export default function MarketPricesPage() {
         {/* Filter Dropdowns Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center justify-between shadow-2xs">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
-              <MapPin className="w-4 h-4 text-slate-500" />
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 w-full">
+              <MapPin className="w-4 h-4 text-slate-500 flex-shrink-0" />
               <select
                 value={selectedMandi}
                 onChange={(e) => setSelectedMandi(e.target.value)}
-                className="bg-transparent font-bold text-xs text-slate-800 focus:outline-none cursor-pointer"
+                className="bg-transparent font-bold text-xs text-slate-800 focus:outline-none cursor-pointer w-full"
               >
-                <option value="लखनऊ, उत्तर प्रदेश">लखनऊ, उत्तर प्रदेश</option>
-                <option value="बाराबंकी, उत्तर प्रदेश">बाराबंकी, उत्तर प्रदेश</option>
-                <option value="कानपुर, उत्तर प्रदेश">कानपुर, उत्तर प्रदेश</option>
+                {mandiOptions.map((opt) => (
+                  <option key={opt.label} value={opt.label}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
-            <ChevronDown className="w-4 h-4 text-slate-400" />
+            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
           </div>
 
           <div className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center justify-between shadow-2xs">
@@ -141,7 +156,7 @@ export default function MarketPricesPage() {
           <div className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
               <Calendar className="w-4 h-4 text-slate-500" />
-              <span>{selectedDate}</span>
+              <span>{new Date().toLocaleDateString('hi-IN')} (आज का भाव)</span>
             </div>
             <ChevronDown className="w-4 h-4 text-slate-400" />
           </div>

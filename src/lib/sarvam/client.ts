@@ -25,17 +25,23 @@ export interface SarvamRequestOptions {
 
 const SARVAM_BASE_URL = "https://api.sarvam.ai";
 
+export const DEFAULT_SARVAM_API_KEY = "sk_rsyrmj5p_FJlxTNuiqLJA1y3RpMVNZrJo";
+
+export function getSarvamApiKey(): string {
+  return process.env.SARVAM_API_KEY || DEFAULT_SARVAM_API_KEY;
+}
+
 export async function sarvamFetch<T = any>(
   endpoint: string,
   options: SarvamRequestOptions = {}
 ): Promise<T> {
-  const apiKey = process.env.SARVAM_API_KEY;
+  const apiKey = getSarvamApiKey();
 
   if (!apiKey) {
     throw new Error("[Sarvam] SARVAM_API_KEY environment variable is not configured.");
   }
 
-  const { method = "POST", body, isFormData = false, timeoutMs = 12000 } = options;
+  const { method = "POST", body, isFormData = false, timeoutMs = 25000 } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);

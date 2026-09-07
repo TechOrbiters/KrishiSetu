@@ -26,6 +26,8 @@ import { FarmerLayout } from '@/components/layout/FarmerLayout';
 import { useFarmerStore } from '@/lib/store/farmerStore';
 import { createFarmerListing } from '@/lib/api/client';
 import { useVoiceInput, VoiceInputResult } from '@/lib/hooks/useVoiceInput';
+import { logisticsSync } from '@/lib/realtime/logisticsSync';
+import { createProduceListing } from '@/lib/firebase';
 
 function WizardContent() {
   const router = useRouter();
@@ -272,6 +274,39 @@ function WizardContent() {
         status: 'ACTIVE',
         imageUrl: imageUrl || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=400',
       });
+
+      // Synchronize in real time with Buyer Portal & Admin Portal
+      try {
+        logisticsSync.broadcast('LISTING_CREATED', {
+          listingId: realListingId,
+          cropName,
+          produceName: cropName,
+          pricePerKg: numPrice,
+          quantityKg: numQty,
+        });
+        createProduceListing({
+          id: realListingId,
+          crop: cropName,
+          cropHindi: cropName,
+          variety: 'Desi',
+          quantityKg: numQty,
+          minOrderKg: Number(minOrder) || 10,
+          pricePerKg: numPrice,
+          marketPricePerKg: numPrice + 4,
+          quality: quality === 'प्रीमियम' ? 'A' : quality === 'अच्छी' ? 'B' : 'C',
+          harvestDate: new Date().toISOString().split('T')[0],
+          cultivationLocation: `${user.village || 'बैजनाथपुर'}, ${user.district || 'बाराबंकी'}`,
+          freshnessWindowHours: 24,
+          perishable: true,
+          status: 'ACTIVE',
+          viewsCount: 1,
+          image: imageUrl || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400',
+          farmerName: user.fullName || 'सत्यापित किसान संघ',
+          fpoName: user.fullName || 'Kisan FPO',
+          distanceKm: 12,
+          rating: 4.9,
+        }).catch(() => {});
+      } catch (e) {}
 
       if (refreshListings) {
         await refreshListings();

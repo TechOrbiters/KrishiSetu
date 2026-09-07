@@ -71,6 +71,7 @@ export interface Order {
   pickupLocation: string;
   dropLocation: string;
   distanceKm: number;
+  paymentMethod?: 'COD' | 'UPI' | 'NETBANKING' | 'CARD';
   transporterName?: string;
   transporterVehicle?: string;
   transporterPhone?: string;
@@ -101,6 +102,9 @@ export interface TransporterTrip {
   currentLocation?: { lat: number; lng: number; lastUpdated?: string; speedKmh?: number; address?: string };
   driverName?: string;
   vehicleNumber?: string;
+  otp?: string;
+  podOtp?: string;
+  temperature?: number;
 }
 
 export interface MarketPrice {
@@ -164,3 +168,21 @@ export interface Dispute {
   status: 'OPEN' | 'RESOLVED';
   resolution?: string;
 }
+
+export interface BuyerDemand {
+  id: string;
+  crop: string;
+  cropHindi: string;
+  quantityKg: number;
+  targetPricePerKg: number;
+  buyerName: string;
+  buyerPhone: string;
+  buyerType: 'CONSUMER' | 'BUSINESS' | 'KIRANA' | 'HOTEL_REST';
+  deliveryLocation: string;
+  expectedDeliveryDate: string;
+  status: 'OPEN' | 'MATCHED' | 'FULFILLED' | 'EXPIRED';
+  matchedFarmerCount?: number;
+  createdAt: string;
+  notes?: string;
+}
+

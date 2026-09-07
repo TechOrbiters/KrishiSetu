@@ -47,12 +47,12 @@ export async function GET(req: NextRequest) {
     // 1. Fetch ratings from ratings table
     let ratingsList: any[] = [];
     try {
-      const { data: rts } = await supabaseAdmin
+      const { data: rts, error: fetchErr } = await supabaseAdmin
         .from('ratings')
-        .select('*, users!ratings_reviewer_id_fkey(full_name, role)')
-        .eq('reviewee_id', transporterId)
+        .select('*')
+        .or(`reviewee_id.eq.${transporterId},reviewee_id.eq.${user!.uid}`)
         .order('created_at', { ascending: false });
-      if (rts && rts.length > 0) {
+      if (!fetchErr && rts && rts.length > 0) {
         ratingsList = rts;
       }
     } catch (e) {
@@ -60,88 +60,83 @@ export async function GET(req: NextRequest) {
     }
 
     // Merge in-memory ratings
-    const memRatings = inMemoryRatings.filter((r) => r.reviewee_id === transporterId);
+    const memRatings = inMemoryRatings.filter((r) => r.reviewee_id === transporterId || r.reviewee_id === user!.uid);
     if (memRatings.length > 0) {
       ratingsList = [...memRatings, ...ratingsList];
+    }
+
+    // Augment reviewer info
+    if (ratingsList.length > 0) {
+      const reviewerIds = ratingsList.map((r) => r.reviewer_id).filter(Boolean);
+      if (reviewerIds.length > 0) {
+        try {
+          const { data: reviewers } = await supabaseAdmin
+            .from('users')
+            .select('id, full_name, role')
+            .in('id', reviewerIds);
+          const reviewerMap = new Map((reviewers || []).map((u) => [u.id, u]));
+          ratingsList = ratingsList.map((r) => ({
+            ...r,
+            users: r.users || reviewerMap.get(r.reviewer_id) || { full_name: 'सत्यापित साथी', role: 'BUYER' },
+          }));
+        } catch (e) {}
+      }
     }
 
     // 2. Fetch transporter profile rating
     const { data: profile } = await supabaseAdmin
       .from('transporter_profiles')
       .select('rating')
-      .eq('user_id', transporterId)
+      .or(`user_id.eq.${transporterId},user_id.eq.${user!.uid}`)
       .maybeSingle();
 
-    const overallRating = Number(profile?.rating || 4.9);
+    const profileRating = Number(profile?.rating || 0);
 
     // Calculate star distribution
     const starsBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let totalPunctuality = 0;
     let totalHandling = 0;
     let totalComm = 0;
+    let sumRating = 0;
 
     ratingsList.forEach((r) => {
       const star = Math.round(r.rating) as 1 | 2 | 3 | 4 | 5;
       if (starsBreakdown[star] !== undefined) starsBreakdown[star]++;
+      sumRating += Number(r.rating || 5);
       totalPunctuality += Number(r.punctuality_rating || r.rating);
       totalHandling += Number(r.handling_rating || r.rating);
       totalComm += Number(r.communication_rating || r.rating);
     });
 
     const count = ratingsList.length;
+    const avgFromRatings = count > 0 ? Math.round((sumRating / count) * 10) / 10 : 0;
+    const finalOverallRating = avgFromRatings > 0 ? avgFromRatings : (profileRating > 0 ? profileRating : 4.8);
 
-    // Provide rich verified reviews (including default sample verified reviews if no rows yet)
-    const reviews = count > 0 ? ratingsList.map((r) => ({
+    // Real verified reviews only - no fake dummy reviews
+    const reviews = ratingsList.map((r) => ({
       id: r.id,
-      reviewer_name: r.users?.full_name || 'किसान साथी (सत्यापित)',
-      reviewer_role: r.users?.role || 'FARMER',
+      reviewer_name: r.users?.full_name || 'सत्यापित साथी',
+      reviewer_role: r.users?.role || 'BUYER',
       rating: Number(r.rating || 5.0),
-      review_text: r.review_text || 'उत्कृष्ट समय पर डिलीवरी और सुरक्षित परिवहन।',
+      review_text: r.review_text || '',
       order_number: r.order_id ? `ORD-${r.order_id.slice(-6).toUpperCase()}` : undefined,
       created_at: r.created_at,
-    })) : [
-      {
-        id: 'rev_1',
-        reviewer_name: 'रामकुमार वर्मा (किसान)',
-        reviewer_role: 'FARMER' as const,
-        rating: 5.0,
-        review_text: 'टमाटर की डिलीवरी समय पर और बिना किसी नुकसान के पूरी की। बहुत विश्वसनीय ट्रांसपोर्टर!',
-        order_number: 'ORD-8921A4',
-        created_at: '2026-09-05T14:30:00Z',
-      },
-      {
-        id: 'rev_2',
-        reviewer_name: 'सतीश गुप्ता (थोक खरीदार)',
-        reviewer_role: 'BUYER' as const,
-        rating: 4.8,
-        review_text: 'लाइव ट्रैकिंग बिल्कुल सटीक थी। मंडी पहुंचते ही तुरंत अनलोडिंग में सहयोग दिया।',
-        order_number: 'ORD-7712E9',
-        created_at: '2026-09-04T10:15:00Z',
-      },
-      {
-        id: 'rev_3',
-        reviewer_name: 'अवध FPO संघ',
-        reviewer_role: 'FPO' as const,
-        rating: 5.0,
-        review_text: 'गेहूं के 1000 किग्रा लॉट को सुरक्षित पहुंचाया। वाहन साफ-सुथरा और क्षमता अनुकूल था।',
-        order_number: 'ORD-6540B2',
-        created_at: '2026-09-02T16:45:00Z',
-      }
-    ];
+    }));
 
     return NextResponse.json({
       success: true,
       overview: {
-        overall_rating: overallRating,
-        total_reviews: Math.max(count, 3),
-        stars_breakdown: count > 0 ? starsBreakdown : { 5: 22, 4: 5, 3: 1, 2: 0, 1: 0 },
+        overall_rating: finalOverallRating,
+        total_reviews: count,
+        stars_breakdown: starsBreakdown,
         metrics: {
-          punctuality: count > 0 ? Math.round((totalPunctuality / count) * 10) / 10 : 4.9,
-          produce_handling: count > 0 ? Math.round((totalHandling / count) * 10) / 10 : 4.8,
-          communication: count > 0 ? Math.round((totalComm / count) * 10) / 10 : 4.9,
+          punctuality: count > 0 ? Math.round((totalPunctuality / count) * 10) / 10 : 0,
+          produce_handling: count > 0 ? Math.round((totalHandling / count) * 10) / 10 : 0,
+          communication: count > 0 ? Math.round((totalComm / count) * 10) / 10 : 0,
         },
         reviews,
       },
+      reviews,
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

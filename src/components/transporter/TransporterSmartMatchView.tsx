@@ -27,7 +27,7 @@ interface TransporterSmartMatchViewProps {
 }
 
 export const TransporterSmartMatchView: React.FC<TransporterSmartMatchViewProps> = ({
-  availableTrips,
+  availableTrips = [],
   onAcceptJob,
   onRejectJob,
   onOpenKrishiAI,
@@ -37,7 +37,8 @@ export const TransporterSmartMatchView: React.FC<TransporterSmartMatchViewProps>
   const [sortBy, setSortBy] = useState<'MATCH' | 'PAYOUT' | 'DISTANCE' | 'URGENCY'>('MATCH');
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
-  const availableJobs = availableTrips.filter((t) => t.status === 'AVAILABLE');
+  const tripsList = Array.isArray(availableTrips) ? availableTrips : [];
+  const availableJobs = tripsList.filter((t) => t.status === 'AVAILABLE');
 
   // Filter and Sort logic
   const filteredJobs = availableJobs
@@ -72,7 +73,7 @@ export const TransporterSmartMatchView: React.FC<TransporterSmartMatchViewProps>
               </span>
             </div>
             <p className="text-xs text-amber-100 max-w-2xl leading-relaxed">
-              SmartTransport AI एल्गोरिदम आपके वाहन (Mini Truck UP32 AB 1234), लाइव स्थान और FreshRoute समय सीमा के आधार पर सर्वोत्तम डिलीवरी मैच करता है।
+              SmartTransport AI एल्गोरिदम आपके वाहन की क्षमता, लाइव स्थान और FreshRoute समय सीमा के आधार पर सर्वोत्तम डिलीवरी मैच करता है।
             </p>
           </div>
 
@@ -151,33 +152,45 @@ export const TransporterSmartMatchView: React.FC<TransporterSmartMatchViewProps>
       </div>
 
       {/* Dynamic Load Pooling AI Recommendation Banner */}
-      <div className="bg-emerald-50 border border-emerald-300 p-4 rounded-xl flex items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-emerald-600 text-white rounded-lg shrink-0">
-            <Layers className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="font-bold text-emerald-950 flex items-center gap-1.5">
-              <span>SmartTransport Dynamic Load Pooling</span>
-              <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
-                ₹400 अतिरिक्त बचत
-              </span>
+      {availableJobs.length >= 2 && (
+        <div className="bg-emerald-50 border border-emerald-300 p-4 rounded-xl flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-emerald-600 text-white rounded-lg shrink-0">
+              <Layers className="w-4 h-4" />
             </div>
-            <p className="text-emerald-800 text-[11px] mt-0.5">
-              आपके मिनी ट्रक में 500 kg क्षमता शेष है। बाराबंकी रूट पर 2 डिलीवरी को एक साथ पूल करके प्रति किमी कमाई ₹22/km तक बढ़ाएं।
-            </p>
+            <div>
+              <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                <span>SmartTransport Dynamic Load Pooling</span>
+                <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
+                  अतिरिक्त बचत
+                </span>
+              </div>
+              <p className="text-emerald-800 text-[11px] mt-0.5">
+                समान मार्ग पर एकाधिक डिलीवरी उपलब्ध हैं। इन्हें एक साथ लोड करके प्रति किमी मुनाफा अधिकतम करें।
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Available Jobs List */}
       <div className="space-y-4">
-        {filteredJobs.length === 0 ? (
+        {availableJobs.length === 0 ? (
+          <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3">
+            <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-2xl">
+              🌾
+            </div>
+            <h3 className="text-base font-extrabold text-slate-800">वर्तमान में कोई डिलीवरी अनुरोध उपलब्ध नहीं है</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              जब कोई किसान या खरीदार डिजिटल डिलीवरी का ऑर्डर बुक करेंगे और किसान ट्रांसपोर्टर का चयन करेंगे, तो SmartMatch AI तुरंत आपको यहाँ अलर्ट करेगा।
+            </p>
+          </div>
+        ) : filteredJobs.length === 0 ? (
           <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-2">
-            <div className="text-3xl">🌾</div>
-            <div className="font-bold text-slate-800 text-sm">कोई डिलीवरी उपलब्ध नहीं मिली</div>
+            <div className="text-3xl">🔍</div>
+            <div className="font-bold text-slate-800 text-sm">चयनित फिल्टर के अनुसार कोई ऑर्डर नहीं मिला</div>
             <p className="text-xs text-slate-500">
-              चयनित फिल्टर के अनुसार कोई ऑर्डर नहीं है। कृपया फिल्टर बदलकर देखें।
+              कृपया फसल या दूरी का फिल्टर बदलकर पुनः प्रयास करें।
             </p>
           </div>
         ) : (

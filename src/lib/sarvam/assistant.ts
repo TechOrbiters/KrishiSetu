@@ -2,8 +2,9 @@ import { parseIntentFromTranscript } from "./stt";
 import { generateSpeech } from "./tts";
 import { translateText } from "./translate";
 import { detectLanguage } from "./language";
-import { supabaseAdmin } from "@/lib/supabase/server";
-import { computeDemandSenseReal } from "@/lib/domain/aiEngine";
+import { generateChatCompletion } from "./chat";
+import { supabaseAdmin } from "../supabase/server";
+import { computeDemandSenseReal } from "../domain/aiEngine";
 
 export interface KrishiAssistantRequest {
   userQuery: string;
@@ -467,16 +468,41 @@ export async function processKrishiAssistantRequest(
     }
 
     /* ----------------------------------------------------------------
-       UNKNOWN — helpful greeting
+       UNKNOWN / GENERAL CONVERSATIONAL AGRICULTURAL ADVISORY
+       Uses Sarvam 105B conversational foundation models
        ---------------------------------------------------------------- */
     default: {
-      responseText =
-        `नमस्ते! मैं आपका कृषक AI सहायक हूँ। आप मुझसे पूछ सकते हैं:\n` +
-        `• "मेरे पास 500 किलो टमाटर हैं" → उपज सूची\n` +
-        `• "आज टमाटर का भाव क्या है?" → मंडी भाव\n` +
-        `• "कोई खरीदार ढूंढो" → खरीदार सूची\n` +
-        `• "मेरी कमाई बताओ" → भुगतान लेजर\n` +
-        `• "ट्रांसपोर्टर चाहिए" → उपलब्ध वाहन`;
+      try {
+        const systemPrompt =
+          "Aap KrishiSetu ke visheshagya Krishi AI Sahayak (Agricultural AI Assistant) hain. " +
+          "Kisan bhaiyon aur vyapariyon ko kheti, fasal rog, mandi bhav, bechne ka sahi samay, khad-beej, " +
+          "aur krishi vyapar ke bare me spasht, saral aur labhkari salah dein. Bhasha saral, sahyogi aur aadarpoorvak honi chahiye.";
+
+        const llmAnswer = await generateChatCompletion([
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userQuery },
+        ], {
+          maxTokens: 350,
+          temperature: 0.7,
+        });
+
+        if (llmAnswer) {
+          responseText = llmAnswer;
+          fallbackUsed = false;
+        } else {
+          throw new Error("Empty LLM output");
+        }
+      } catch (llmErr: any) {
+        console.warn("[Krishi Assistant] Sarvam LLM fallback:", llmErr?.message || llmErr);
+        responseText =
+          `नमस्ते! मैं आपका कृषक AI सहायक हूँ। आप मुझसे पूछ सकते हैं:\n` +
+          `• "मेरे पास 500 किलो टमाटर हैं" → उपज सूची\n` +
+          `• "आज टमाटर का भाव क्या है?" → मंडी भाव\n` +
+          `• "कोई खरीदार ढूंढो" → खरीदार सूची\n` +
+          `• "मेरी कमाई बताओ" → भुगतान लेजर\n` +
+          `• "ट्रांसपोर्टर चाहिए" → उपलब्ध वाहन`;
+        fallbackUsed = true;
+      }
     }
   }
 

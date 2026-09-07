@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useFarmerStore } from '@/lib/store/farmerStore';
+import { LanguageSelector } from '../common/LanguageSelector';
 
 export const FarmerSidebar: React.FC = () => {
   const pathname = usePathname();
@@ -123,24 +124,11 @@ export const FarmerSidebar: React.FC = () => {
       </div>
 
       {/* Sidebar Footer: Language Selector & Logout */}
-      <div className="p-4 border-t border-slate-100 space-y-3 bg-slate-50/50">
+      <div className="p-3 border-t border-slate-100 space-y-2.5 bg-slate-50/50">
+
         {/* Language Selector Box */}
-        <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
-          <div className="flex items-center gap-2 text-slate-700 font-semibold">
-            <Globe className="w-4 h-4 text-emerald-600" />
-            <span>हिंदी</span>
-          </div>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as any)}
-            className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer text-xs"
-          >
-            {languages.map((l: any) => (
-              <option key={l.code} value={l.code}>
-                {l.localName}
-              </option>
-            ))}
-          </select>
+        <div className="w-full">
+          <LanguageSelector className="w-full [&>button]:w-full [&>button]:justify-between" variant="light" showLabel={true} />
         </div>
 
         {/* Logout */}

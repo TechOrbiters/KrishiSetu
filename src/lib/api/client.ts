@@ -9,6 +9,7 @@ import { calculateHaversineFallback } from "../maps/routing";
 import { MarketPriceQueryFilters, MarketPriceApiResponse, MarketPriceSummaryCard } from "../types/market";
 import { getFirebaseBearerToken } from "../firebase/authClient";
 import { UserProfile, ProduceItem, OrderItem } from "../seedData";
+import { logisticsSync } from "../realtime/logisticsSync";
 
 const IS_DEMO_MODE = typeof process !== 'undefined' && 
   (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.DEMO_MODE === 'true');
@@ -347,6 +348,9 @@ export async function createBuyerOrder(payload: any, idempotencyKey?: string): P
     if (!res.ok || !json.success) {
       return { success: false, error: json.error || `HTTP ${res.status}` };
     }
+    if (typeof window !== 'undefined') {
+      logisticsSync.broadcast('ORDER_PLACED', { orderId: json.order?.id });
+    }
     return { success: true, data: json.order, source: json.source };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to create order' };
@@ -400,7 +404,10 @@ export async function acceptFarmerOrder(orderId: string): Promise<ApiResult<any>
     if (!res.ok || !json.success) {
       return { success: false, error: json.error || `HTTP ${res.status}` };
     }
-    return { success: true, data: json.order };
+    if (typeof window !== 'undefined') {
+      logisticsSync.broadcast('ORDER_ACCEPTED', { orderId, tripId: json.transportRequest?.id });
+    }
+    return { success: true, data: { ...json.order, transportRequest: json.transportRequest } };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to accept order' };
   }
@@ -1076,5 +1083,257 @@ export async function fetchWeatherData(
   }
 }
 
+/* ========================================================================= */
+/* 13. BUYER PORTAL API CLIENT METHODS                                       */
+/* ========================================================================= */
 
+export interface BuyerProfileData {
+  user: any;
+  profile: any;
+}
 
+export async function fetchBuyerProfile(): Promise<ApiResult<BuyerProfileData>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/profile'), { headers });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: { user: json.user, profile: json.profile } };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function updateBuyerProfile(updates: any): Promise<ApiResult<BuyerProfileData>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/profile'), {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(updates),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: { user: json.user, profile: json.profile } };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchBuyerAddresses(): Promise<ApiResult<any[]>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/addresses'), { headers });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.addresses || [] };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function addBuyerAddress(address: any): Promise<ApiResult<any>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/addresses'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(address),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.address };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function deleteBuyerAddress(id: string): Promise<ApiResult<boolean>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl(`/api/buyer/addresses/${id}`), {
+      method: 'DELETE',
+      headers,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchBuyerSavedListings(): Promise<ApiResult<any[]>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/saved'), { headers });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.saved || [] };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function saveProduceListing(listingId: string): Promise<ApiResult<any>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/saved'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ listing_id: listingId }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.saved };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function deleteSavedProduceListing(id: string): Promise<ApiResult<boolean>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl(`/api/buyer/saved/${id}`), {
+      method: 'DELETE',
+      headers,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchBuyerCart(): Promise<ApiResult<any[]>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/cart'), { headers });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.items || [] };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function syncBuyerCartItem(listingId: string, quantityKg: number): Promise<ApiResult<any>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/cart'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ listing_id: listingId, quantity_kg: quantityKg }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.item };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function removeBuyerCartItem(id: string): Promise<ApiResult<boolean>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl(`/api/buyer/cart/${id}`), {
+      method: 'DELETE',
+      headers,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchTransportOptions(listingId?: string, distanceKm?: number, quantityKg?: number): Promise<ApiResult<any[]>> {
+  try {
+    const headers = await getAuthHeaders();
+    const params = new URLSearchParams();
+    if (listingId) params.append('listingId', listingId);
+    if (distanceKm) params.append('distanceKm', distanceKm.toString());
+    if (quantityKg) params.append('quantityKg', quantityKg.toString());
+    const res = await fetch(getApiUrl(`/api/transport/options?${params.toString()}`), { headers });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.options || [] };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchBuyerPriceAlerts(): Promise<ApiResult<any[]>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/price-alerts'), { headers });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.alerts || [] };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function createBuyerPriceAlert(alert: any): Promise<ApiResult<any>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl('/api/buyer/price-alerts'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(alert),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: json.alert };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function deleteBuyerPriceAlert(id: string): Promise<ApiResult<boolean>> {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(getApiUrl(`/api/buyer/price-alerts/${id}`), {
+      method: 'DELETE',
+      headers,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || `HTTP ${res.status}` };
+    }
+    return { success: true, data: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}

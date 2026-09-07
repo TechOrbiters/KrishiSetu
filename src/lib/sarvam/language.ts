@@ -23,11 +23,12 @@ export async function detectLanguage(text: string): Promise<LanguageDetectionRes
     const data = await sarvamFetch<{
       language_code?: string;
       detected_language?: string;
+      script_code?: string;
       confidence?: number;
       script?: string;
-    }>("/text-language-detection", {
+    }>("/text-lid", {
       body: {
-        input: text,
+        input: text.slice(0, 1000),
       },
     });
 
@@ -35,8 +36,8 @@ export async function detectLanguage(text: string): Promise<LanguageDetectionRes
 
     return {
       detectedLanguage,
-      confidence: data.confidence || 0.9,
-      script: data.script,
+      confidence: data.confidence || 0.95,
+      script: data.script_code || data.script,
       fallbackUsed: false,
     };
   } catch (err: any) {

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -174,7 +174,7 @@ function RobotFeatureIcon() {
 
 export default function MasterLandingPage() {
   const router = useRouter();
-  const { language, setLanguage, languages } = useLanguage();
+  const { language, setLanguage, languages, currentLanguageObj, t } = useLanguage();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
 
   return (
@@ -205,20 +205,20 @@ export default function MasterLandingPage() {
             className="text-xs font-bold text-[#15803D] bg-[#E6F4EA] hover:bg-[#CEEAD6] px-3.5 py-1.5 rounded-xl border border-[#CEEAD6] transition-colors shadow-2xs flex items-center gap-1.5"
           >
             <span>👤</span>
-            <span>किसान लॉगिन / पंजीकरण</span>
+            <span>{t('farmerLogin')}</span>
           </Link>
-          <div className="relative">
+          <div className="relative" data-no-translate="true">
             <button
               onClick={() => setLangMenuOpen(!langMenuOpen)}
               className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
               style={{ minHeight: '40px' }}
             >
               <Globe className="w-4 h-4 text-slate-600" />
-              <span>भाषा: {languages.find(l => l.code === language)?.localName || 'हिन्दी'}</span>
+              <span>{t('languageLabel')}: {currentLanguageObj?.nativeName || 'हिंदी'}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} />
             </button>
             {langMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50">
+              <div className="language-dropdown-menu absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50">
                 {languages.map((l) => (
                   <button
                     key={l.code}
@@ -228,8 +228,8 @@ export default function MasterLandingPage() {
                     }}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors ${language === l.code ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
                   >
-                    <span>{l.localName}</span>
-                    <span className="text-xs text-slate-400">{l.label}</span>
+                    <span>{l.nativeName}</span>
+                    <span className="text-xs text-slate-400">{l.name}</span>
                   </button>
                 ))}
               </div>
@@ -309,10 +309,16 @@ export default function MasterLandingPage() {
               lineHeight: 1.18,
             }}
           >
-            <span style={{ color: '#16A34A' }}>किसान</span>
-            <span style={{ color: '#1E293B' }}> से सीधा </span>
-            <span style={{ color: '#16A34A' }}>बाज़ार</span>
-            <span style={{ color: '#1E293B' }}> तक</span>
+            {language === 'hi' ? (
+              <>
+                <span style={{ color: '#16A34A' }}>किसान</span>
+                <span style={{ color: '#1E293B' }}> से सीधा </span>
+                <span style={{ color: '#16A34A' }}>बाज़ार</span>
+                <span style={{ color: '#1E293B' }}> तक</span>
+              </>
+            ) : (
+              <span style={{ color: '#15803D' }}>{t('heroTitle')}</span>
+            )}
           </h1>
           <div
             className="flex items-center justify-center gap-3 flex-wrap mb-3 font-bold"
@@ -322,11 +328,11 @@ export default function MasterLandingPage() {
               fontFamily: "'Noto Sans Devanagari', sans-serif",
             }}
           >
-            <span>बेहतर दाम</span>
+            <span>{t('heroTagline1')}</span>
             <span className="text-emerald-400 font-normal">•</span>
-            <span>आसान बिक्री</span>
+            <span>{t('heroTagline2')}</span>
             <span className="text-emerald-400 font-normal">•</span>
-            <span>स्मार्ट डिलीवरी</span>
+            <span>{t('heroTagline3')}</span>
           </div>
           <p
             className="leading-relaxed mb-4 text-slate-700 font-medium"
@@ -336,8 +342,7 @@ export default function MasterLandingPage() {
               lineHeight: 1.6,
             }}
           >
-            किसानों को सीधे खरीदारों से जोड़ने वाला<br />
-            सरल और भरोसेमंद डिजिटल बाज़ार।
+            {t('heroDesc')}
           </p>
           <div
             className="mx-auto"
@@ -376,7 +381,7 @@ export default function MasterLandingPage() {
       {/* MAIN CONTENT */}
       <main className="flex-1 max-w-[1180px] w-full mx-auto px-4 sm:px-6 lg:px-8 pb-8">
 
-        {/* आप कौन हैं? */}
+        {/* Who are you Section */}
         <div className="text-center pt-6 pb-4">
           <h2
             className="inline-flex items-center gap-3 font-extrabold text-slate-800"
@@ -386,7 +391,7 @@ export default function MasterLandingPage() {
             }}
           >
             <LeftLeafBranch />
-            <span>आप कौन हैं?</span>
+            <span>{t('whoAreYou')}</span>
             <RightLeafBranch />
           </h2>
         </div>
@@ -395,89 +400,92 @@ export default function MasterLandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
 
           {/* Farmer */}
-          <div
-            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+          <Link
+            href="/auth/farmer"
+            onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER'); }}
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer group block"
             style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <FarmerAvatar />
               <div>
-                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#15803D', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>किसान</h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">अपनी उपज बेचें</p>
+                <h3 className="font-black leading-tight group-hover:text-emerald-800 transition-colors" style={{ fontSize: '22px', color: '#15803D', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>{t('roleFarmerTitle')}</h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">{t('roleFarmerDesc')}</p>
               </div>
             </div>
-            <Link
-              href="/auth/farmer"
-              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER'); }}
-              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
+            <span
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all group-hover:opacity-95 group-hover:scale-[1.02] active:scale-[0.98] inline-block text-center"
               style={{ background: '#15803D', borderRadius: '10px', boxShadow: '0 2px 8px rgba(21,128,61,0.32)', whiteSpace: 'nowrap' }}
             >
-              प्रवेश करें →
-            </Link>
-          </div>
+              {t('enterPortalWithArrow')}
+            </span>
+          </Link>
 
           {/* Buyer */}
-          <div
-            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+          <Link
+            href="/buyer"
+            onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER'); }}
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer group block"
             style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <BuyerAvatar />
               <div>
-                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#1D4ED8', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>खरीदार</h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">सीधे खरीदें</p>
+                <h3 className="font-black leading-tight group-hover:text-blue-800 transition-colors" style={{ fontSize: '22px', color: '#1D4ED8', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>{t('roleBuyerTitle')}</h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">{t('roleBuyerDesc')}</p>
               </div>
             </div>
-            <button
-              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER'); router.push('/buyer'); }}
-              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
+            <span
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all group-hover:opacity-95 group-hover:scale-[1.02] active:scale-[0.98] inline-block text-center"
               style={{ background: '#1D4ED8', borderRadius: '10px', boxShadow: '0 2px 8px rgba(29,78,216,0.32)', whiteSpace: 'nowrap' }}
             >
-              प्रवेश करें →
-            </button>
-          </div>
+              {t('enterPortalWithArrow')}
+            </span>
+          </Link>
 
           {/* Transporter */}
-          <div
-            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+          <Link
+            href="/transporter"
+            onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER'); }}
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer group block"
             style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <TransporterAvatar />
               <div>
-                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#EA580C', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>परिवहनकर्ता</h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">डिलीवरी सेवाएं दें</p>
+                <h3 className="font-black leading-tight group-hover:text-orange-700 transition-colors" style={{ fontSize: '22px', color: '#EA580C', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>{t('roleTransporterTitle')}</h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">{t('roleTransporterDesc')}</p>
               </div>
             </div>
-            <button
-              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER'); router.push('/transporter'); }}
-              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
+            <span
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all group-hover:opacity-95 group-hover:scale-[1.02] active:scale-[0.98] inline-block text-center"
               style={{ background: '#EA580C', borderRadius: '10px', boxShadow: '0 2px 8px rgba(234,88,12,0.32)', whiteSpace: 'nowrap' }}
             >
-              प्रवेश करें →
-            </button>
-          </div>
+              {t('enterPortalWithArrow')}
+            </span>
+          </Link>
 
           {/* Admin */}
-          <div
-            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md"
+          <Link
+            href="/admin"
+            onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN'); }}
+            className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer group block"
             style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
           >
             <div className="flex items-center gap-4">
               <AdminAvatar />
               <div>
-                <h3 className="font-black leading-tight" style={{ fontSize: '22px', color: '#7C3AED', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>व्यवस्थापक</h3>
-                <p className="text-sm text-slate-500 font-semibold mt-0.5">प्लेटफॉर्म प्रबंधन करें</p>
+                <h3 className="font-black leading-tight group-hover:text-purple-800 transition-colors" style={{ fontSize: '22px', color: '#7C3AED', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>{t('roleAdminTitle')}</h3>
+                <p className="text-sm text-slate-500 font-semibold mt-0.5">{t('roleAdminDesc')}</p>
               </div>
             </div>
-            <button
-              onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN'); router.push('/admin'); }}
-              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-[0.98]"
+            <span
+              className="font-bold text-sm text-white flex-shrink-0 px-5 py-2.5 transition-all group-hover:opacity-95 group-hover:scale-[1.02] active:scale-[0.98] inline-block text-center"
               style={{ background: '#7C3AED', borderRadius: '10px', boxShadow: '0 2px 8px rgba(124,58,237,0.32)', whiteSpace: 'nowrap' }}
             >
-              प्रवेश करें →
-            </button>
-          </div>
+              {t('enterPortalWithArrow')}
+            </span>
+          </Link>
 
         </div>
 
@@ -489,29 +497,29 @@ export default function MasterLandingPage() {
           <div className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0" style={{ borderColor: 'rgba(21,128,61,0.12)' }}>
             <RupeeFeatureIcon />
             <div>
-              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">बेहतर दाम</h4>
-              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">किसानों को उचित मूल्य</p>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{t('vp1Title')}</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">{t('vp1Desc')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0" style={{ borderColor: 'rgba(21,128,61,0.12)' }}>
             <LinkFeatureIcon />
             <div>
-              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">सीधे संपर्क</h4>
-              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">किसान से खरीदार तक सीधा जुड़ाव</p>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{t('vp2Title')}</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">{t('vp2Desc')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3.5 p-4 sm:p-5 lg:border-r border-b sm:border-b-0" style={{ borderColor: 'rgba(21,128,61,0.12)' }}>
             <TruckFeatureIcon />
             <div>
-              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">आसान डिलीवरी</h4>
-              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">स्मार्ट और समय पर डिलीवरी</p>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{t('vp4Title')}</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">{t('vp4Desc')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3.5 p-4 sm:p-5">
             <RobotFeatureIcon />
             <div>
-              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">स्मार्ट समाधान</h4>
-              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">AI आधारित बाजार और लॉजिस्टिक्स</p>
+              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{t('vp3Title')}</h4>
+              <p className="text-[11.5px] text-slate-500 font-medium mt-0.5">{t('vp3Desc')}</p>
             </div>
           </div>
         </div>
@@ -532,7 +540,7 @@ export default function MasterLandingPage() {
         <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
           <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22L6.66 19.7C7.14 19.87 7.64 20 8 20C19 20 22 3 22 3C21 5 14 5.25 9 6.25C4 7.25 2 11.5 2 13.5C2 15.5 3.75 17.25 3.75 17.25C7 8 17 8 17 8Z" />
         </svg>
-        <span>किसानों की समृद्धि, देश की प्रगति।</span>
+        <span>{t('trustLine')}</span>
       </footer>
 
     </div>

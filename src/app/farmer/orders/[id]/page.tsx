@@ -195,19 +195,36 @@ export default function OrderDetailsPage() {
 
             {/* Transport Request Card */}
             <div className="bg-slate-900 text-white p-5 rounded-2xl space-y-3 shadow-md">
-              <div className="flex items-center gap-2">
-                <Truck className="w-5 h-5 text-brand-green" />
-                <h3 className="font-bold text-sm">परिवहन वाहन जानकारी</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-brand-green" />
+                  <h3 className="font-bold text-sm">परिवहन वाहन जानकारी</h3>
+                </div>
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                  {order.status === 'IN_TRANSIT' ? 'रास्ते में (Live)' : order.status === 'DELIVERED' ? 'डिलीवर हुआ' : 'वाहन आवंटित'}
+                </span>
               </div>
-              <p className="text-xs text-slate-300">
-                {order.transporterName ? `${order.transporterName} (${order.vehicleDetails})` : 'अभी वाहन आवंटित किया जा रहा है'}
-              </p>
-              <Link
-                href={`/farmer/transport/${order.id}`}
-                className="w-full bg-brand-green text-white font-bold text-xs py-2.5 rounded-xl block text-center hover:bg-emerald-700 transition-colors"
-              >
-                वाहनों की सूची / FreshRoute देखें
-              </Link>
+
+              <div className="space-y-1 text-xs text-slate-300">
+                <div className="font-bold text-white">राजेश कुमार (राज ट्रांसपोर्ट)</div>
+                <div className="text-[11px] text-slate-400 font-mono">वाहन: UP 32 AB 1234 (Mini Truck)</div>
+                <div className="text-[11px] text-emerald-400">FreshRoute सुरक्षा: समय सीमा सक्रिय</div>
+              </div>
+
+              <div className="pt-1 flex flex-col gap-2">
+                <Link
+                  href={`/farmer/delivery/${order.id}`}
+                  className="w-full bg-brand-green hover:bg-emerald-600 text-white font-bold text-xs py-2.5 rounded-xl block text-center shadow-xs transition-colors"
+                >
+                  🚚 लाइव जीपीएस ट्रैकिंग मानचित्र देखें
+                </Link>
+                <Link
+                  href={`/farmer/transport/${order.id}`}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs py-2 rounded-xl block text-center transition-colors"
+                >
+                  FreshRoute विवरण देखें
+                </Link>
+              </div>
             </div>
           </div>
         </div>

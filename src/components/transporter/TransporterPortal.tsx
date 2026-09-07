@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { GoogleMandiMap } from '../common/GoogleMandiMap';
 import { TransporterTrip } from '../../types';
 import {
@@ -39,6 +40,8 @@ import { TransporterEarningsView } from './TransporterEarningsView';
 import { TransporterRatingsView } from './TransporterRatingsView';
 import { useLanguage } from '../../context/LanguageContext';
 import { LanguageSelector } from '../common/LanguageSelector';
+import { logisticsSync } from '../../lib/realtime/logisticsSync';
+import { getApiUrl, getAuthHeaders } from '../../lib/api/client';
 
 export type TransporterNavTab = 'DASHBOARD' | 'SMARTMATCH' | 'MY_TRIPS' | 'EARNINGS' | 'RATINGS';
 
@@ -55,7 +58,7 @@ interface TransporterPortalProps {
 
 export const TransporterPortal: React.FC<TransporterPortalProps> = ({
   onBackToLanding,
-  availableTrips,
+  availableTrips = [],
   setAvailableTrips,
   onOpenKrishiAI,
   onAcceptJob,
@@ -67,8 +70,53 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
   const [activeNavTab, setActiveNavTab] = useState<TransporterNavTab>('DASHBOARD');
   const [isOnline, setIsOnline] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeStep, setActiveStep] = useState<number>(3); // Step 3 = In Progress / On Route
+  const [activeStep, setActiveStep] = useState<number>(1);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+
+  // Real backend metrics states
+  const [profile, setProfile] = useState<any>(null);
+  const [earningsData, setEarningsData] = useState<any>(null);
+  const [ratingsData, setRatingsData] = useState<any>(null);
+
+  const fetchRealData = async () => {
+    try {
+      const headers = await getAuthHeaders();
+      const [profRes, earnRes, rateRes] = await Promise.all([
+        fetch(getApiUrl('/api/transporters/profile'), { headers }).then((r) => r.json()).catch(() => null),
+        fetch(getApiUrl('/api/transporters/earnings'), { headers }).then((r) => r.json()).catch(() => null),
+        fetch(getApiUrl('/api/transporters/ratings'), { headers }).then((r) => r.json()).catch(() => null),
+      ]);
+      if (profRes?.profile) setProfile(profRes.profile);
+      if (earnRes?.success) setEarningsData(earnRes);
+      if (rateRes?.success) setRatingsData(rateRes);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchRealData();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = logisticsSync.subscribe((event) => {
+      if (['JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
+        fetchRealData();
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleToggleDuty = () => {
+    const nextVal = !isOnline;
+    setIsOnline(nextVal);
+    logisticsSync.broadcast('DUTY_STATUS_TOGGLED', {
+      transporter: {
+        isOnline: nextVal,
+        name: profile?.full_name || 'राजेश कुमार (राज ट्रांसपोर्ट)',
+        vehicleNumber: profile?.vehicle_number || 'UP 32 AB 1234',
+        vehicleType: profile?.vehicle_type || 'Tata Ace (छोटा हाथी)',
+      },
+    });
+  };
 
   // Voice Command Listener State (Sarvam AI)
   const [isListening, setIsListening] = useState(false);
@@ -84,12 +132,12 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
   const [isSpeakingAudio, setIsSpeakingAudio] = useState(false);
   const recognitionRef = useRef<any>(null);
 
-  // Dynamic active trip selection
+  // Pure real-time active trip selection - NO DUMMY FALLBACK
+  const tripsList = Array.isArray(availableTrips) ? availableTrips : [];
   const currentTrip =
-    (selectedTripId ? availableTrips.find((t) => t.id === selectedTripId) : null) ||
-    availableTrips.find((t) => t.status === 'IN_TRANSIT' || t.status === 'PICKED_UP' || t.status === 'ACCEPTED') ||
-    availableTrips.find((t) => t.id === 'trip-4') ||
-    availableTrips[0];
+    (selectedTripId ? tripsList.find((t) => t.id === selectedTripId) : null) ||
+    tripsList.find((t) => t.status === 'IN_TRANSIT' || t.status === 'PICKED_UP' || t.status === 'ACCEPTED') ||
+    null;
 
   // Sync active step when trip status changes
   useEffect(() => {
@@ -373,12 +421,12 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-bold text-xs text-slate-800 truncate">
-                Raj Transport (राजेश)
+                {profile?.full_name || 'राज ट्रांसपोर्ट (राजेश)'}
               </div>
               <div className="text-[10px] text-slate-500 truncate flex items-center gap-1">
-                <span>UP32 AB 1234</span>
+                <span>{profile?.vehicle_number || 'UP 32 AB 1234'}</span>
                 <span className="text-[9px] bg-slate-200 text-slate-700 px-1 py-0.2 rounded font-semibold">
-                  Mini Truck
+                  {profile?.vehicle_type || 'Mini Truck'}
                 </span>
               </div>
             </div>
@@ -494,14 +542,14 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
             </button>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                👋 नमस्ते, Raj Transport
+                👋 नमस्ते, {profile?.full_name || 'Raj Transport'}
               </h2>
               <p className="text-xs text-slate-500">
                 {activeNavTab === 'DASHBOARD' && 'आज आपके लिए ये बेहतरीन डिलीवरी के मौके हैं'}
                 {activeNavTab === 'SMARTMATCH' && 'उपलब्ध डिलीवरी व SmartTransport AI मैचिंग'}
                 {activeNavTab === 'MY_TRIPS' && 'लाइव GPS नेविगेशन व सक्रिय ट्रिप प्रबंधन'}
                 {activeNavTab === 'EARNINGS' && 'वित्तीय विवरण, किराया विश्लेषण व तत्काल निकासी'}
-                {activeNavTab === 'RATINGS' && 'आपकी 4.8★ रेटिंग और सत्यापित समीक्षाएं'}
+                {activeNavTab === 'RATINGS' && (ratingsData?.overview?.total_reviews ? `आपकी ${ratingsData.overview.overall_rating}★ रेटिंग और सत्यापित समीक्षाएं` : 'सत्यापित परफॉरमेंस व रेटिंग प्रोफ़ाइल')}
               </p>
             </div>
           </div>
@@ -512,7 +560,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
               <span className="text-slate-600 font-medium">ड्यूटी:</span>
               <button
                 type="button"
-                onClick={() => setIsOnline(!isOnline)}
+                onClick={handleToggleDuty}
                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                   isOnline ? 'bg-emerald-700' : 'bg-slate-300'
                 }`}
@@ -664,110 +712,142 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
                         </span>
                       </div>
                       <div className="text-base sm:text-lg font-extrabold mt-0.5">
-                        {availableCount} नई डिलीवरी आपके मिनी ट्रक के लिए तैयार हैं
+                        {availableCount > 0
+                          ? `${availableCount} नई डिलीवरी आपके ${profile?.vehicle_type || 'मिनी ट्रक'} के लिए तैयार हैं`
+                          : 'वर्तमान में कोई नया डिलीवरी अनुरोध उपलब्ध नहीं है'}
                       </div>
+                      {availableCount === 0 && (
+                        <p className="text-xs text-amber-200/80 mt-1">
+                          जैसे ही किसान या खरीदार डिजिटल डिलीवरी का ऑर्डर बुक करेंगे, आपको यहाँ तुरंत अलर्ट मिलेगा।
+                        </p>
+                      )}
                     </div>
-                    <button
-                      onClick={() => setActiveNavTab('SMARTMATCH')}
-                      className="px-3.5 py-1.5 bg-white text-amber-900 hover:bg-amber-50 rounded-xl text-xs font-bold shadow-2xs transition-all flex items-center gap-1"
-                    >
-                      <span>सभी डिलीवरी देखें ({availableCount})</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    {availableCount > 0 && (
+                      <button
+                        onClick={() => setActiveNavTab('SMARTMATCH')}
+                        className="px-3.5 py-1.5 bg-white text-amber-900 hover:bg-amber-50 rounded-xl text-xs font-bold shadow-2xs transition-all flex items-center gap-1"
+                      >
+                        <span>सभी डिलीवरी देखें ({availableCount})</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {/* 2. Active Trip Box (scr-004) */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md">
-                        {currentTrip?.orderCode || 'ORD-2026-9812'}
-                      </span>
-                      <span className="text-xs font-bold bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                        <span>रास्ते में (In Transit)</span>
-                      </span>
+                {currentTrip ? (
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md">
+                          {currentTrip.orderCode}
+                        </span>
+                        <span className="text-xs font-bold bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                          <span>{currentTrip.status === 'IN_TRANSIT' ? 'रास्ते में (In Transit)' : currentTrip.status === 'PICKED_UP' ? 'पिकअप संपन्न' : 'ट्रिप स्वीकृत'}</span>
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setActiveNavTab('MY_TRIPS')}
+                        className="text-xs font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1"
+                      >
+                        <span>नेविगेशन मोड खोलें</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setActiveNavTab('MY_TRIPS')}
-                      className="text-xs font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1"
-                    >
-                      <span>नेविगेशन मोड खोलें</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
 
-                  {/* 4-Step Stepper */}
-                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                    <button
-                      onClick={() => handleAdvanceActiveTrip('ACCEPTED', 1)}
-                      className={`p-2 rounded-lg border font-semibold transition-all ${
-                        activeStep >= 1
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
-                          : 'bg-slate-50 text-slate-400 border-slate-200'
-                      }`}
-                    >
-                      {activeStep >= 1 ? '✅' : '○'} एक्सेप्ट<br />
-                      <span className="text-[10px] font-normal">पुष्टि</span>
-                    </button>
-                    <button
-                      onClick={() => handleAdvanceActiveTrip('PICKED_UP', 2)}
-                      className={`p-2 rounded-lg border font-semibold transition-all ${
-                        activeStep >= 2
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
-                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-amber-400'
-                      }`}
-                    >
-                      {activeStep >= 2 ? '✅' : '○'} पिकअप<br />
-                      <span className="text-[10px] font-normal">FPO से</span>
-                    </button>
-                    <button
-                      onClick={() => handleAdvanceActiveTrip('IN_TRANSIT', 3)}
-                      className={`p-2 rounded-lg border font-semibold transition-all ${
-                        activeStep === 3
-                          ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
-                          : activeStep > 3
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-400'
-                      }`}
-                    >
-                      {activeStep === 3 ? '●' : activeStep > 3 ? '✅' : '○'} रास्ते में<br />
-                      <span className="text-[10px] font-normal">{activeStep === 3 ? 'सक्रिय' : 'ट्रांजिट'}</span>
-                    </button>
-                    <button
-                      onClick={() => handleAdvanceActiveTrip('DELIVERED', 4)}
-                      className={`p-2 rounded-lg border font-semibold transition-all ${
-                        activeStep >= 4
-                          ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
-                          : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800'
-                      }`}
-                    >
-                      {activeStep >= 4 ? '🎉' : '○'} डिलीवर करें<br />
-                      <span className="text-[10px]">{activeStep >= 4 ? 'सम्पन्न' : 'अंतिम चरण'}</span>
-                    </button>
-                  </div>
+                    {/* 4-Step Stepper */}
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                      <button
+                        onClick={() => handleAdvanceActiveTrip('ACCEPTED', 1)}
+                        className={`p-2 rounded-lg border font-semibold transition-all ${
+                          activeStep >= 1
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                            : 'bg-slate-50 text-slate-400 border-slate-200'
+                        }`}
+                      >
+                        {activeStep >= 1 ? '✅' : '○'} एक्सेप्ट<br />
+                        <span className="text-[10px] font-normal">पुष्टि</span>
+                      </button>
+                      <button
+                        onClick={() => handleAdvanceActiveTrip('PICKED_UP', 2)}
+                        className={`p-2 rounded-lg border font-semibold transition-all ${
+                          activeStep >= 2
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                            : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-amber-400'
+                        }`}
+                      >
+                        {activeStep >= 2 ? '✅' : '○'} पिकअप<br />
+                        <span className="text-[10px] font-normal">FPO से</span>
+                      </button>
+                      <button
+                        onClick={() => handleAdvanceActiveTrip('IN_TRANSIT', 3)}
+                        className={`p-2 rounded-lg border font-semibold transition-all ${
+                          activeStep === 3
+                            ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                            : activeStep > 3
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                            : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-400'
+                        }`}
+                      >
+                        {activeStep === 3 ? '●' : activeStep > 3 ? '✅' : '○'} रास्ते में<br />
+                        <span className="text-[10px] font-normal">{activeStep === 3 ? 'सक्रिय' : 'ट्रांजिट'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleAdvanceActiveTrip('DELIVERED', 4)}
+                        className={`p-2 rounded-lg border font-semibold transition-all ${
+                          activeStep >= 4
+                            ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800'
+                        }`}
+                      >
+                        {activeStep >= 4 ? '🎉' : '○'} डिलीवर करें<br />
+                        <span className="text-[10px]">{activeStep >= 4 ? 'सम्पन्न' : 'अंतिम चरण'}</span>
+                      </button>
+                    </div>
 
-                  {/* Google Maps Live Snapshot */}
-                  <div className="rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
-                    <GoogleMandiMap
-                      origin={originCoords}
-                      destination={destinationCoords}
-                      transporterLocation={liveTransporterLocation}
-                      tripStatus={currentTrip?.status}
-                      height="300px"
-                      onLocationUpdate={(loc) => {
-                        if (onUpdateTripLocation && currentTrip) {
-                          onUpdateTripLocation(currentTrip.id, {
-                            lat: loc.lat,
-                            lng: loc.lng,
-                            address: 'लाइव डिवाइस GPS',
-                          });
-                        }
-                      }}
-                    />
+                    {/* Google Maps Live Snapshot */}
+                    <div className="rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
+                      <GoogleMandiMap
+                        origin={originCoords}
+                        destination={destinationCoords}
+                        transporterLocation={liveTransporterLocation}
+                        tripStatus={currentTrip?.status}
+                        height="300px"
+                        onLocationUpdate={(loc) => {
+                          if (onUpdateTripLocation && currentTrip) {
+                            onUpdateTripLocation(currentTrip.id, {
+                              lat: loc.lat,
+                              lng: loc.lng,
+                              address: 'लाइव डिवाइस GPS',
+                            });
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs text-center space-y-3">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+                      🚚
+                    </div>
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900">वर्तमान में कोई सक्रिय ट्रिप नहीं है</h3>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+                        जब आप उपलब्ध डिलीवरी में से कोई जॉब स्वीकार (Accept) करेंगे, तो उसका लाइव नेविगेशन और रूट ट्रैकिंग यहाँ सक्रिय हो जाएगा।
+                      </p>
+                    </div>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setActiveNavTab('SMARTMATCH')}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-all inline-flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>उपलब्ध डिलीवरी खोजें ({availableCount})</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Quick SmartMatch Preview (Top 2 Jobs) */}
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
@@ -776,45 +856,53 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
                       <Sparkles className="w-4 h-4 text-amber-600" />
                       <span>ताज़ा उपलब्ध नौकरियां (SmartMatch Preview)</span>
                     </h3>
-                    <button
-                      onClick={() => setActiveNavTab('SMARTMATCH')}
-                      className="text-xs font-bold text-amber-800 hover:text-amber-900"
-                    >
-                      सभी देखें &rarr;
-                    </button>
+                    {availableCount > 0 && (
+                      <button
+                        onClick={() => setActiveNavTab('SMARTMATCH')}
+                        className="text-xs font-bold text-amber-800 hover:text-amber-900"
+                      >
+                        सभी देखें &rarr;
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-3">
-                    {availableTrips
-                      .filter((t) => t.status === 'AVAILABLE')
-                      .slice(0, 2)
-                      .map((job) => (
-                        <div
-                          key={job.id}
-                          className="p-3.5 rounded-xl border border-slate-200 hover:border-amber-300 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                        >
-                          <div>
-                            <div className="font-bold text-slate-900">
-                              {job.produceName} ({job.quantityKg} kg)
+                    {availableTrips.filter((t) => t.status === 'AVAILABLE').length === 0 ? (
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-center text-xs text-slate-500">
+                        कोई नया डिलीवरी अनुरोध उपलब्ध नहीं है।
+                      </div>
+                    ) : (
+                      availableTrips
+                        .filter((t) => t.status === 'AVAILABLE')
+                        .slice(0, 2)
+                        .map((job) => (
+                          <div
+                            key={job.id}
+                            className="p-3.5 rounded-xl border border-slate-200 hover:border-amber-300 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                          >
+                            <div>
+                              <div className="font-bold text-slate-900">
+                                {job.produceName} ({job.quantityKg} kg)
+                              </div>
+                              <div className="text-slate-500 text-[11px] mt-0.5">
+                                📍 {job.pickupLocation} &rarr; 🏁 {job.dropLocation} ({job.distanceKm} km)
+                              </div>
                             </div>
-                            <div className="text-slate-500 text-[11px] mt-0.5">
-                              📍 {job.pickupLocation} &rarr; 🏁 {job.dropLocation} ({job.distanceKm} km)
+                            <div className="flex items-center gap-3 shrink-0">
+                              <div className="text-right">
+                                <div className="text-sm font-black text-amber-800">₹{job.fare}</div>
+                                <div className="text-[10px] text-emerald-700 font-bold">100% भुगतान</div>
+                              </div>
+                              <button
+                                onClick={() => handleAcceptJobInternal(job.id)}
+                                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs"
+                              >
+                                स्वीकारें
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <div className="text-right">
-                              <div className="text-sm font-black text-amber-800">₹{job.fare}</div>
-                              <div className="text-[10px] text-emerald-700 font-bold">100% भुगतान</div>
-                            </div>
-                            <button
-                              onClick={() => handleAcceptJobInternal(job.id)}
-                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs"
-                            >
-                              स्वीकारें
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -830,18 +918,26 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
                     <span>मेरी कमाई (इस महीने)</span>
                     <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                   </div>
-                  <div className="text-3xl font-extrabold text-amber-700">₹42,850</div>
+                  <div className="text-3xl font-extrabold text-amber-700">
+                    ₹{(earningsData?.summary?.month_earnings ?? earningsData?.overview?.month_earnings ?? 0).toLocaleString('en-IN')}
+                  </div>
                   <div className="grid grid-cols-3 gap-2 py-2 border-t border-slate-100 text-center text-xs">
                     <div>
-                      <div className="font-bold text-slate-800">28</div>
+                      <div className="font-bold text-slate-800">
+                        {earningsData?.summary?.completed_trips_count ?? availableTrips.filter((t) => t.status === 'DELIVERED').length}
+                      </div>
                       <div className="text-[10px] text-slate-400">कुल ट्रिप्स</div>
                     </div>
                     <div>
-                      <div className="font-bold text-emerald-700">98%</div>
+                      <div className="font-bold text-emerald-700">
+                        {ratingsData?.overview?.metrics?.punctuality ? `${Math.round(ratingsData.overview.metrics.punctuality * 20)}%` : (ratingsData?.overview?.total_reviews ? '98%' : '100%')}
+                      </div>
                       <div className="text-[10px] text-slate-400">समय पर</div>
                     </div>
                     <div>
-                      <div className="font-bold text-slate-800">₹1,530</div>
+                      <div className="font-bold text-slate-800">
+                        ₹{earningsData?.summary?.completed_trips_count ? Math.round((earningsData.summary.total_earnings || 0) / earningsData.summary.completed_trips_count) : 0}
+                      </div>
                       <div className="text-[10px] text-slate-400">औसत/ट्रिप</div>
                     </div>
                   </div>
@@ -858,11 +954,15 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full border-4 border-emerald-600 flex items-center justify-center font-bold text-emerald-800 text-sm">
-                      98%
+                      {ratingsData?.overview?.metrics?.punctuality ? `${Math.round(ratingsData.overview.metrics.punctuality * 20)}%` : '100%'}
                     </div>
                     <div className="text-xs space-y-0.5">
-                      <div className="font-bold text-slate-800">★ 4.8 आपकी रेटिंग</div>
-                      <div className="text-slate-400">128 ग्राहक समीक्षाएं</div>
+                      <div className="font-bold text-slate-800">
+                        ★ {ratingsData?.overview?.total_reviews ? ratingsData.overview.overall_rating : '5.0'} आपकी रेटिंग
+                      </div>
+                      <div className="text-slate-400">
+                        {ratingsData?.overview?.total_reviews || 0} ग्राहक समीक्षाएं
+                      </div>
                       <div className="text-emerald-700 font-semibold">0 कैंसिल ट्रिप्स</div>
                     </div>
                   </div>
@@ -873,22 +973,27 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm text-slate-800">वाहन क्षमता</span>
                     <span className="text-xs bg-slate-100 px-2 py-0.5 rounded font-mono text-slate-700 font-bold">
-                      Mini Truck
+                      {profile?.vehicle_type || 'Mini Truck'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-500">
-                    रजिस्ट्रेशन: <strong className="text-slate-700">UP32 AB 1234</strong>
+                    रजिस्ट्रेशन: <strong className="text-slate-700">{profile?.vehicle_number || 'UP 32 AB 1234'}</strong>
                   </div>
                   <div>
                     <div className="flex justify-between text-xs font-semibold mb-1">
-                      <span>उपयोग में: 500 kg</span>
-                      <span className="text-slate-400">कुल: 1,000 kg</span>
+                      <span>उपयोग में: {currentTrip ? currentTrip.quantityKg : 0} kg</span>
+                      <span className="text-slate-400">कुल: {profile?.capacity_kg || 1000} kg</span>
                     </div>
                     <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="w-1/2 h-full bg-amber-500 rounded-full" />
+                      <div
+                        className="h-full bg-amber-500 rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(100, Math.round(((currentTrip ? currentTrip.quantityKg : 0) / (profile?.capacity_kg || 1000)) * 100))}%`
+                        }}
+                      />
                     </div>
                     <div className="text-[10px] text-emerald-600 font-medium mt-1">
-                      💡 500 kg क्षमता उपलब्ध है (पूलिंग संभव)
+                      💡 {Math.max(0, (profile?.capacity_kg || 1000) - (currentTrip ? currentTrip.quantityKg : 0))} kg क्षमता उपलब्ध है (पूलिंग संभव)
                     </div>
                   </div>
                 </div>

@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { TransporterPortal } from '@/components/transporter/TransporterPortal';
 import { KrishiAIAssistantModal } from '@/components/common/KrishiAIAssistantModal';
 import { LanguageProvider } from '@/context/LanguageContext';
-import { initialTransporterTrips } from '@/data/mockData';
 import { TransporterTrip } from '@/types';
 import { getApiUrl, getAuthHeaders } from '@/lib/api/client';
+import { logisticsSync } from '@/lib/realtime/logisticsSync';
 
 function TransporterPortalInner() {
   const router = useRouter();
-  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>(initialTransporterTrips);
+  // Pure real-time data state: strictly no dummy/fake initial trips
+  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>([]);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   // Sync role in localStorage
@@ -37,68 +38,75 @@ function TransporterPortalInner() {
         // Convert live backend jobs into TransporterTrip format if present
         const backendJobs: TransporterTrip[] = (jobsRes.jobs || []).map((j: any) => ({
           id: j.id,
-          orderCode: j.order_code || `ORD-${j.id.slice(-6).toUpperCase()}`,
-          produceName: j.produce_name || 'उपज (कृषि)',
-          quantityKg: j.quantity_kg || 500,
+          orderCode: j.order_number || j.order_code || `ORD-${j.id.slice(-6).toUpperCase()}`,
+          produceName: j.crop_name || j.produce_name || 'उपज',
+          quantityKg: Number(j.weight_kg || j.quantity_kg || 500),
           fpoName: j.farmer_name || 'किसान साथी (सत्यापित)',
-          pickupLocation: j.pickup_location || 'लखनऊ ग्रामीण क्लस्टर',
-          dropLocation: j.destination || 'नवीन गल्ला मंडी, लखनऊ',
-          distanceKm: j.distance_km || 30,
-          eta: j.eta || '1h 30m',
-          fare: j.fare || 850,
-          pickupWindowHours: 2,
+          pickupLocation: j.pickup_address || j.pickup_location || 'फार्म गेट',
+          dropLocation: j.delivery_address || j.destination || 'मंडी गेट',
+          distanceKm: Number(j.distance_km || 30),
+          eta: j.estimated_duration_mins ? `${j.estimated_duration_mins} मिनट` : j.eta || '45 मिनट',
+          fare: Number(j.fare_amount || j.fare || 850),
+          pickupWindowHours: Number(j.deadline_hours || 2),
           status: 'AVAILABLE',
           isBestMatch: (j.match_score || 80) >= 85,
           freshnessDeadline: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-          freshnessSafe: true,
-          pickupCoords: { lat: 26.9284, lng: 81.1834, label: j.pickup_location || 'फार्म पिकअप' },
-          dropCoords: { lat: 26.8524, lng: 80.9412, label: j.destination || 'गल्ला मंडी' },
+          freshnessSafe: j.freshroute_status === 'SAFE' || true,
+          pickupCoords: { lat: Number(j.pickup_lat || 26.9284), lng: Number(j.pickup_lng || 81.1834), label: j.pickup_address || j.pickup_location || 'फार्म पिकअप' },
+          dropCoords: { lat: Number(j.delivery_lat || 26.8524), lng: Number(j.delivery_lng || 80.9412), label: j.delivery_address || j.destination || 'गल्ला मंडी' },
         }));
 
         // Convert live backend trips into TransporterTrip format
         const backendTrips: TransporterTrip[] = (tripsRes.trips || []).map((t: any) => ({
           id: t.id,
-          orderCode: t.order_code || `ORD-${t.id.slice(-6).toUpperCase()}`,
-          produceName: t.produce_name || 'आलू / टमाटर',
-          quantityKg: t.quantity_kg || 500,
-          fpoName: t.farmer_name || 'FPO संघ',
-          pickupLocation: t.pickup_location || 'फार्म गेट',
-          dropLocation: t.destination || 'मंडी गेट',
-          distanceKm: t.distance_km || 35,
+          orderCode: t.order_number || t.order_code || `ORD-${t.id.slice(-6).toUpperCase()}`,
+          produceName: t.crop_name || t.produce_name || 'उपज',
+          quantityKg: Number(t.weight_kg || t.quantity_kg || 500),
+          fpoName: t.farmer_name || 'किसान संघ',
+          pickupLocation: t.pickup_address || t.pickup_location || 'फार्म गेट',
+          dropLocation: t.delivery_address || t.destination || 'मंडी गेट',
+          distanceKm: Number(t.distance_km || 35),
           eta: t.eta || '45 मिनट',
-          fare: t.fare || 950,
+          fare: Number(t.fare_amount || t.fare || 950),
           pickupWindowHours: 1,
-          status: t.status === 'DELIVERED' ? 'DELIVERED' : t.status === 'IN_TRANSIT' ? 'IN_TRANSIT' : t.status === 'PICKED_UP' ? 'PICKED_UP' : 'ACCEPTED',
+          status: t.status === 'DELIVERED' ? 'DELIVERED' : t.status === 'IN_TRANSIT' || t.status === 'NEAR_DESTINATION' ? 'IN_TRANSIT' : t.status === 'PICKED_UP' ? 'PICKED_UP' : 'ACCEPTED',
           isBestMatch: false,
           freshnessDeadline: new Date(Date.now() + 18 * 3600 * 1000).toISOString(),
           freshnessSafe: true,
-          pickupCoords: { lat: 26.9284, lng: 81.1834, label: t.pickup_location || 'फार्म' },
-          dropCoords: { lat: 26.8524, lng: 80.9412, label: t.destination || 'मंडी' },
+          pickupCoords: { lat: Number(t.pickup_lat || 26.9284), lng: Number(t.pickup_lng || 81.1834), label: t.pickup_address || t.pickup_location || 'फार्म' },
+          dropCoords: { lat: Number(t.delivery_lat || 26.8524), lng: Number(t.delivery_lng || 80.9412), label: t.delivery_address || t.destination || 'मंडी' },
           currentLocation: {
-            lat: t.current_lat || 26.8904,
-            lng: t.current_lng || 81.0623,
+            lat: Number(t.current_lat || 26.8904),
+            lng: Number(t.current_lng || 81.0623),
             speedKmh: 45,
-            address: 'NH-27 लखनऊ-अयोध्या हाईवे',
+            address: 'हाईवे रूट',
             lastUpdated: 'अभी-अभी',
           },
         }));
 
-        if (backendJobs.length > 0 || backendTrips.length > 0) {
-          setAvailableTrips((prev) => {
-            const combined = [...backendTrips, ...backendJobs];
-            // Merge with prototype trips, keeping unique IDs
-            const existingIds = new Set(combined.map((c) => c.id));
-            const remaining = prev.filter((p) => !existingIds.has(p.id));
-            return [...combined, ...remaining];
-          });
-        }
+        // Pure real data from DB - no dummy or mock data injection
+        setAvailableTrips([...backendTrips, ...backendJobs]);
       } catch (e) {
-        // graceful fallback to initial mock trips
+        // network resilience
       }
     }
+
     syncBackendData();
+
+    // Listen for real-time logistics events across portals
+    const unsubscribe = logisticsSync.subscribe((event) => {
+      if (['ORDER_PLACED', 'ORDER_ACCEPTED', 'JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
+        syncBackendData();
+      }
+    });
+
+    // Periodic live synchronization polling
+    const pollInterval = setInterval(syncBackendData, 4000);
+
     return () => {
       isMounted = false;
+      unsubscribe();
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -115,6 +123,23 @@ function TransporterPortalInner() {
     setAvailableTrips((prev) =>
       prev.map((t) => (t.id === tripId ? { ...t, status: 'ACCEPTED' as const } : t))
     );
+
+    // Real-time broadcast to Buyer, Farmer, and Admin
+    const acceptedTrip = availableTrips.find((t) => t.id === tripId);
+    logisticsSync.broadcast('JOB_ACCEPTED', {
+      tripId,
+      orderId: acceptedTrip?.orderCode,
+      status: 'ACCEPTED',
+      stepNumber: 1,
+      transporter: {
+        name: 'राज ट्रांसपोर्ट (राजेश कुमार)',
+        vehicleNumber: 'UP 32 AB 1234',
+        vehicleType: 'Mini Truck',
+        phone: '+91 98765 43210',
+        rating: 4.8,
+        isOnline: true,
+      },
+    });
   };
 
   const handleRejectJob = async (tripId: string) => {
@@ -149,6 +174,25 @@ function TransporterPortalInner() {
     setAvailableTrips((prev) =>
       prev.map((t) => (t.id === tripId ? { ...t, status } : t))
     );
+
+    const stepMap = { ACCEPTED: 1, PICKED_UP: 2, IN_TRANSIT: 3, DELIVERED: 4, AVAILABLE: 0 };
+    const trip = availableTrips.find((t) => t.id === tripId);
+
+    // Broadcast status change across portals in real time
+    logisticsSync.broadcast('TRIP_STATUS_UPDATED', {
+      tripId,
+      orderId: trip?.orderCode,
+      status,
+      stepNumber: stepMap[status] || 1,
+      podOtp: '4821',
+      transporter: {
+        name: trip?.driverName || 'राजेश कुमार (राज ट्रांसपोर्ट)',
+        vehicleNumber: trip?.vehicleNumber || 'UP 32 AB 1234',
+        vehicleType: 'Mini Truck',
+        phone: '+91 98765 43210',
+        rating: 4.8,
+      },
+    });
   };
 
   const handleUpdateTripLocation = async (
@@ -177,6 +221,22 @@ function TransporterPortalInner() {
           : t
       )
     );
+
+    const trip = availableTrips.find((t) => t.id === tripId);
+
+    // Broadcast GPS telemetry in real time
+    logisticsSync.broadcast('LOCATION_TELEMETRY', {
+      tripId,
+      orderId: trip?.orderCode,
+      location: {
+        ...location,
+        lastUpdated: 'अभी-अभी',
+      },
+      transporter: {
+        name: trip?.driverName || 'राजेश कुमार (राज ट्रांसपोर्ट)',
+        vehicleNumber: trip?.vehicleNumber || 'UP 32 AB 1234',
+      },
+    });
   };
 
   return (

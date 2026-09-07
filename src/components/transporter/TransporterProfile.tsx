@@ -18,6 +18,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { getApiUrl, getAuthHeaders } from '@/lib/api/client';
+import { logisticsSync } from '@/lib/realtime/logisticsSync';
 
 interface Props {
   onProfileUpdated?: () => void;
@@ -103,6 +104,15 @@ export default function TransporterProfile({ onProfileUpdated }: Props) {
   const toggleDuty = async () => {
     const nextVal = !availability;
     setAvailability(nextVal);
+    logisticsSync.broadcast('DUTY_STATUS_TOGGLED', {
+      transporter: {
+        id: profile?.id,
+        name: profile?.full_name,
+        phone: profile?.phone,
+        vehicleNumber: profile?.vehicle_number,
+        isOnline: nextVal,
+      },
+    });
     try {
       const headers = await getAuthHeaders();
       await fetch(getApiUrl('/api/transporters/availability'), {

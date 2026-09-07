@@ -36,6 +36,19 @@ export function evaluateFreshRoute(input: FreshRouteInput): FreshRouteResult {
 
   const freshnessDeadlineIso = new Date(freshnessDeadlineMs).toISOString();
 
+  // If already expired at current time, immediately return INELIGIBLE
+  if (now >= freshnessDeadlineMs) {
+    return {
+      status: 'INELIGIBLE',
+      freshnessDeadlineIso,
+      estimatedArrivalIso: null,
+      remainingFreshnessMinutes: 0,
+      isEligible: false,
+      requiresConfirmation: false,
+      reason: 'फसल की ताज़गी पहले ही समाप्त हो चुकी है (INELIGIBLE)।',
+    };
+  }
+
   // If road route duration is unavailable (OSRM failed), we cannot guarantee freshness
   if (input.routeDurationMinutes === null) {
     const remainingMs = freshnessDeadlineMs - now;
