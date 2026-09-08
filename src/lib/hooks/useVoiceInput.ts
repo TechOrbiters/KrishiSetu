@@ -97,25 +97,60 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
         throw new Error("कोई आवाज़ रिकॉर्ड नहीं हुई (No audio recorded). कृपया दोबारा बोलें।");
       }
 
-      const formData = new FormData();
-      formData.append("file", audioBlob, "recording.webm");
+      let transcript = "";
+      let languageCode = "hi-IN";
+      let provider = "sarvam";
 
-      const response = await fetch("/api/ai/speech-to-text", {
-        method: "POST",
-        body: formData,
-      });
+      // 1. Try Sarvam AI STT directly from browser
+      try {
+        const formData = new FormData();
+        const file = new File([audioBlob], "recording.webm", { type: audioBlob.type || "audio/webm" });
+        formData.append("file", file);
+        formData.append("language_code", "hi-IN");
+        formData.append("model", "saarika:v2.5");
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        const errorMsg =
-          data?.error?.message || "आवाज़ पहचानने में समस्या आई। कृपया दोबारा प्रयास करें।";
-        throw new Error(errorMsg);
+        const sttRes = await fetch("https://api.sarvam.ai/speech-to-text", {
+          method: "POST",
+          headers: { "api-subscription-key": "sk_rsyrmj5p_FJlxTNuiqLJA1y3RpMVNZrJo" },
+          body: formData,
+        });
+        if (sttRes.ok) {
+          const sttData = await sttRes.json();
+          const sttTranscript = sttData.transcript || sttData.transcription || "";
+          if (sttTranscript.trim()) {
+            transcript = sttTranscript.trim();
+            languageCode = sttData.language_code || "hi-IN";
+            provider = "sarvam_stt_live";
+          }
+        }
+      } catch (sttErr) {
+        console.warn("[useVoiceInput] Sarvam STT notice:", sttErr);
       }
 
-      const transcript = (data.transcript || "").trim();
+      // 2. Try server route if direct STT failed
       if (!transcript) {
-        throw new Error("कोई स्पष्ट आवाज़ सुनाई नहीं दी। कृपया माइक के पास बोलें।");
+        try {
+          const formData = new FormData();
+          formData.append("file", audioBlob, "recording.webm");
+          const response = await fetch("/api/ai/speech-to-text", {
+            method: "POST",
+            body: formData,
+            signal: AbortSignal.timeout(5000),
+          });
+          const text = await response.text();
+          let data: any = null;
+          try { data = JSON.parse(text); } catch {}
+          if (response.ok && data?.success && data.transcript) {
+            transcript = (data.transcript || "").trim();
+            languageCode = data.languageCode || "hi-IN";
+            provider = data.provider || "server";
+          }
+        } catch { /* fallthrough */ }
+      }
+
+      if (!transcript) {
+        // 3. Friendly fallback: prompt user to type
+        throw new Error("कोई स्पष्ट आवाज़ सुनाई नहीं दी। कृपया माइक के पास बोलें या टाइप करें।");
       }
 
       setState("success");
@@ -123,9 +158,9 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
 
       const result: VoiceInputResult = {
         transcript,
-        languageCode: data.languageCode || "hi-IN",
-        provider: data.provider || "sarvam",
-        extractedIntent: data.extractedIntent,
+        languageCode,
+        provider,
+        extractedIntent: undefined,
         field: field || undefined,
       };
 

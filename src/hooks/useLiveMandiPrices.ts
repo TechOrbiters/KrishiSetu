@@ -333,10 +333,11 @@ export function useLiveMandiPrices(options: UseLiveMandiPricesOptions = {}): Use
 
         if (!isMountedRef.current) return;
 
-        if (data?.records && Array.isArray(data.records) && data.records.length > 0) {
-          setPrices(data.records);
+        const incomingRecords = data?.records || data?.prices || data?.data;
+        if (incomingRecords && Array.isArray(incomingRecords) && incomingRecords.length > 0) {
+          setPrices(incomingRecords);
           setIsLive(true);
-          setIsFallback(false);
+          setIsFallback(data?.fallbackUsed || false);
           setError(null);
           setErrorDetails(null);
           setRetryCount(0);
@@ -363,8 +364,11 @@ export function useLiveMandiPrices(options: UseLiveMandiPricesOptions = {}): Use
             saveLocalCachedMandi(selectedState, data);
           }
         } else {
-          // Empty data response
-          throw new Error('मंडी पोर्टल से कोई रिकॉर्ड प्राप्त नहीं हुआ');
+          // Graceful fallback without throwing empty data error
+          const fallbackData = (enableLocalStorage ? getLocalCachedMandi(selectedState)?.records : null) || fallbackPrices || fallbackMarketPrices || [];
+          setPrices(fallbackData);
+          setIsFallback(true);
+          setError(null);
         }
       } catch (err: any) {
         clearTimeout(timeoutId);

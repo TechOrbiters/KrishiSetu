@@ -2989,7 +2989,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                           return (
                             <>
                               {/* SVG Polyline */}
-                              <svg className="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none">
+                              <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                                 <polyline
                                   fill="none"
                                   stroke="#047857"
@@ -2998,8 +2998,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                                   strokeLinejoin="round"
                                   points={points.map((p, idx) => {
                                     const x = (idx / (points.length - 1 || 1)) * 100;
-                                    const y = 100 - ((p.price - minP) / (maxP - minP)) * 100;
-                                    return `${x}%,${y}%`;
+                                    const y = Math.max(5, Math.min(95, 100 - ((p.price - minP) / (maxP - minP)) * 100));
+                                    return `${x.toFixed(2)},${y.toFixed(2)}`;
                                   }).join(' ')}
                                 />
                               </svg>
