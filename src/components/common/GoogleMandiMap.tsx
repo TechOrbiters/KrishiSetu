@@ -105,19 +105,32 @@ function loadGoogleMapsScript(apiKey: string): Promise<boolean> {
     isGoogleMapsLoading = true;
     const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
     if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(true));
-      existingScript.addEventListener('error', () => resolve(false));
+      if ((window as any).google && (window as any).google.maps) {
+        isGoogleMapsLoading = false;
+        resolve(true);
+        return;
+      }
+      existingScript.addEventListener('load', () => {
+        isGoogleMapsLoading = false;
+        resolve(true);
+      });
+      existingScript.addEventListener('error', () => {
+        isGoogleMapsLoading = false;
+        resolve(false);
+      });
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
+    const callbackName = '__krishiSetuGoogleMapsInit';
+    (window as any)[callbackName] = () => {
       isGoogleMapsLoading = false;
       resolve(true);
     };
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async&callback=${callbackName}`;
+    script.async = true;
+    script.defer = true;
     script.onerror = (e) => {
       console.warn('Google Maps JS API script tag failed to load:', e);
       isGoogleMapsLoading = false;

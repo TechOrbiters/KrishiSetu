@@ -27,6 +27,8 @@ const STORAGE_KEYS = ['krishisetu_language', 'kisansetu_app_language'];
  */
 function applyDOMTranslation(targetLang: Language) {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  // Hindi is the base application language. Never mutate DOM text when target is 'hi'
+  if (targetLang === 'hi') return;
 
   // Build lookup mapping: any source phrase in any language -> target language text
   const phraseMap = new Map<string, string>();
@@ -114,19 +116,23 @@ function applyDOMTranslation(targetLang: Language) {
 }
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        for (const key of STORAGE_KEYS) {
-          const saved = localStorage.getItem(key) as Language;
-          if (saved && ['hi', 'en', 'mr', 'te', 'ta', 'bn'].includes(saved)) {
-            return saved;
+  // Always initialize to 'hi' (base language) so SSR static export and client initial render match 100%
+  const [language, setLanguageState] = useState<Language>('hi');
+
+  // Load language preference from localStorage only after initial client mount
+  useEffect(() => {
+    try {
+      for (const key of STORAGE_KEYS) {
+        const saved = localStorage.getItem(key) as Language;
+        if (saved && ['hi', 'en', 'mr', 'te', 'ta', 'bn'].includes(saved)) {
+          if (saved !== 'hi') {
+            setLanguageState(saved);
           }
+          break;
         }
-      } catch (_) {}
-    }
-    return 'hi';
-  });
+      }
+    } catch (_) {}
+  }, []);
 
   const setLanguage = useCallback((newLang: Language) => {
     setLanguageState(newLang);
@@ -141,8 +147,9 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         console.warn('Could not persist language to localStorage:', e);
       }
     }
-    // Instantly apply DOM auto-translation
-    requestAnimationFrame(() => applyDOMTranslation(newLang));
+    if (newLang !== 'hi') {
+      requestAnimationFrame(() => applyDOMTranslation(newLang));
+    }
   }, []);
 
   // Sync with localStorage & other tabs/instances
@@ -152,7 +159,9 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         const lang = e.newValue as Language;
         if (['hi', 'en', 'mr', 'te', 'ta', 'bn'].includes(lang)) {
           setLanguageState(lang);
-          requestAnimationFrame(() => applyDOMTranslation(lang));
+          if (lang !== 'hi') {
+            requestAnimationFrame(() => applyDOMTranslation(lang));
+          }
         }
       }
     };
@@ -179,6 +188,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       document.documentElement.lang = language;
     } catch (_) {}
     
+    if (language === 'hi') return;
+
     applyDOMTranslation(language);
 
     // Watch for dynamic DOM changes (tab switching, modals, new data)
@@ -187,7 +198,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       clearTimeout(timer);
       timer = setTimeout(() => {
         applyDOMTranslation(language);
-      }, 80);
+      }, 150);
     });
 
     if (typeof document !== 'undefined' && document.body) {
