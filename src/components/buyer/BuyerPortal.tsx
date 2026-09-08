@@ -2939,8 +2939,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Mandi Interactive Error / Fallback Banner */}
-                  {(buyerMandiErrorDetails || isBuyerMandiFallback) && (
+                  {/* Mandi Interactive Error / Fallback Banner - only display if prices failed to load */}
+                  {buyerMandiErrorDetails && buyerMandiList.length === 0 && (
                     <MandiErrorBanner
                       errorDetails={buyerMandiErrorDetails}
                       isRetrying={isBuyerMandiRetrying}

@@ -213,7 +213,7 @@ export function useLiveMandiPrices(options: UseLiveMandiPricesOptions = {}): Use
     refreshIntervalMs,
     maxRetries = 3,
     retryDelayMs = 2000,
-    timeoutMs = 9000,
+    timeoutMs = 15000,
     enableLocalStorage = true,
     fallbackPrices = fallbackMarketPrices,
   } = options;

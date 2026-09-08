@@ -14,7 +14,7 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "!/@(_next|favicon.svg|favicon.ico|manifest.json)/**",
         "destination": "/index.html"
       }
     ],
