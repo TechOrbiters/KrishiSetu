@@ -24,6 +24,12 @@ import { CategoryFilter } from './CategoryFilter';
 import { LiveTrackingMap } from '../maps/LiveTrackingMap';
 import { getAccurateCropImage } from '@/lib/cropImages';
 import {
+  matchesProduceSearch,
+  TRENDING_SEARCHES,
+  cleanVoiceSearchQuery,
+  getInstantCropSuggestions,
+} from '@/lib/search/cropSearch';
+import {
   Store,
   Users,
   ShoppingBag,
@@ -624,6 +630,183 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>(['टमाटर', 'आलू', 'गेहूं']);
+  const searchBarRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('krishi_buyer_recent_searches');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setRecentSearches(parsed.slice(0, 6));
+          }
+        }
+      } catch {}
+    }
+  }, []);
+
+  const saveRecentSearch = (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    setRecentSearches((prev) => {
+      const updated = [trimmed, ...prev.filter((item) => item.toLowerCase() !== trimmed.toLowerCase())].slice(0, 6);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('krishi_buyer_recent_searches', JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+  };
+
+  const removeRecentSearch = (e: React.MouseEvent, termToRemove: string) => {
+    e.stopPropagation();
+    setRecentSearches((prev) => {
+      const updated = prev.filter((item) => item !== termToRemove);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('krishi_buyer_recent_searches', JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+  };
+
+  // Close search suggestions on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (searchBarRef.current && !searchBarRef.current.contains(e.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handleSelectSearchQuery = (term: string) => {
+    setSearchQuery(term);
+    saveRecentSearch(term);
+    setIsSearchFocused(false);
+    setActiveTab('BROWSE');
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchQuery.trim()) {
+        handleSelectSearchQuery(searchQuery.trim());
+      } else {
+        setActiveTab('BROWSE');
+        setIsSearchFocused(false);
+      }
+    } else if (e.key === 'Escape') {
+      setIsSearchFocused(false);
+    }
+  };
+
+  // Native Web Speech API Voice Search
+  const handleVoiceSearchToggle = () => {
+    if (typeof window === 'undefined') return;
+
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRec) {
+      setVoiceError(
+        language === 'en'
+          ? 'Voice search is not supported in this browser. Opening Krishi AI...'
+          : 'वॉयस सर्च इस ब्राउज़र में समर्थित नहीं है। कृषि AI खोला जा रहा है...'
+      );
+      setTimeout(() => {
+        setVoiceError(null);
+        onOpenKrishiAI();
+      }, 1500);
+      return;
+    }
+
+    if (isVoiceListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+      setIsVoiceListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRec();
+      recognitionRef.current = recognition;
+      recognition.lang = language === 'en' ? 'en-IN' : 'hi-IN';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setIsVoiceListening(true);
+        setVoiceError(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        let interim = '';
+        let final = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            final += event.results[i][0].transcript;
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        const spoken = final || interim;
+        if (spoken) {
+          const cleaned = cleanVoiceSearchQuery(spoken);
+          setSearchQuery(cleaned);
+          if (event.results[0]?.isFinal) {
+            handleSelectSearchQuery(cleaned);
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          setVoiceError(
+            language === 'en'
+              ? 'Microphone permission blocked. Please allow mic access.'
+              : 'माइक्रोफ़ोन अनुमति बंद है। कृपया ब्राउज़र में माइक चालू करें।'
+          );
+        } else if (event.error !== 'no-speech') {
+          setVoiceError(language === 'en' ? 'Could not capture voice. Try again.' : 'आवाज़ नहीं सुनी जा सकी। पुनः प्रयास करें।');
+        }
+        setIsVoiceListening(false);
+        setTimeout(() => setVoiceError(null), 4000);
+      };
+
+      recognition.onend = () => {
+        setIsVoiceListening(false);
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.warn('Failed to start speech recognition:', err);
+      setIsVoiceListening(false);
+      setVoiceError(
+        language === 'en'
+          ? 'Microphone error. Opening Krishi AI...'
+          : 'माइक चालू नहीं हो सका। कृषि AI खोला जा रहा है...'
+      );
+      setTimeout(() => {
+        setVoiceError(null);
+        onOpenKrishiAI();
+      }, 1500);
+    }
+  };
   const [sortBy, setSortBy] = useState<'PRICE_ASC' | 'PRICE_DESC' | 'DISTANCE_ASC'>('DISTANCE_ASC');
   const [orderFilter, setOrderFilter] = useState<'ALL' | 'ACTIVE' | 'ORDERED' | 'PACKED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED'>('ALL');
   const [selectedLocation, setSelectedLocation] = useState('Lucknow, UP');
@@ -1689,10 +1872,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
       // Search Query Filter
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchName = item.crop?.toLowerCase().includes(q) || item.cropHindi?.toLowerCase().includes(q);
-        const matchFpo = item.fpoName?.toLowerCase().includes(q) || item.farmerName?.toLowerCase().includes(q);
-        return matchName || matchFpo;
+        if (!matchesProduceSearch(item, searchQuery)) {
+          return false;
+        }
       }
       return true;
     });
@@ -1711,6 +1893,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       return 0;
     });
   }, [listings, searchQuery, selectedCategory, sortBy]);
+
+  // Derived instant crop suggestions for search autocomplete dropdown
+  const cropSuggestions = useMemo(() => {
+    return getInstantCropSuggestions(searchQuery, listings || []);
+  }, [searchQuery, listings]);
 
   const isDark = themePreference === 'dark';
 
@@ -1758,23 +1945,257 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         </div>
 
         {/* Central Search Bar */}
-        <div className="flex-1 max-w-xl relative">
-          <div className="relative flex items-center">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3" />
+        <div className="flex-1 max-w-xl relative" ref={searchBarRef}>
+          <div
+            className={`relative flex items-center transition-all duration-200 ${
+              isVoiceListening
+                ? 'ring-2 ring-red-500 rounded-xl'
+                : isSearchFocused
+                ? 'ring-2 ring-emerald-600 rounded-xl shadow-xs'
+                : ''
+            }`}
+          >
+            <Search
+              className={`w-4 h-4 absolute left-3 pointer-events-none transition-colors ${
+                isSearchFocused ? 'text-emerald-700' : 'text-slate-400'
+              }`}
+            />
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={language === 'en' ? 'What are you looking for? (tomato, wheat, potato...)' : 'क्या ढूंढ रहे हैं? (टमाटर, गेहूं, आलू...)'}
-              className="w-full pl-9 pr-24 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white text-slate-800 placeholder-slate-400"
+              onFocus={() => setIsSearchFocused(true)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchFocused(true);
+              }}
+              onKeyDown={handleSearchKeyDown}
+              placeholder={
+                isVoiceListening
+                  ? language === 'en'
+                    ? '🎤 Listening... speak crop name (e.g. "tomato")'
+                    : '🎤 सुन रहे हैं... बोलिए जैसे "टमाटर" या "आलू"...'
+                  : language === 'en'
+                  ? 'What are you looking for? (tomato, wheat, potato...)'
+                  : 'क्या ढूंढ रहे हैं? (टमाटर, गेहूं, आलू...)'
+              }
+              className={`w-full pl-9 ${searchQuery ? 'pr-20' : 'pr-11'} py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border ${
+                isVoiceListening
+                  ? 'border-red-500 bg-red-50/20 text-red-900 dark:text-red-200'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100'
+              } rounded-xl focus:outline-none placeholder-slate-400 dark:placeholder-slate-500 transition-all`}
             />
+
+            {/* Clear Button */}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  searchInputRef.current?.focus();
+                }}
+                className="absolute right-9 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md cursor-pointer transition-colors"
+                title="खोज हटाएं (Clear Search)"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Voice Search / Mic Button */}
             <button
-              onClick={onOpenKrishiAI}
-              className="absolute right-2 p-1 text-slate-500 hover:text-emerald-700 rounded-md cursor-pointer flex items-center gap-1 text-xs"
+              type="button"
+              onClick={handleVoiceSearchToggle}
+              title={
+                isVoiceListening
+                  ? 'वॉयस सर्च रोकें (Stop Listening)'
+                  : 'बोलकर खोजें (Voice Search)'
+              }
+              className={`absolute right-2 p-1.5 rounded-lg cursor-pointer flex items-center justify-center transition-all ${
+                isVoiceListening
+                  ? 'bg-red-500 text-white animate-pulse shadow-sm'
+                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-750'
+              }`}
+              aria-label="Voice search microphone"
             >
-              <Mic className="w-4 h-4 text-emerald-700" />
+              <Mic className={`w-4 h-4 ${isVoiceListening ? 'animate-bounce' : ''}`} />
             </button>
           </div>
+
+          {/* Voice Error Notification Popup */}
+          {voiceError && (
+            <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-amber-50 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs rounded-xl shadow-md z-50 flex items-center justify-between gap-2 animate-in fade-in">
+              <span className="text-[11px] font-semibold">{voiceError}</span>
+              <button
+                onClick={() => setVoiceError(null)}
+                className="text-amber-600 hover:text-amber-900 text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Autocomplete & Suggestions Dropdown Popover */}
+          {isSearchFocused && (
+            <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[460px] overflow-y-auto">
+              {/* If search query is empty -> Show Trending Searches & Recent Searches */}
+              {!searchQuery.trim() ? (
+                <div className="p-3.5 space-y-3">
+                  {/* Trending Searches */}
+                  <div>
+                    <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{language === 'en' ? 'Trending Produce Searches' : 'लोकप्रिय खोजें (Trending Searches)'}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {TRENDING_SEARCHES.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleSelectSearchQuery(item.nameHi)}
+                          className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span>{item.emoji}</span>
+                          <span>{language === 'en' ? item.nameEn : item.nameHi}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{language === 'en' ? 'Recent Searches' : 'हालिया खोजें (Recent Searches)'}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecentSearches([]);
+                            try {
+                              localStorage.removeItem('krishi_buyer_recent_searches');
+                            } catch {}
+                          }}
+                          className="text-[10px] text-slate-400 hover:text-red-600 cursor-pointer font-semibold"
+                        >
+                          {language === 'en' ? 'Clear All' : 'सभी हटाएं'}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {recentSearches.map((term, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectSearchQuery(term)}
+                            className="group px-2.5 py-1 bg-slate-100/70 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer transition-colors"
+                          >
+                            <span>{term}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => removeRecentSearch(e, term)}
+                              className="text-slate-400 hover:text-red-500 opacity-60 group-hover:opacity-100 transition-opacity"
+                              title="हटाएं"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Voice Search Hint */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                      <Mic className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>माइक पर क्लिक करके सीधे बोलकर खोजें</span>
+                    </div>
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">Press Enter ↵</span>
+                  </div>
+                </div>
+              ) : (
+                /* If search query has text -> Show live matched produce suggestions */
+                <div>
+                  <div className="p-2.5 bg-slate-50/70 dark:bg-slate-850/50 flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                    <span>
+                      {language === 'en' ? `Suggestions for "${searchQuery}"` : `"${searchQuery}" के सुझाव`}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-extrabold">
+                      {filteredListings.length} उपलब्ध उपज
+                    </span>
+                  </div>
+
+                  {cropSuggestions.length > 0 ? (
+                    <div className="py-1">
+                      {cropSuggestions.map((sug, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleSelectSearchQuery(sug.cropHindi || sug.cropName)}
+                          className="px-3.5 py-2.5 hover:bg-emerald-50/60 dark:hover:bg-slate-800/80 flex items-center justify-between gap-3 cursor-pointer transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-b-0"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <img
+                              src={sug.imageUrl}
+                              alt={sug.cropName}
+                              className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                {sug.cropHindi} <span className="text-slate-400 font-normal text-[11px]">({sug.cropName})</span>
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                {sug.listingCount} किसान/FPO लिस्टिंग • {sug.totalQuantityKg.toLocaleString()} kg उपलब्ध
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-xs font-extrabold text-[#03542B] dark:text-emerald-400">
+                              ₹{sug.minPrice}/kg से शुरू
+                            </div>
+                            <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
+                              सीधे खेत से
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center space-y-2">
+                      <p className="text-xs text-slate-500">
+                        "{searchQuery}" नाम से कोई सटीक उपज नहीं मिली।
+                      </p>
+                      <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+                        {TRENDING_SEARCHES.slice(0, 4).map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleSelectSearchQuery(item.nameHi)}
+                            className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg hover:bg-emerald-100 cursor-pointer"
+                          >
+                            {item.emoji} {item.nameHi}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* View All Results Button */}
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 text-center border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSearchQuery(searchQuery)}
+                      className="w-full py-2 px-4 bg-[#03542B] hover:bg-[#023e1f] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      <span>"{searchQuery}" के सभी {filteredListings.length} परिणाम बाज़ार में देखें →</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Location Dropdown */}
@@ -2377,6 +2798,73 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                       className="w-28 h-28 rounded-2xl object-cover border-2 border-emerald-300 shadow-md z-10 shrink-0"
                     />
                   </div>
+
+                  {/* Active Search Results Banner on Home (if user typed in search bar) */}
+                  {searchQuery.trim() !== '' && (
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-emerald-300 dark:border-emerald-700 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+                            <Search className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                              खोज परिणाम: "{searchQuery}"
+                            </h3>
+                            <p className="text-[11px] text-slate-500">
+                              {filteredListings.length} ताज़ा खेत की उपज उपलब्ध
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer"
+                          >
+                            फ़िल्टर हटाएं
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('BROWSE')}
+                            className="px-3.5 py-1.5 bg-[#03542B] hover:bg-[#023e1f] text-white text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <span>बाज़ार में सभी देखें</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {filteredListings.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                          {filteredListings.slice(0, 4).map((item) => (
+                            <ProduceCard
+                              key={item.id}
+                              item={item}
+                              isSaved={savedListingIds.includes(item.id)}
+                              onToggleBookmark={toggleBookmark}
+                              onAddToCart={handleAddToCart}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center text-xs text-slate-500 space-y-2">
+                          <p>"{searchQuery}" के लिए कोई उपज नहीं मिली।</p>
+                          <div className="flex flex-wrap justify-center gap-1.5">
+                            {TRENDING_SEARCHES.slice(0, 5).map((t) => (
+                              <button
+                                key={t.id}
+                                onClick={() => handleSelectSearchQuery(t.nameHi)}
+                                className="text-xs bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2 py-1 rounded-lg text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                              >
+                                {t.emoji} {t.nameHi}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Category Filter Tiles */}
                   <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-3">
