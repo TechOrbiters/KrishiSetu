@@ -48,6 +48,8 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoStopTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeFieldRef = useRef<string | null>(null);
+  const speechRecognitionRef = useRef<any>(null);
+  const liveTranscriptRef = useRef<string>("");
 
   // Clean up media tracks and timers
   const cleanupMedia = useCallback(() => {
@@ -58,6 +60,10 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
     if (autoStopTimerRef.current) {
       clearTimeout(autoStopTimerRef.current);
       autoStopTimerRef.current = null;
+    }
+    if (speechRecognitionRef.current) {
+      try { speechRecognitionRef.current.stop(); } catch (e) {}
+      speechRecognitionRef.current = null;
     }
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -90,10 +96,58 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
     return "";
   };
 
+  // Convert browser-captured WebM/Opus audio to standard PCM 16-bit WAV for Sarvam STT
+  const convertBlobToWav = async (blob: Blob): Promise<Blob> => {
+    try {
+      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+      if (!AudioCtx) return blob;
+      const ctx = new AudioCtx();
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      ctx.close().catch(() => {});
+
+      const channelData = audioBuffer.getChannelData(0);
+      const sampleRate = audioBuffer.sampleRate;
+      const dataLength = channelData.length * 2;
+      const buffer = new ArrayBuffer(44 + dataLength);
+      const view = new DataView(buffer);
+
+      const writeStr = (offset: number, str: string) => {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      };
+
+      writeStr(0, "RIFF");
+      view.setUint32(4, 36 + dataLength, true);
+      writeStr(8, "WAVE");
+      writeStr(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, 1, true); // Mono
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true); // byte rate
+      view.setUint16(32, 2, true); // block align
+      view.setUint16(34, 16, true); // 16-bit
+      writeStr(36, "data");
+      view.setUint32(40, dataLength, true);
+
+      let offset = 44;
+      for (let i = 0; i < channelData.length; i++) {
+        const s = Math.max(-1, Math.min(1, channelData[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+
+      return new Blob([view], { type: "audio/wav" });
+    } catch (e) {
+      console.warn("[useVoiceInput] WAV conversion notice:", e);
+      return blob;
+    }
+  };
+
   const uploadAndTranscribe = async (audioBlob: Blob, field: string | null) => {
     setState("processing");
     try {
-      if (audioBlob.size === 0) {
+      if (audioBlob.size === 0 && !liveTranscriptRef.current) {
         throw new Error("कोई आवाज़ रिकॉर्ड नहीं हुई (No audio recorded). कृपया दोबारा बोलें।");
       }
 
@@ -101,10 +155,11 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
       let languageCode = "hi-IN";
       let provider = "sarvam";
 
-      // 1. Try Sarvam AI STT directly from browser with official Saaras v3 model
+      // 1. Try Sarvam AI STT directly with compliant 16-bit PCM WAV
       try {
+        const wavBlob = await convertBlobToWav(audioBlob);
         const formData = new FormData();
-        const file = new File([audioBlob], "recording.wav", { type: audioBlob.type || "audio/wav" });
+        const file = new File([wavBlob], "recording.wav", { type: "audio/wav" });
         formData.append("file", file);
         formData.append("language_code", "hi-IN");
         formData.append("model", "saaras:v3");
@@ -131,8 +186,13 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
         console.warn("[useVoiceInput] Sarvam STT notice:", sttErr);
       }
 
+      // 2. Native SpeechRecognition in-browser fallback
+      if (!transcript && liveTranscriptRef.current.trim()) {
+        transcript = liveTranscriptRef.current.trim();
+        provider = "browser_speech_recognition";
+      }
+
       if (!transcript) {
-        // 3. Friendly fallback: prompt user to type
         throw new Error("कोई स्पष्ट आवाज़ सुनाई नहीं दी। कृपया माइक के पास बोलें या टाइप करें।");
       }
 
@@ -225,6 +285,31 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
         };
 
         mediaRecorder.start(250); // Slice data every 250ms
+        liveTranscriptRef.current = "";
+
+        // Start browser Web Speech API in parallel for instant Hindi speech capture fallback
+        try {
+          const SpeechRec = typeof window !== "undefined" ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : null;
+          if (SpeechRec) {
+            const recognizer = new SpeechRec();
+            recognizer.continuous = true;
+            recognizer.interimResults = true;
+            recognizer.lang = "hi-IN";
+            recognizer.onresult = (event: any) => {
+              let text = "";
+              for (let i = 0; i < event.results.length; i++) {
+                text += event.results[i][0].transcript + " ";
+              }
+              liveTranscriptRef.current = text.trim();
+            };
+            recognizer.onerror = () => {};
+            recognizer.start();
+            speechRecognitionRef.current = recognizer;
+          }
+        } catch (recErr) {
+          // Web Speech API not available or blocked, fallback to Sarvam wav STT
+        }
+
         setState("recording");
 
         // Duration timer
