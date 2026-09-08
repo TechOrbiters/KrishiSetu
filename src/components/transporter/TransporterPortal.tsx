@@ -388,7 +388,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
   return (
     <div className="flex h-screen bg-slate-100 font-sans text-slate-800 antialiased overflow-hidden">
       {/* Sidebar (Navigation shown in image) */}
-      <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex md:flex-col justify-between shrink-0 shadow-2xs z-20">
+      <aside className="w-64 bg-white border-r border-slate-200 hidden lg:flex lg:flex-col justify-between shrink-0 shadow-2xs z-20">
         <div>
           {/* Logo & Brand */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -536,7 +536,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg bg-slate-100 text-slate-700"
+              className="lg:hidden p-2 rounded-lg bg-slate-100 text-slate-700"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -596,74 +596,210 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
           </div>
         </header>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile & Tablet Side Panel Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-slate-200 p-3 space-y-1 shadow-md animate-fadeIn text-xs">
-            <button
-              onClick={() => {
-                setActiveNavTab('DASHBOARD');
-                setMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
-                activeNavTab === 'DASHBOARD' ? 'bg-amber-600 text-white' : 'text-slate-700'
-              }`}
-            >
-              <Truck className="w-4 h-4" />
-              <span>डैशबोर्ड</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveNavTab('SMARTMATCH');
-                setMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold ${
-                activeNavTab === 'SMARTMATCH' ? 'bg-amber-600 text-white' : 'text-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Sparkles className="w-4 h-4" />
-                <span>उपलब्ध डिलीवरी (SmartMatch)</span>
+          <div className="fixed inset-0 z-50 lg:hidden flex">
+            {/* Backdrop */}
+            <div
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300"
+              aria-hidden="true"
+            />
+
+            {/* Slide-Out Side Panel */}
+            <div className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl z-10 flex flex-col justify-between overflow-hidden animate-slideInLeft">
+              {/* Header */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+                    KS
+                  </div>
+                  <div>
+                    <h2 className="font-extrabold text-sm text-slate-900 leading-tight">
+                      KrishiSetu
+                    </h2>
+                    <p className="text-[10px] font-bold text-amber-700 tracking-wide uppercase">
+                      ट्रांसपोर्टर पोर्टल
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[10px]">
-                {availableCount}
-              </span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveNavTab('MY_TRIPS');
-                setMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
-                activeNavTab === 'MY_TRIPS' ? 'bg-amber-600 text-white' : 'text-slate-700'
-              }`}
-            >
-              <Navigation className="w-4 h-4" />
-              <span>मेरी ट्रिप्स (My Trips)</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveNavTab('EARNINGS');
-                setMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
-                activeNavTab === 'EARNINGS' ? 'bg-amber-600 text-white' : 'text-slate-700'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>आय / कमाई (Earnings)</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveNavTab('RATINGS');
-                setMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left font-bold ${
-                activeNavTab === 'RATINGS' ? 'bg-amber-600 text-white' : 'text-slate-700'
-              }`}
-            >
-              <Star className="w-4 h-4" />
-              <span>रेटिंग और समीक्षा</span>
-            </button>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {/* Transporter Profile Pill */}
+                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-sm shrink-0">
+                    🚚
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-xs text-slate-800 truncate">
+                      {profile?.full_name || 'राज ट्रांसपोर्ट (राजेश)'}
+                    </div>
+                    <div className="text-[10px] text-slate-500 truncate flex items-center gap-1 mt-0.5">
+                      <span>{profile?.vehicle_number || 'UP 32 AB 1234'}</span>
+                      <span className="text-[9px] bg-slate-200 text-slate-700 px-1 py-0.2 rounded font-semibold">
+                        {profile?.vehicle_type || 'Mini Truck'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duty Toggle in Drawer */}
+                <div className="flex items-center justify-between p-2.5 bg-amber-50/60 border border-amber-200/60 rounded-xl text-xs">
+                  <span className="text-slate-700 font-bold">ड्यूटी स्थिति:</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleToggleDuty}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                        isOnline ? 'bg-emerald-700' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                          isOnline ? 'translate-x-4.5' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                    <span className={`font-bold text-xs ${isOnline ? 'text-emerald-800' : 'text-slate-400'}`}>
+                      {isOnline ? 'ऑनलाइन' : 'ऑफलाइन'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Navigation Links */}
+                <div className="space-y-1 pt-1">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pb-1">
+                    पोर्टल सुविधाएं (Features)
+                  </div>
+                  <button
+                    onClick={() => {
+                      setActiveNavTab('DASHBOARD');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold text-xs transition-all ${
+                      activeNavTab === 'DASHBOARD'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4" />
+                    <span>{t('dashboard')}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveNavTab('SMARTMATCH');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left font-bold text-xs transition-all ${
+                      activeNavTab === 'SMARTMATCH'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>{t('availableTrips')}</span>
+                    </div>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full font-bold text-[10px] ${
+                        activeNavTab === 'SMARTMATCH'
+                          ? 'bg-white text-amber-900'
+                          : 'bg-amber-100 text-amber-900'
+                      }`}
+                    >
+                      {availableCount}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveNavTab('MY_TRIPS');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold text-xs transition-all ${
+                      activeNavTab === 'MY_TRIPS'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>{t('activeDeliveries')}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveNavTab('EARNINGS');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold text-xs transition-all ${
+                      activeNavTab === 'EARNINGS'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    <span>{t('analytics')}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveNavTab('RATINGS');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-bold text-xs transition-all ${
+                      activeNavTab === 'RATINGS'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Star className="w-4 h-4" />
+                    <span>{t('profile')}</span>
+                  </button>
+                </div>
+
+                {/* AI Assistant Banner */}
+                <div className="p-3 bg-gradient-to-br from-amber-600 to-amber-700 text-white rounded-xl shadow-xs">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Bot className="w-4 h-4 text-amber-200" />
+                    <span className="text-xs font-bold">AI साथी आपकी मदद के लिए</span>
+                  </div>
+                  <p className="text-[11px] text-amber-100 leading-relaxed mb-2.5">
+                    बेहतर कमाई और स्मार्ट ट्रिप के सुझाव तुरंत पाएं
+                  </p>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenKrishiAI();
+                    }}
+                    className="w-full py-1.5 bg-white text-amber-900 text-xs font-bold rounded-lg shadow-2xs transition-colors hover:bg-amber-50"
+                  >
+                    AI साथी से बात करें
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
+                <LanguageSelector variant="light" showLabel={false} />
+                <button
+                  onClick={onBackToLanding}
+                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>{t('switchRole')}</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

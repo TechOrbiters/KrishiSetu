@@ -44,6 +44,7 @@ import {
   Filter,
   Check,
   X,
+  Menu,
   HelpCircle,
   Headphones,
   Package,
@@ -1261,6 +1262,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
   const [activeChatOrder, setActiveChatOrder] = useState<any | null>(null);
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<any | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   const trendDataMap: Record<string, Record<'7D' | '15D' | '1M' | '3M', { label: string; price: number }[]>> = useMemo(() => {
     const getDaysAgoLabel = (daysAgo: number): string => {
@@ -1713,12 +1715,24 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   return (
     <div className={`h-screen overflow-hidden ${isDark ? 'dark bg-slate-950 text-slate-100' : 'bg-[#F4F6F8] text-slate-800'} font-sans flex flex-col antialiased transition-colors duration-200`}>
       {/* --- TOP HEADER BAR (Exact Mockup Layout) --- */}
-      <header className={`${isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'} px-4 lg:px-6 py-2.5 flex items-center justify-between gap-4 shrink-0 z-40 shadow-xs border-b`}>
-        {/* Logo */}
-        <div className="flex items-center gap-3 shrink-0">
+      <header className={`${isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'} px-3 sm:px-4 lg:px-6 py-2.5 flex items-center justify-between gap-3 sm:gap-4 shrink-0 z-40 shadow-xs border-b`}>
+        {/* Logo & Mobile Menu Toggle */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className={`p-2 rounded-xl transition-colors lg:hidden flex items-center justify-center cursor-pointer ${
+              isDark ? 'bg-slate-800 text-slate-200 hover:bg-slate-750' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+            title="पोर्टल मेनू व फीचर्स (Menu & Features)"
+            aria-label="Open portal navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
           <button
             onClick={onBackToLanding}
-            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors md:hidden"
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-colors hidden sm:block md:hidden cursor-pointer"
+            title="रोल बदलें (Switch Role)"
           >
             ←
           </button>
@@ -2004,10 +2018,174 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         </div>
       )}
 
+      {/* === MOBILE & TABLET SLIDE-OUT SIDE PANEL DRAWER === */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity cursor-pointer"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div
+            className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] ${
+              isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'
+            } shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-250 border-r ${
+              isDark ? 'border-slate-800' : 'border-slate-200'
+            }`}
+          >
+            {/* Drawer Header */}
+            <div className={`p-4 border-b flex items-center justify-between shrink-0 ${isDark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-100 bg-slate-50/70'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#03542B] flex items-center justify-center text-white shadow-xs">
+                  <Leaf className="w-4 h-4 fill-emerald-400 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-[#03542B] dark:text-emerald-400 leading-none">
+                    Kisan Bazaar
+                  </h3>
+                  <p className="text-[9px] text-emerald-700 dark:text-emerald-300 font-bold uppercase tracking-wider mt-0.5">
+                    Buyer Portal Features
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'} transition-colors cursor-pointer`}
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Profile Card */}
+            <div className="p-3.5 shrink-0">
+              <div className={`p-3 ${isDark ? 'bg-slate-850 border-slate-750' : 'bg-slate-50 border-slate-200'} border rounded-2xl flex items-center gap-3 shadow-2xs`}>
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
+                  alt="Rohit Verma"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-xs truncate">Rohit Verma</span>
+                    <span className="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded-md">
+                      Buyer
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>Lucknow, UP (नवीन गल्ला मंडी)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Menu Items with Badges and Active Highlighting */}
+            <nav className="flex-1 px-3 py-1 overflow-y-auto space-y-1 text-xs font-semibold custom-scrollbar">
+              <div className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 px-3 py-1 uppercase tracking-wider">
+                पोर्टल के मुख्य फीचर्स (Features)
+              </div>
+
+              {[
+                { id: 'HOME', icon: Store, en: 'Home', hi: 'होम' },
+                { id: 'BROWSE', icon: Search, en: 'Bazaar Products', hi: 'बाज़ार प्रोडक्ट्स' },
+                { id: 'ORDERS', icon: Package, en: 'Orders', hi: 'ऑर्डर्स' },
+                { id: 'FARMERS', icon: Users, en: 'Farmers / FPOs', hi: 'किसान / FPOs' },
+                { id: 'PRICES', icon: TrendingUp, en: 'Market Prices', hi: 'बाजार भाव', badge: 'नया' },
+                { id: 'DELIVERY_TRACKING', icon: Compass, en: 'Delivery Tracking', hi: 'डिलीवरी ट्रैकिंग' },
+                { id: 'DELIVERY_VIKALP', icon: Truck, en: 'Delivery Vikalp', hi: 'डिलीवरी विकल्प' },
+                { id: 'PAYMENTS', icon: CreditCard, en: 'Payments', hi: 'भुगतान इतिहास' },
+                { id: 'NOTIFICATIONS', icon: Bell, en: 'Notifications', hi: 'सूचनाएं', count: unreadNotificationsCount },
+                { id: 'SETTINGS', icon: Settings, en: 'Settings & Profile', hi: 'सेटिंग्स एवं प्रोफाइल' },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id as any);
+                      if (item.id === 'SETTINGS') setActiveSettingsSection('MENU');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-[#03542B] text-white font-bold shadow-xs'
+                        : isDark
+                        ? 'text-slate-300 hover:bg-slate-800'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-300' : 'text-slate-500 dark:text-slate-400'}`} />
+                      <span>{language === 'en' ? item.en : item.hi}</span>
+                    </div>
+                    {item.badge && (
+                      <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded-md font-bold">
+                        {item.badge}
+                      </span>
+                    )}
+                    {typeof item.count === 'number' && item.count > 0 && (
+                      <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.2 rounded-full font-bold">
+                        {item.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Bottom Actions & Role Switcher */}
+            <div className={`p-3.5 border-t space-y-2.5 shrink-0 ${isDark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-100 bg-slate-50/80'}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onOpenKrishiAI();
+                }}
+                className="w-full py-2.5 bg-[#03542B] hover:bg-[#023e1f] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              >
+                <Bot className="w-4 h-4 text-emerald-300" />
+                <span>AI Shopping Assistant</span>
+              </button>
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onBackToLanding();
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold text-center transition-colors cursor-pointer ${
+                    isDark ? 'border-slate-700 bg-slate-850 text-slate-200 hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  🔄 रोल बदलें (Role)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleThemeChange(isDark ? 'light' : 'dark')}
+                  className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                    isDark ? 'border-slate-700 bg-slate-850 text-amber-400 hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                  title={isDark ? 'Light Mode' : 'Dark Mode'}
+                >
+                  {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- MAIN LAYOUT (Left Navigation + Canvas + Right Rail) --- */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
-        {/* === LEFT SIDEBAR (Fixed in view as previous) === */}
-        <aside className={`w-full md:w-56 ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'} flex flex-col shrink-0 md:h-full md:overflow-y-auto border-r border-slate-200 dark:border-slate-800 z-30`}>
+      <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+        {/* === LEFT SIDEBAR (Desktop only, hidden on mobile/tablet) === */}
+        <aside className={`hidden lg:flex lg:w-60 xl:w-64 ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'} flex-col shrink-0 h-full overflow-y-auto border-r border-slate-200 dark:border-slate-800 z-20`}>
           {/* User Profile Card */}
           <div className={`p-3 m-2.5 ${isDark ? 'bg-slate-800/90 border-slate-700/80' : 'bg-slate-50 border-slate-200/80'} border rounded-2xl flex items-center gap-2.5`}>
             <img

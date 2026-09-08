@@ -15,12 +15,21 @@ import {
   LogOut,
   ChevronDown,
   Bot,
+  X,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useFarmerStore } from '@/lib/store/farmerStore';
 import { LanguageSelector } from '../common/LanguageSelector';
 
-export const FarmerSidebar: React.FC = () => {
+interface FarmerSidebarProps {
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export const FarmerSidebar: React.FC<FarmerSidebarProps> = ({
+  isOpenMobile = false,
+  onCloseMobile,
+}) => {
   const pathname = usePathname();
   const router = useRouter();
   const { t, language, setLanguage, languages } = useLanguage();
@@ -59,10 +68,10 @@ export const FarmerSidebar: React.FC = () => {
     { href: '/farmer/profile',      labelKey: 'nav.profile',      subKey: 'My Profile',       icon: User },
   ];
 
-  return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 z-30 select-none hidden md:flex">
+  const sidebarContent = (isMobileView = false) => (
+    <>
       {/* Sidebar Header: Brand Logo or Farmer Profile Avatar */}
-      <div className="p-5 border-b border-slate-100 flex items-center gap-3">
+      <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-3">
         {showFarmerAvatar ? (
           /* Farmer Avatar Variant (on market-prices, orders, delivery, payments, listings) */
           <div className="flex items-center gap-3 w-full">
@@ -71,11 +80,11 @@ export const FarmerSidebar: React.FC = () => {
               alt={user.fullName}
               className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-xs"
             />
-            <div>
-              <h2 className="font-bold text-base text-slate-900 leading-tight">{user.fullName}</h2>
-              <button className="text-xs text-slate-500 flex items-center gap-0.5 hover:text-brand-green">
-                <span>{user.village}, {user.district}</span>
-                <ChevronDown className="w-3.5 h-3.5" />
+            <div className="min-w-0 flex-1">
+              <h2 className="font-bold text-base text-slate-900 leading-tight truncate">{user.fullName}</h2>
+              <button className="text-xs text-slate-500 flex items-center gap-0.5 hover:text-brand-green truncate">
+                <span className="truncate">{user.village}, {user.district}</span>
+                <ChevronDown className="w-3.5 h-3.5 shrink-0" />
               </button>
             </div>
           </div>
@@ -93,6 +102,16 @@ export const FarmerSidebar: React.FC = () => {
             </div>
           </div>
         )}
+
+        {isMobileView && (
+          <button
+            onClick={onCloseMobile}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation Links */}
@@ -107,6 +126,9 @@ export const FarmerSidebar: React.FC = () => {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => {
+                if (isMobileView) onCloseMobile?.();
+              }}
               className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all ${
                 isActive
                   ? 'bg-emerald-50 text-emerald-700 font-bold shadow-xs'
@@ -125,7 +147,6 @@ export const FarmerSidebar: React.FC = () => {
 
       {/* Sidebar Footer: Language Selector & Logout */}
       <div className="p-3 border-t border-slate-100 space-y-2.5 bg-slate-50/50">
-
         {/* Language Selector Box */}
         <div className="w-full">
           <LanguageSelector className="w-full [&>button]:w-full [&>button]:justify-between" variant="light" showLabel={true} />
@@ -145,6 +166,33 @@ export const FarmerSidebar: React.FC = () => {
           </div>
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Fixed Sidebar */}
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 z-30 select-none hidden lg:flex">
+        {sidebarContent(false)}
+      </aside>
+
+      {/* Mobile & Tablet Slide-Out Side Panel Drawer */}
+      {isOpenMobile && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop */}
+          <div
+            onClick={onCloseMobile}
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300"
+            aria-hidden="true"
+          />
+
+          {/* Drawer Container */}
+          <div className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl z-10 flex flex-col justify-between overflow-hidden animate-slideInLeft select-none">
+            {sidebarContent(true)}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
+

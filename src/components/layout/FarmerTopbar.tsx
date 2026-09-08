@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Sun, Cloud, CloudRain, CloudLightning, CloudFog, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MapPin, Sun, Cloud, CloudRain, CloudLightning, CloudFog, ChevronDown, Menu } from 'lucide-react';
 import { useFarmerStore } from '@/lib/store/farmerStore';
 import { fetchWeatherData, WeatherData } from '@/lib/api/client';
 import { LanguageSelector } from '../common/LanguageSelector';
@@ -24,7 +24,11 @@ function getWeatherIcon(condition?: string) {
   return <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-amber-100 flex-shrink-0" />;
 }
 
-export const FarmerTopbar: React.FC = () => {
+interface FarmerTopbarProps {
+  onOpenMobileMenu?: () => void;
+}
+
+export const FarmerTopbar: React.FC<FarmerTopbarProps> = ({ onOpenMobileMenu }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, notificationsCount } = useFarmerStore();
@@ -63,6 +67,13 @@ export const FarmerTopbar: React.FC = () => {
     <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 sm:py-4 sticky top-0 z-30 shadow-2xs flex items-center justify-between gap-2">
       {/* Left Title & Greeting */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+        <button
+          onClick={onOpenMobileMenu}
+          className="lg:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex-shrink-0"
+          aria-label="Open side menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         {!isHome && (
           <button
             onClick={() => router.back()}
