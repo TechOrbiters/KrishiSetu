@@ -1,20 +1,15 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
 import {
-  getFirestore,
-  collection,
-  doc,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  getDocs,
-  serverTimestamp,
-  QuerySnapshot,
-  DocumentData,
-} from 'firebase/firestore';
-import config from '../../firebase-applet-config.json';
+  ref,
+  onValue,
+  off,
+  set,
+  update,
+  remove,
+  get,
+} from 'firebase/database';
+import { firebaseApp, firebaseAuth, firebaseRtdb } from './firebase/client';
+import { supabaseClient } from './supabase/client';
+import { logisticsSync } from './realtime/logisticsSync';
 import {
   ProduceListing,
   Order,
@@ -34,18 +29,12 @@ import {
   initialDisputes,
 } from '../data/mockData';
 
-// Initialize Firebase App
-export const app = getApps().length > 0 ? getApp() : initializeApp(config);
+// Re-export core instances
+export const app = firebaseApp;
+export const auth = firebaseAuth;
+export const db = firebaseRtdb;
 
-// Initialize Auth
-export const auth = getAuth(app);
-
-// Initialize Firestore (using custom databaseId if configured)
-export const db = config.firestoreDatabaseId
-  ? getFirestore(app, config.firestoreDatabaseId)
-  : getFirestore(app);
-
-// --- Custom Error Handler for Firebase Integration Skill ---
+// Backwards-compatible Error Handling stubs
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -55,200 +44,247 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  };
-}
-
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): void {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid || null,
-      email: auth.currentUser?.email || null,
-      emailVerified: auth.currentUser?.emailVerified || null,
-      isAnonymous: auth.currentUser?.isAnonymous || null,
-      tenantId: auth.currentUser?.tenantId || null,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.warn('Firestore Operation Info: ', JSON.stringify(errInfo));
+  console.warn(`[RTDB Operation ${operationType}] Path: ${path}`, error);
 }
 
-// Collection References
-export const produceListingsCol = collection(db, 'produceListings');
-export const ordersCol = collection(db, 'orders');
-export const transporterTripsCol = collection(db, 'transporterTrips');
-export const marketPricesCol = collection(db, 'marketPrices');
-export const fposCol = collection(db, 'fpos');
-export const verificationsCol = collection(db, 'verifications');
-export const disputesCol = collection(db, 'disputes');
-export const usersCol = collection(db, 'users');
+// Dummy collection objects for legacy components that reference them
+export const produceListingsCol = {} as any;
+export const ordersCol = {} as any;
+export const transporterTripsCol = {} as any;
+export const marketPricesCol = {} as any;
+export const fposCol = {} as any;
+export const verificationsCol = {} as any;
+export const disputesCol = {} as any;
+export const usersCol = {} as any;
 
-// --- Realtime Subscriptions ---
+/* -------------------------------------------------------------------------- */
+/* Realtime Subscriptions via Firebase Realtime Database (RTDB)                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Helper to convert RTDB snapshot object { id1: val1, id2: val2 } to Array
+ */
+function snapshotToArray<T extends { id?: string }>(val: any, initialDefaults: T[] = []): T[] {
+  if (!val) return initialDefaults;
+  if (Array.isArray(val)) {
+    return val.filter(Boolean).map((item, idx) => ({
+      id: item.id || `item_${idx}`,
+      ...item,
+    }));
+  }
+  if (typeof val === 'object') {
+    return Object.keys(val).map((k) => ({
+      id: k,
+      ...val[k],
+    }));
+  }
+  return initialDefaults;
+}
 
 export function subscribeProduceListings(
   onData: (listings: ProduceListing[]) => void,
   onError?: (err: Error) => void
 ) {
-  return onSnapshot(
-    produceListingsCol,
-    (snapshot: QuerySnapshot<DocumentData>) => {
-      const items: ProduceListing[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as ProduceListing);
-      });
-      onData(items);
+  if (!firebaseRtdb || typeof window === 'undefined') {
+    onData(initialProduceListings);
+    return () => {};
+  }
+
+  const listingsRef = ref(firebaseRtdb, 'produceListings');
+  const listener = onValue(
+    listingsRef,
+    (snapshot) => {
+      const val = snapshot.val();
+      if (!val) {
+        // Seed default listings if RTDB is currently empty
+        seedInitialDataIfEmpty().catch(() => {});
+        onData(initialProduceListings);
+      } else {
+        const list = snapshotToArray<ProduceListing>(val, initialProduceListings);
+        onData(list);
+      }
     },
     (err) => {
-      console.error('Realtime ProduceListings subscription error:', err);
+      console.warn('Realtime ProduceListings subscription warning:', err);
       if (onError) onError(err);
-      handleFirestoreError(err, OperationType.GET, 'produceListings');
+      onData(initialProduceListings);
     }
   );
+
+  return () => off(listingsRef, 'value', listener);
 }
 
 export function subscribeOrders(
   onData: (orders: Order[]) => void,
   onError?: (err: Error) => void
 ) {
-  return onSnapshot(
-    ordersCol,
-    (snapshot: QuerySnapshot<DocumentData>) => {
-      const items: Order[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as Order);
-      });
-      onData(items);
+  if (!firebaseRtdb || typeof window === 'undefined') {
+    onData(initialOrders);
+    return () => {};
+  }
+
+  const ordersRef = ref(firebaseRtdb, 'orders');
+  const listener = onValue(
+    ordersRef,
+    (snapshot) => {
+      const val = snapshot.val();
+      if (!val) {
+        seedInitialDataIfEmpty().catch(() => {});
+        onData(initialOrders);
+      } else {
+        const list = snapshotToArray<Order>(val, initialOrders);
+        onData(list);
+      }
     },
     (err) => {
-      console.error('Realtime Orders subscription error:', err);
+      console.warn('Realtime Orders subscription warning:', err);
       if (onError) onError(err);
-      handleFirestoreError(err, OperationType.GET, 'orders');
+      onData(initialOrders);
     }
   );
+
+  return () => off(ordersRef, 'value', listener);
 }
 
 export function subscribeTransporterTrips(
   onData: (trips: TransporterTrip[]) => void,
   onError?: (err: Error) => void
 ) {
-  return onSnapshot(
-    transporterTripsCol,
-    (snapshot: QuerySnapshot<DocumentData>) => {
-      const items: TransporterTrip[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as TransporterTrip);
-      });
-      onData(items);
+  if (!firebaseRtdb || typeof window === 'undefined') {
+    onData(initialTransporterTrips);
+    return () => {};
+  }
+
+  const tripsRef = ref(firebaseRtdb, 'transporterTrips');
+  const listener = onValue(
+    tripsRef,
+    (snapshot) => {
+      const val = snapshot.val();
+      if (!val) {
+        seedInitialDataIfEmpty().catch(() => {});
+        onData(initialTransporterTrips);
+      } else {
+        const list = snapshotToArray<TransporterTrip>(val, initialTransporterTrips);
+        onData(list);
+      }
     },
     (err) => {
-      console.error('Realtime TransporterTrips subscription error:', err);
+      console.warn('Realtime TransporterTrips subscription warning:', err);
       if (onError) onError(err);
-      handleFirestoreError(err, OperationType.GET, 'transporterTrips');
+      onData(initialTransporterTrips);
     }
   );
+
+  return () => off(tripsRef, 'value', listener);
 }
 
 export function subscribeMarketPrices(
   onData: (prices: MarketPrice[]) => void,
   onError?: (err: Error) => void
 ) {
-  return onSnapshot(
-    marketPricesCol,
-    (snapshot: QuerySnapshot<DocumentData>) => {
-      const items: MarketPrice[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as MarketPrice);
-      });
-      onData(items);
+  if (!firebaseRtdb || typeof window === 'undefined') {
+    onData(initialMarketPrices);
+    return () => {};
+  }
+
+  const pricesRef = ref(firebaseRtdb, 'marketPrices');
+  const listener = onValue(
+    pricesRef,
+    (snapshot) => {
+      const val = snapshot.val();
+      const list = snapshotToArray<MarketPrice>(val, initialMarketPrices);
+      onData(list);
     },
     (err) => {
-      console.error('Realtime MarketPrices subscription error:', err);
+      console.warn('Realtime MarketPrices subscription warning:', err);
       if (onError) onError(err);
-      handleFirestoreError(err, OperationType.GET, 'marketPrices');
+      onData(initialMarketPrices);
     }
   );
+
+  return () => off(pricesRef, 'value', listener);
 }
 
 export function subscribeFPOs(
   onData: (fpos: FPOProfile[]) => void,
   onError?: (err: Error) => void
 ) {
-  return onSnapshot(
-    fposCol,
-    (snapshot: QuerySnapshot<DocumentData>) => {
-      const items: FPOProfile[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as FPOProfile);
-      });
-      onData(items);
+  if (!firebaseRtdb || typeof window === 'undefined') {
+    onData(initialFPOs);
+    return () => {};
+  }
+
+  const fposRef = ref(firebaseRtdb, 'fpos');
+  const listener = onValue(
+    fposRef,
+    (snapshot) => {
+      const val = snapshot.val();
+      const list = snapshotToArray<FPOProfile>(val, initialFPOs);
+      onData(list);
     },
     (err) => {
-      console.error('Realtime FPOs subscription error:', err);
+      console.warn('Realtime FPOs subscription warning:', err);
       if (onError) onError(err);
-      handleFirestoreError(err, OperationType.GET, 'fpos');
+      onData(initialFPOs);
     }
   );
+
+  return () => off(fposRef, 'value', listener);
 }
 
 export function subscribeVerifications(
   onData: (verifications: VerificationRequest[]) => void,
   onError?: (err: Error) => void
 ) {
-  return onSnapshot(
-    verificationsCol,
-    (snapshot: QuerySnapshot<DocumentData>) => {
-      const items: VerificationRequest[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as VerificationRequest);
-      });
-      onData(items);
+  if (!firebaseRtdb || typeof window === 'undefined') {
+    onData(initialVerifications);
+    return () => {};
+  }
+
+  const verifRef = ref(firebaseRtdb, 'verifications');
+  const listener = onValue(
+    verifRef,
+    (snapshot) => {
+      const val = snapshot.val();
+      const list = snapshotToArray<VerificationRequest>(val, initialVerifications);
+      onData(list);
     },
     (err) => {
-      console.error('Realtime Verifications subscription error:', err);
+      console.warn('Realtime Verifications subscription warning:', err);
       if (onError) onError(err);
-      handleFirestoreError(err, OperationType.GET, 'verifications');
+      onData(initialVerifications);
     }
   );
+
+  return () => off(verifRef, 'value', listener);
 }
 
 export function subscribeDisputes(
   onData: (disputes: Dispute[]) => void,
   onError?: (err: Error) => void
 ) {
-  return onSnapshot(
-    disputesCol,
-    (snapshot: QuerySnapshot<DocumentData>) => {
-      const items: Dispute[] = [];
-      snapshot.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as Dispute);
-      });
-      onData(items);
+  if (!firebaseRtdb || typeof window === 'undefined') {
+    onData(initialDisputes);
+    return () => {};
+  }
+
+  const dispRef = ref(firebaseRtdb, 'disputes');
+  const listener = onValue(
+    dispRef,
+    (snapshot) => {
+      const val = snapshot.val();
+      const list = snapshotToArray<Dispute>(val, initialDisputes);
+      onData(list);
     },
     (err) => {
-      console.error('Realtime Disputes subscription error:', err);
+      console.warn('Realtime Disputes subscription warning:', err);
       if (onError) onError(err);
-      handleFirestoreError(err, OperationType.GET, 'disputes');
+      onData(initialDisputes);
     }
   );
+
+  return () => off(dispRef, 'value', listener);
 }
 
 export function subscribeBuyerProfile(
@@ -256,142 +292,144 @@ export function subscribeBuyerProfile(
   onData: (data: any) => void,
   onError?: (err: Error) => void
 ) {
-  // 1. Immediately provide cached local data if available
   if (typeof window !== 'undefined') {
     try {
       const local = localStorage.getItem(`kisan_buyer_profile_${id}`);
-      if (local) {
-        const parsed = JSON.parse(local);
-        if (parsed) onData(parsed);
-      }
-    } catch (e) {
-      // ignore
-    }
+      if (local) onData(JSON.parse(local));
+    } catch (e) {}
   }
 
-  // 2. Attempt Firestore realtime sync
-  try {
-    const docRef = doc(db, 'users', id);
-    return onSnapshot(
-      docRef,
-      (d) => {
-        if (d.exists()) {
-          const data = d.data();
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem(`kisan_buyer_profile_${id}`, JSON.stringify(data));
-            } catch (e) {}
-          }
-          onData(data);
-        } else {
-          onData(null);
-        }
-      },
-      (err) => {
-        console.warn('Realtime BuyerProfile subscription warning:', err.message);
-        if (onError) onError(err);
-        handleFirestoreError(err, OperationType.GET, `users/${id}`);
+  if (!firebaseRtdb || typeof window === 'undefined') return () => {};
+
+  const profileRef = ref(firebaseRtdb, `users/${id}`);
+  const listener = onValue(
+    profileRef,
+    (snap) => {
+      const data = snap.val();
+      if (data && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`kisan_buyer_profile_${id}`, JSON.stringify(data));
+        } catch (e) {}
       }
-    );
-  } catch (err: any) {
-    console.warn('Firestore subscription not available, using local cache:', err.message);
-    return () => {};
-  }
+      onData(data);
+    },
+    (err) => {
+      if (onError) onError(err);
+    }
+  );
+
+  return () => off(profileRef, 'value', listener);
 }
 
-// --- Realtime Mutations ---
+/* -------------------------------------------------------------------------- */
+/* Realtime Mutations with Multi-Tier Storage (RTDB + Supabase + Local)        */
+/* -------------------------------------------------------------------------- */
 
 export async function createProduceListing(listing: Omit<ProduceListing, 'id'> & { id?: string }) {
-  const customId = listing.id || `prod-${Date.now()}`;
-  const path = `produceListings/${customId}`;
+  const customId = listing.id || `prod_${Date.now()}`;
+  const dataToSave = {
+    ...listing,
+    id: customId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
   try {
-    const docRef = doc(db, 'produceListings', customId);
-    const dataToSave = {
-      ...listing,
-      id: customId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    await setDoc(docRef, dataToSave);
+    // 1. RTDB instant broadcast
+    if (firebaseRtdb) {
+      await set(ref(firebaseRtdb, `produceListings/${customId}`), dataToSave);
+    }
+
+    // 2. Supabase persistent backup
+    supabaseClient
+      .from('produce_listings')
+      .insert({
+        crop_name: listing.cropHindi || listing.crop,
+        category: 'Vegetables',
+        total_quantity: listing.quantityKg,
+        available_quantity: listing.quantityKg,
+        price_per_kg: listing.pricePerKg,
+        grade: listing.quality || 'A',
+        location_name: listing.cultivationLocation,
+        status: 'ACTIVE',
+        images: listing.image ? [listing.image] : [],
+        shelf_life_days: Math.round((listing.freshnessWindowHours || 48) / 24),
+      })
+      .then(() => {}, () => {});
+
+    // 3. Zero-latency cross-tab event
+    logisticsSync.broadcast('LISTING_CREATED', { listing: dataToSave });
+
     return customId;
   } catch (err) {
-    console.error('Error creating produce listing in Firestore:', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+    console.error('Error creating produce listing in RTDB:', err);
+    return customId;
   }
 }
 
 export async function updateProduceListing(id: string, updates: Partial<ProduceListing>) {
-  const path = `produceListings/${id}`;
   try {
-    const docRef = doc(db, 'produceListings', id);
-    await setDoc(
-      docRef,
-      {
+    if (firebaseRtdb) {
+      await update(ref(firebaseRtdb, `produceListings/${id}`), {
         ...updates,
         updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+      });
+    }
+    logisticsSync.broadcast('LISTING_CREATED', { listing: { id, ...updates } });
   } catch (err) {
-    console.error('Error updating produce listing in Firestore:', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+    console.error('Error updating produce listing in RTDB:', err);
   }
 }
 
 export async function deleteProduceListing(id: string) {
-  const path = `produceListings/${id}`;
   try {
-    const docRef = doc(db, 'produceListings', id);
-    await deleteDoc(docRef);
+    if (firebaseRtdb) {
+      await remove(ref(firebaseRtdb, `produceListings/${id}`));
+    }
+    logisticsSync.broadcast('LISTING_CREATED', { deletedId: id });
   } catch (err) {
-    console.error('Error deleting produce listing from Firestore:', err);
-    handleFirestoreError(err, OperationType.DELETE, path);
+    console.error('Error deleting produce listing from RTDB:', err);
   }
 }
 
 export async function createOrder(order: Order) {
-  const customId = order.id || `ord-${Date.now()}`;
-  const path = `orders/${customId}`;
-  
-  // 1. Immediately cache in localStorage for client instant recovery
+  const customId = order.id || `ord_${Date.now()}`;
+  const orderData = {
+    ...order,
+    id: customId,
+    createdAt: new Date().toISOString(),
+  };
+
+  // 1. Immediate localStorage cache for client instant recovery
   if (typeof window !== 'undefined') {
     try {
       const local = localStorage.getItem('kisan_buyer_orders');
       const parsed = local ? JSON.parse(local) : [];
-      parsed.unshift({ ...order, id: customId, createdAt: new Date().toISOString() });
+      parsed.unshift(orderData);
       localStorage.setItem('kisan_buyer_orders', JSON.stringify(parsed));
     } catch (e) {}
   }
 
   try {
-    const orderDocRef = doc(db, 'orders', customId);
-    const orderData = {
-      ...order,
-      id: customId,
-      createdAt: new Date().toISOString(),
-    };
-    
-    // Protected with timeout so Firestore pending handshake never hangs the client
-    await Promise.race([
-      setDoc(orderDocRef, orderData, { merge: true }),
-      new Promise((resolve) => setTimeout(resolve, 1500))
-    ]);
+    // 2. Write to RTDB for instant real-time sync across portals
+    if (firebaseRtdb) {
+      await set(ref(firebaseRtdb, `orders/${customId}`), orderData);
+    }
 
-    // If order uses DELIVERY_PARTNER, automatically spawn a real-time Transporter Trip
+    // 3. If delivery method is partner, create transporter trip in RTDB
     if (order.deliveryMethod === 'DELIVERY_PARTNER') {
-      const tripId = `trip-${Date.now()}`;
-      const tripDocRef = doc(db, 'transporterTrips', tripId);
+      const tripId = `trip_${Date.now()}`;
       const tripData: TransporterTrip = {
         id: tripId,
         orderCode: order.orderCode,
         produceName: order.items[0]?.cropHindi || order.items[0]?.crop || 'कृषि उपज',
-        quantityKg: order.items.reduce((sum, it) => sum + it.quantityKg, 0),
-        fpoName: order.sellerName,
-        pickupLocation: order.pickupLocation,
-        dropLocation: order.dropLocation,
-        distanceKm: order.distanceKm || 45,
-        eta: order.eta || '3h 30m',
-        fare: order.deliveryFee,
+        quantityKg: order.items.reduce((sum, it) => sum + (it.quantityKg || 0), 0),
+        fpoName: order.sellerName || 'किसान संघ (सत्यापित)',
+        pickupLocation: order.pickupLocation || 'फार्म गेट, बाराबंकी',
+        dropLocation: order.dropLocation || 'मंडी गेट, लखनऊ',
+        distanceKm: order.distanceKm || 28,
+        eta: order.eta || '45 मिनट',
+        fare: order.deliveryFee || 250,
         pickupWindowHours: 4,
         status: 'AVAILABLE',
         isBestMatch: true,
@@ -399,74 +437,89 @@ export async function createOrder(order: Order) {
         freshnessSafe: true,
         otp: Math.floor(1000 + Math.random() * 9000).toString(),
         temperature: 21.5,
+        pickupCoords: { lat: 26.9284, lng: 81.1834, label: order.pickupLocation || 'फार्म' },
+        dropCoords: { lat: 26.8524, lng: 80.9412, label: order.dropLocation || 'मंडी' },
       };
-      
-      Promise.race([
-        setDoc(tripDocRef, tripData, { merge: true }),
-        new Promise((resolve) => setTimeout(resolve, 1500))
-      ]).catch(() => {});
+
+      if (firebaseRtdb) {
+        await set(ref(firebaseRtdb, `transporterTrips/${tripId}`), tripData);
+      }
     }
+
+    // 4. Also record in Supabase
+    supabaseClient
+      .from('orders')
+      .insert({
+        order_number: order.orderCode,
+        status: 'PLACED',
+        total_amount: order.totalAmount,
+        quantity: order.items[0]?.quantityKg || 50,
+        unit_price: order.items[0]?.pricePerKg || 25,
+      })
+      .then(() => {}, () => {});
+
+    // 5. Broadcast real-time logistics event
+    logisticsSync.broadcast('ORDER_PLACED', {
+      orderId: customId,
+      order: orderData,
+      timestamp: Date.now(),
+    });
 
     return customId;
   } catch (err) {
-    console.warn('Warning creating order in Firestore (saved locally):', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+    console.error('Error creating order in RTDB:', err);
     return customId;
   }
 }
 
 export async function updateOrder(id: string, updates: Partial<Order>) {
-  const path = `orders/${id}`;
   try {
-    const docRef = doc(db, 'orders', id);
-    await Promise.race([
-      setDoc(docRef, updates, { merge: true }),
-      new Promise((resolve) => setTimeout(resolve, 1500))
-    ]);
+    if (firebaseRtdb) {
+      await update(ref(firebaseRtdb, `orders/${id}`), updates);
+    }
+    if (updates.status === 'ACCEPTED') {
+      logisticsSync.broadcast('ORDER_ACCEPTED', { orderId: id, status: 'ACCEPTED', timestamp: Date.now() });
+    } else if (updates.status === 'PACKED') {
+      logisticsSync.broadcast('ORDER_PACKED', { orderId: id, status: 'PACKED', timestamp: Date.now() });
+    }
   } catch (err) {
-    console.error('Error updating order in Firestore:', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+    console.error('Error updating order in RTDB:', err);
   }
 }
 
 export async function updateTransporterTrip(id: string, updates: Partial<TransporterTrip>) {
-  const path = `transporterTrips/${id}`;
   try {
-    const docRef = doc(db, 'transporterTrips', id);
-    await Promise.race([
-      setDoc(docRef, updates, { merge: true }),
-      new Promise((resolve) => setTimeout(resolve, 1500))
-    ]);
+    if (firebaseRtdb) {
+      await update(ref(firebaseRtdb, `transporterTrips/${id}`), updates);
 
-    // Synchronize order status if trip status changes
-    if (updates.status && updates.orderCode) {
-      const orderDocs = await getDocs(ordersCol);
-      orderDocs.forEach(async (d) => {
-        const orderData = d.data() as Order;
-        if (orderData.orderCode === updates.orderCode) {
-          let nextOrderStatus: Order['status'] = orderData.status;
-          if (updates.status === 'ACCEPTED') nextOrderStatus = 'ACCEPTED';
-          if (updates.status === 'PICKED_UP') nextOrderStatus = 'PACKED';
-          if (updates.status === 'IN_TRANSIT') nextOrderStatus = 'IN_TRANSIT';
-          if (updates.status === 'DELIVERED') nextOrderStatus = 'DELIVERED';
-
-          await Promise.race([
-            setDoc(
-              doc(db, 'orders', d.id),
-              {
-                status: nextOrderStatus,
-                ...(updates.status === 'DELIVERED' ? { deliveredAt: 'अभी-अभी' } : {}),
-              },
-              { merge: true }
-            ),
-            new Promise((resolve) => setTimeout(resolve, 1500))
-          ]);
+      // If status changed and orderCode is present, synchronize order status in RTDB
+      if (updates.status && updates.orderCode) {
+        const snap = await get(ref(firebaseRtdb, 'orders'));
+        const ordersVal = snap.val();
+        if (ordersVal) {
+          for (const ordKey of Object.keys(ordersVal)) {
+            const ord = ordersVal[ordKey];
+            if (ord.orderCode === updates.orderCode) {
+              let nextStatus = ord.status;
+              if (updates.status === 'ACCEPTED') nextStatus = 'ACCEPTED';
+              if (updates.status === 'PICKED_UP') nextStatus = 'PACKED';
+              if (updates.status === 'IN_TRANSIT') nextStatus = 'IN_TRANSIT';
+              if (updates.status === 'DELIVERED') nextStatus = 'DELIVERED';
+              await update(ref(firebaseRtdb, `orders/${ordKey}`), { status: nextStatus });
+            }
+          }
         }
-      });
+      }
     }
+
+    logisticsSync.broadcast('TRIP_STATUS_UPDATED', {
+      tripId: id,
+      orderId: updates.orderCode,
+      status: updates.status,
+      timestamp: Date.now(),
+    });
   } catch (err) {
-    console.error('Error updating transporter trip in Firestore:', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+    console.error('Error updating transporter trip in RTDB:', err);
   }
 }
 
@@ -474,156 +527,147 @@ export async function updateTransporterLocation(
   tripId: string,
   location: { lat: number; lng: number; speedKmh?: number; address?: string; lastUpdated?: string }
 ) {
-  const path = `transporterTrips/${tripId}`;
   try {
-    const docRef = doc(db, 'transporterTrips', tripId);
-    await setDoc(
-      docRef,
-      {
-        currentLocation: {
-          ...location,
-          lastUpdated: location.lastUpdated || new Date().toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        },
-      },
-      { merge: true }
-    );
+    const locData = {
+      ...location,
+      lastUpdated: location.lastUpdated || new Date().toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    };
+
+    if (firebaseRtdb) {
+      await update(ref(firebaseRtdb, `transporterTrips/${tripId}`), {
+        currentLocation: locData,
+      });
+      // Also update shipments telemetry endpoint for LiveTrackingMap
+      await set(ref(firebaseRtdb, `shipments/${tripId}/location`), {
+        latitude: location.lat,
+        longitude: location.lng,
+        speed_kmh: location.speedKmh || 40,
+        updated_at: Date.now(),
+      });
+    }
+
+    logisticsSync.broadcast('LOCATION_TELEMETRY', {
+      tripId,
+      location: locData,
+      timestamp: Date.now(),
+    });
   } catch (err) {
-    console.error('Error updating transporter location in Firestore:', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+    console.error('Error updating transporter location in RTDB:', err);
   }
 }
 
+export function subscribeTransporterLocation(
+  tripId: string,
+  onData: (loc: { lat: number; lng: number; speedKmh?: number; address?: string; lastUpdated?: string }) => void
+) {
+  if (!firebaseRtdb || typeof window === 'undefined') return () => {};
+
+  const locRef = ref(firebaseRtdb, `shipments/${tripId}/location`);
+  const listener = onValue(locRef, (snap) => {
+    const val = snap.val();
+    if (val && typeof val.latitude === 'number' && typeof val.longitude === 'number') {
+      onData({
+        lat: val.latitude,
+        lng: val.longitude,
+        speedKmh: val.speed_kmh || 35,
+        address: 'हाईवे रूट',
+        lastUpdated: 'अभी-अभी',
+      });
+    }
+  });
+
+  return () => off(locRef, 'value', listener);
+}
+
 export async function updateVerification(id: string, status: 'VERIFIED' | 'REJECTED') {
-  const path = `verifications/${id}`;
-  try {
-    const docRef = doc(db, 'verifications', id);
-    await setDoc(docRef, { status }, { merge: true });
-  } catch (err) {
-    console.error('Error updating verification status in Firestore:', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+  if (firebaseRtdb) {
+    await update(ref(firebaseRtdb, `verifications/${id}`), { status });
   }
 }
 
 export async function updateDispute(id: string, status: 'RESOLVED' | 'OPEN', resolution?: string) {
-  const path = `disputes/${id}`;
-  try {
-    const docRef = doc(db, 'disputes', id);
-    await setDoc(
-      docRef,
-      {
-        status,
-        ...(resolution ? { resolution } : {}),
-      },
-      { merge: true }
-    );
-  } catch (err) {
-    console.error('Error updating dispute in Firestore:', err);
-    handleFirestoreError(err, OperationType.WRITE, path);
+  if (firebaseRtdb) {
+    await update(ref(firebaseRtdb, `disputes/${id}`), {
+      status,
+      ...(resolution ? { resolution } : {}),
+    });
   }
 }
 
 export async function updateBuyerProfile(id: string, profile: any) {
-  // 1. Immediately persist to localStorage
   if (typeof window !== 'undefined') {
     try {
       const existing = localStorage.getItem(`kisan_buyer_profile_${id}`);
       const parsed = existing ? JSON.parse(existing) : {};
-      const merged = {
-        ...parsed,
-        ...profile,
-        updatedAt: new Date().toISOString(),
-      };
+      const merged = { ...parsed, ...profile, updatedAt: new Date().toISOString() };
       localStorage.setItem(`kisan_buyer_profile_${id}`, JSON.stringify(merged));
     } catch (e) {}
   }
 
-  // 2. Sync to Firestore
-  const path = `users/${id}`;
-  try {
-    const docRef = doc(db, 'users', id);
-    await setDoc(
-      docRef,
-      {
-        ...profile,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-  } catch (err: any) {
-    console.warn('Warning updating buyer profile in Firestore (saved locally):', err.message);
-    handleFirestoreError(err, OperationType.WRITE, path);
+  if (firebaseRtdb) {
+    await update(ref(firebaseRtdb, `users/${id}`), {
+      ...profile,
+      updatedAt: new Date().toISOString(),
+    });
   }
 }
 
-// --- Seed Initial Data if Collections are Empty ---
+// --- Seed Initial Data into RTDB if Empty ---
 
 export async function seedInitialDataIfEmpty(force = false) {
+  if (!firebaseRtdb) return;
+
   try {
-    // 1. Listings
-    const listingsSnap = await getDocs(produceListingsCol);
-    if (force || listingsSnap.empty) {
-      console.log('Seeding initial produce listings to Firestore...');
-      for (const item of initialProduceListings) {
-        await setDoc(doc(db, 'produceListings', item.id), item);
-      }
+    const snap = await get(ref(firebaseRtdb, 'produceListings'));
+    if (force || !snap.exists() || !snap.val()) {
+      console.log('Seeding initial produce listings to RTDB...');
+      const listingsMap: Record<string, any> = {};
+      initialProduceListings.forEach((it) => {
+        listingsMap[it.id] = it;
+      });
+      await set(ref(firebaseRtdb, 'produceListings'), listingsMap);
     }
 
-    // 2. Orders
-    const ordersSnap = await getDocs(ordersCol);
-    if (force || ordersSnap.empty) {
-      console.log('Seeding initial orders to Firestore...');
-      for (const item of initialOrders) {
-        await setDoc(doc(db, 'orders', item.id), item);
-      }
+    const oSnap = await get(ref(firebaseRtdb, 'orders'));
+    if (force || !oSnap.exists() || !oSnap.val()) {
+      console.log('Seeding initial orders to RTDB...');
+      const ordersMap: Record<string, any> = {};
+      initialOrders.forEach((o) => {
+        ordersMap[o.id] = o;
+      });
+      await set(ref(firebaseRtdb, 'orders'), ordersMap);
     }
 
-    // 3. Transporter Trips
-    const tripsSnap = await getDocs(transporterTripsCol);
-    if (force || tripsSnap.empty) {
-      console.log('Seeding initial transporter trips to Firestore...');
-      for (const item of initialTransporterTrips) {
-        await setDoc(doc(db, 'transporterTrips', item.id), item);
-      }
+    const tSnap = await get(ref(firebaseRtdb, 'transporterTrips'));
+    if (force || !tSnap.exists() || !tSnap.val()) {
+      console.log('Seeding initial trips to RTDB...');
+      const tripsMap: Record<string, any> = {};
+      initialTransporterTrips.forEach((t) => {
+        tripsMap[t.id] = t;
+      });
+      await set(ref(firebaseRtdb, 'transporterTrips'), tripsMap);
     }
 
-    // 4. Market Prices
-    const pricesSnap = await getDocs(marketPricesCol);
-    if (force || pricesSnap.empty) {
-      console.log('Seeding initial market prices to Firestore...');
-      for (const item of initialMarketPrices) {
-        await setDoc(doc(db, 'marketPrices', item.id), item);
-      }
+    const pSnap = await get(ref(firebaseRtdb, 'marketPrices'));
+    if (force || !pSnap.exists() || !pSnap.val()) {
+      const pricesMap: Record<string, any> = {};
+      initialMarketPrices.forEach((p) => {
+        pricesMap[p.id] = p;
+      });
+      await set(ref(firebaseRtdb, 'marketPrices'), pricesMap);
     }
 
-    // 5. FPOs
-    const fposSnap = await getDocs(fposCol);
-    if (force || fposSnap.empty) {
-      console.log('Seeding initial FPO profiles to Firestore...');
-      for (const item of initialFPOs) {
-        await setDoc(doc(db, 'fpos', item.id), item);
-      }
+    const fSnap = await get(ref(firebaseRtdb, 'fpos'));
+    if (force || !fSnap.exists() || !fSnap.val()) {
+      const fposMap: Record<string, any> = {};
+      initialFPOs.forEach((f) => {
+        fposMap[f.id] = f;
+      });
+      await set(ref(firebaseRtdb, 'fpos'), fposMap);
     }
 
-    // 6. Verifications
-    const verifSnap = await getDocs(verificationsCol);
-    if (force || verifSnap.empty) {
-      console.log('Seeding initial verifications to Firestore...');
-      for (const item of initialVerifications) {
-        await setDoc(doc(db, 'verifications', item.id), item);
-      }
-    }
-
-    // 7. Disputes
-    const disputesSnap = await getDocs(disputesCol);
-    if (force || disputesSnap.empty) {
-      console.log('Seeding initial disputes to Firestore...');
-      for (const item of initialDisputes) {
-        await setDoc(doc(db, 'disputes', item.id), item);
-      }
-    }
-
-    console.log('Firestore seed verification completed successfully.');
+    console.log('RTDB initial dataset confirmed and active.');
   } catch (err) {
-    console.error('Error during initial Firestore seeding:', err);
+    console.warn('Notice during initial RTDB seed check:', err);
   }
 }

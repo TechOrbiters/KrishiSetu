@@ -1,4 +1,8 @@
 {
+  "database": {
+    "instance": "kisaan-setu-7d74b-default-rtdb",
+    "rules": "firebase/database.rules.json"
+  },
   "hosting": {
     "public": "out",
     "cleanUrls": true,

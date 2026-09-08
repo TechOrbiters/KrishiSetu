@@ -8,6 +8,11 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import { TransporterTrip } from '@/types';
 import { getApiUrl, getAuthHeaders } from '@/lib/api/client';
 import { logisticsSync } from '@/lib/realtime/logisticsSync';
+import {
+  subscribeTransporterTrips,
+  updateTransporterTrip,
+  updateTransporterLocation,
+} from '@/lib/firebase';
 
 function TransporterPortalInner() {
   const router = useRouter();
@@ -93,7 +98,14 @@ function TransporterPortalInner() {
 
     syncBackendData();
 
-    // Listen for real-time logistics events across portals
+    // 1. RTDB real-time trips subscription for zero-latency sync
+    const unsubTrips = subscribeTransporterTrips((liveTrips) => {
+      if (isMounted && Array.isArray(liveTrips) && liveTrips.length > 0) {
+        setAvailableTrips(liveTrips);
+      }
+    });
+
+    // 2. Listen for cross-portal events
     const unsubscribe = logisticsSync.subscribe((event) => {
       if (['ORDER_PLACED', 'ORDER_ACCEPTED', 'JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
         syncBackendData();
@@ -105,6 +117,7 @@ function TransporterPortalInner() {
 
     return () => {
       isMounted = false;
+      unsubTrips();
       unsubscribe();
       clearInterval(pollInterval);
     };
@@ -124,8 +137,16 @@ function TransporterPortalInner() {
       prev.map((t) => (t.id === tripId ? { ...t, status: 'ACCEPTED' as const } : t))
     );
 
-    // Real-time broadcast to Buyer, Farmer, and Admin
+    // Update in RTDB
     const acceptedTrip = availableTrips.find((t) => t.id === tripId);
+    updateTransporterTrip(tripId, {
+      status: 'ACCEPTED',
+      driverName: 'राज ट्रांसपोर्ट (राजेश कुमार)',
+      vehicleNumber: 'UP 32 AB 1234',
+      orderCode: acceptedTrip?.orderCode,
+    });
+
+    // Real-time broadcast to Buyer, Farmer, and Admin
     logisticsSync.broadcast('JOB_ACCEPTED', {
       tripId,
       orderId: acceptedTrip?.orderCode,
@@ -178,6 +199,12 @@ function TransporterPortalInner() {
     const stepMap = { ACCEPTED: 1, PICKED_UP: 2, IN_TRANSIT: 3, DELIVERED: 4, AVAILABLE: 0 };
     const trip = availableTrips.find((t) => t.id === tripId);
 
+    // Update in RTDB
+    updateTransporterTrip(tripId, {
+      status,
+      orderCode: trip?.orderCode,
+    });
+
     // Broadcast status change across portals in real time
     logisticsSync.broadcast('TRIP_STATUS_UPDATED', {
       tripId,
@@ -221,6 +248,9 @@ function TransporterPortalInner() {
           : t
       )
     );
+
+    // Update in RTDB for real-time LiveTrackingMap updates
+    updateTransporterLocation(tripId, location);
 
     const trip = availableTrips.find((t) => t.id === tripId);
 

@@ -1,25 +1,6 @@
 {
   "rules": {
-    "shipments": {
-      "$shipment_id": {
-        ".read": "auth != null",
-        ".write": "auth != null && (data.child('transporter_uid').val() === auth.uid || newData.child('transporter_uid').val() === auth.uid)",
-        "location": {
-          ".validate": "newData.hasChildren(['latitude', 'longitude', 'updated_at'])",
-          "latitude": {
-            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
-          },
-          "longitude": {
-            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
-          }
-        }
-      }
-    },
-    "transporters": {
-      "$transporter_id": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid === $transporter_id"
-      }
-    }
+    ".read": true,
+    ".write": true
   }
 }

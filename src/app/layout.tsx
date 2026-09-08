@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { FarmerStoreProvider } from '@/lib/store/farmerStore';
+import { AppInitializer } from '@/components/AppInitializer';
 
 export const metadata: Metadata = {
   title: 'KRISHISETU | किसान का अपना डिजिटल बाज़ार',
@@ -46,6 +47,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicon.svg" />
       </head>
       <body>
+        <AppInitializer />
         <LanguageProvider>
           <FarmerStoreProvider>{children}</FarmerStoreProvider>
         </LanguageProvider>

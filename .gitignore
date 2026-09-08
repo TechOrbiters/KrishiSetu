@@ -22,6 +22,7 @@ yarn-error.log*
 # Vercel & Firebase
 .vercel
 .firebase/
+firebase-debug.log*
 
 # IDE / System
 .DS_Store
