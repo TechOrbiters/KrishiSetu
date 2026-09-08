@@ -652,7 +652,6 @@ function WizardContent() {
                   <option value="फल">फल (Fruit)</option>
                   <option value="दालें">दालें (Pulses)</option>
                 </select>
-                <Mic className="w-4 h-4 text-emerald-700 absolute right-3.5 top-3.5 pointer-events-none" />
               </div>
             </div>
 
@@ -928,7 +927,6 @@ function WizardContent() {
                   <option value="2 दिनों में">2 दिनों में तैयार होगी</option>
                   <option value="अगले हफ्ते">अगले हफ्ते तैयार होगी</option>
                 </select>
-                <Mic className="w-4 h-4 text-emerald-700 absolute right-3.5 top-3.5 pointer-events-none" />
               </div>
             </div>
 

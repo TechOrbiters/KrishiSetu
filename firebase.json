@@ -22,6 +22,15 @@
       ],
       "headers": [
         {
+          "source": "**/*.@(html|json)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
           "source": "**/*.@(js|css|woff2|woff|ttf)",
           "headers": [
             {
@@ -58,6 +67,15 @@
         }
       ],
       "headers": [
+        {
+          "source": "**/*.@(html|json)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
         {
           "source": "**/*.@(js|css|woff2|woff|ttf)",
           "headers": [
