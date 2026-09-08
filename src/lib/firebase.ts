@@ -87,7 +87,7 @@ export function subscribeProduceListings(
   onError?: (err: Error) => void
 ) {
   if (!firebaseRtdb || typeof window === 'undefined') {
-    onData(initialProduceListings);
+    onData([]);
     return () => {};
   }
 
@@ -97,18 +97,16 @@ export function subscribeProduceListings(
     (snapshot) => {
       const val = snapshot.val();
       if (!val) {
-        // Seed default listings if RTDB is currently empty
-        seedInitialDataIfEmpty().catch(() => {});
-        onData(initialProduceListings);
+        onData([]);
       } else {
-        const list = snapshotToArray<ProduceListing>(val, initialProduceListings);
+        const list = snapshotToArray<ProduceListing>(val, []);
         onData(list);
       }
     },
     (err) => {
       console.warn('Realtime ProduceListings subscription warning:', err);
       if (onError) onError(err);
-      onData(initialProduceListings);
+      onData([]);
     }
   );
 
@@ -120,7 +118,7 @@ export function subscribeOrders(
   onError?: (err: Error) => void
 ) {
   if (!firebaseRtdb || typeof window === 'undefined') {
-    onData(initialOrders);
+    onData([]);
     return () => {};
   }
 
@@ -130,17 +128,16 @@ export function subscribeOrders(
     (snapshot) => {
       const val = snapshot.val();
       if (!val) {
-        seedInitialDataIfEmpty().catch(() => {});
-        onData(initialOrders);
+        onData([]);
       } else {
-        const list = snapshotToArray<Order>(val, initialOrders);
+        const list = snapshotToArray<Order>(val, []);
         onData(list);
       }
     },
     (err) => {
       console.warn('Realtime Orders subscription warning:', err);
       if (onError) onError(err);
-      onData(initialOrders);
+      onData([]);
     }
   );
 
@@ -152,7 +149,7 @@ export function subscribeTransporterTrips(
   onError?: (err: Error) => void
 ) {
   if (!firebaseRtdb || typeof window === 'undefined') {
-    onData(initialTransporterTrips);
+    onData([]);
     return () => {};
   }
 
@@ -162,17 +159,16 @@ export function subscribeTransporterTrips(
     (snapshot) => {
       const val = snapshot.val();
       if (!val) {
-        seedInitialDataIfEmpty().catch(() => {});
-        onData(initialTransporterTrips);
+        onData([]);
       } else {
-        const list = snapshotToArray<TransporterTrip>(val, initialTransporterTrips);
+        const list = snapshotToArray<TransporterTrip>(val, []);
         onData(list);
       }
     },
     (err) => {
       console.warn('Realtime TransporterTrips subscription warning:', err);
       if (onError) onError(err);
-      onData(initialTransporterTrips);
+      onData([]);
     }
   );
 
@@ -615,11 +611,11 @@ export async function updateBuyerProfile(id: string, profile: any) {
 // --- Seed Initial Data into RTDB if Empty ---
 
 export async function seedInitialDataIfEmpty(force = false) {
-  if (!firebaseRtdb) return;
+  if (!firebaseRtdb || !force) return;
 
   try {
     const snap = await get(ref(firebaseRtdb, 'produceListings'));
-    if (force || !snap.exists() || !snap.val()) {
+    if (!snap.exists() || !snap.val()) {
       console.log('Seeding initial produce listings to RTDB...');
       const listingsMap: Record<string, any> = {};
       initialProduceListings.forEach((it) => {

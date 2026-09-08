@@ -49,9 +49,9 @@ function BuyerPortalPageInner() {
   }, []);
 
   // State
-  const [listings, setListings] = useState<ProduceListing[]>(INITIAL_LISTINGS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [trips, setTrips] = useState<TransporterTrip[]>(INITIAL_TRANSPORTER_TRIPS);
+  const [listings, setListings] = useState<ProduceListing[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [trips, setTrips] = useState<TransporterTrip[]>([]);
   const [marketPrices, setMarketPrices] = useState<MarketPrice[]>(MARKET_PRICES);
   const [fpos, setFpos] = useState<FPOProfile[]>(FPO_PROFILES);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -151,11 +151,13 @@ function BuyerPortalPageInner() {
 
       // 3. Fetch live market prices
       try {
-        const pricesRes = await fetch(getApiUrl('/api/market-prices'), { headers })
-          .then((r) => r.json())
-          .catch(() => null);
-        if (pricesRes?.success && Array.isArray(pricesRes.prices) && pricesRes.prices.length > 0) {
-          setMarketPrices(pricesRes.prices);
+        if (process.env.NEXT_PUBLIC_ENABLE_API_SERVER === 'true') {
+          const pricesRes = await fetch(getApiUrl('/api/market-prices'), { headers })
+            .then((r) => r.json())
+            .catch(() => null);
+          if (pricesRes?.success && Array.isArray(pricesRes.prices) && pricesRes.prices.length > 0) {
+            setMarketPrices(pricesRes.prices);
+          }
         }
       } catch (e) {}
     } catch (err) {}

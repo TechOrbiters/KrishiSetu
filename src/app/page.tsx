@@ -197,36 +197,6 @@ export default function MasterLandingPage() {
       >
         <KrishiSetuLogo />
         <div className="flex items-center gap-2.5">
-          <Link
-            href="/auth/farmer"
-            onClick={() => {
-              if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER');
-            }}
-            className="text-xs font-bold text-[#15803D] bg-[#E6F4EA] hover:bg-[#CEEAD6] px-3 py-1.5 rounded-xl border border-[#CEEAD6] transition-colors shadow-2xs flex items-center gap-1.5"
-          >
-            <span>🌾</span>
-            <span>{t('farmerLogin')}</span>
-          </Link>
-          <Link
-            href="/auth/buyer"
-            onClick={() => {
-              if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER');
-            }}
-            className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-200 transition-colors hidden sm:flex items-center gap-1.5"
-          >
-            <span>🛒</span>
-            <span>क्रेता / Buyer</span>
-          </Link>
-          <Link
-            href="/auth/transporter"
-            onClick={() => {
-              if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER');
-            }}
-            className="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 transition-colors hidden md:flex items-center gap-1.5"
-          >
-            <span>🚚</span>
-            <span>परिवहन / Transporter</span>
-          </Link>
           <div className="relative" data-no-translate="true">
             <button
               onClick={() => setLangMenuOpen(!langMenuOpen)}

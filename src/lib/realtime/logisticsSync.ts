@@ -1,12 +1,21 @@
 /**
- * KrishiSetu Real-Time Logistics Synchronization Manager
+ * KrishiSetu Real-Time Logistics & Operations Synchronization Engine
+ * Powered by Firebase Realtime Database (RTDB) as Primary Real-Time Backend
  * Provides zero-latency (<10ms) cross-portal event propagation across:
  * - Transporter Portal (/transporter)
  * - Buyer Portal (/buyer)
  * - Farmer/FPO Portal (/farmer)
  * - Admin Console (/admin)
- * Uses BroadcastChannel with localStorage fallback and server polling synchronization.
  */
+
+import { ref, onValue, off } from 'firebase/database';
+import { firebaseRtdb } from '../firebase/client';
+import {
+  updateShipmentLocation,
+  updateOrderStatusRealtime,
+  updateTransporterAvailability,
+  updateListingStockRealtime,
+} from '../firebase/rtdb';
 
 export type LogisticsEventType =
   | 'JOB_ACCEPTED'
@@ -67,6 +76,7 @@ class LogisticsRealtimeSync {
   private channel: BroadcastChannel | null = null;
   private listeners: Set<EventListener> = new Set();
   private channelName = 'krishisetu_logistics_channel';
+  private firebaseUnsubscribers: Array<() => void> = [];
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -86,11 +96,12 @@ class LogisticsRealtimeSync {
             try {
               const event = JSON.parse(e.newValue);
               this.notifyListeners(event);
-            } catch (err) {
-              // ignore parse errors
-            }
+            } catch (err) {}
           }
         });
+
+        // Initialize Firebase RTDB global real-time stream listener
+        this.initFirebaseRealtimeSubscriptions();
       } catch (e) {
         console.warn('Realtime sync channel init notice:', e);
       }
@@ -98,7 +109,74 @@ class LogisticsRealtimeSync {
   }
 
   /**
+   * Subscribe to global Firebase Realtime Database stream nodes
+   */
+  private initFirebaseRealtimeSubscriptions() {
+    if (!firebaseRtdb) return;
+
+    try {
+      // 1. Orders RTDB Stream
+      const ordersRef = ref(firebaseRtdb, 'orders');
+      const ordersUnsub = onValue(ordersRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          Object.keys(data).forEach((orderId) => {
+            const ordState = data[orderId];
+            if (ordState && ordState.updated_at) {
+              this.notifyListeners({
+                type: 'TRIP_STATUS_UPDATED',
+                payload: {
+                  orderId,
+                  status: ordState.status,
+                  stepNumber: ordState.stepNumber,
+                  timestamp: ordState.updated_at,
+                },
+              });
+            }
+          });
+        }
+      });
+
+      // 2. Shipments RTDB Stream
+      const shipmentsRef = ref(firebaseRtdb, 'shipments');
+      const shipmentsUnsub = onValue(shipmentsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          Object.keys(data).forEach((shipmentId) => {
+            const shipData = data[shipmentId];
+            if (shipData && shipData.location) {
+              const loc = shipData.location;
+              this.notifyListeners({
+                type: 'LOCATION_TELEMETRY',
+                payload: {
+                  shipmentId,
+                  tripId: shipmentId,
+                  location: {
+                    lat: loc.latitude,
+                    lng: loc.longitude,
+                    speedKmh: loc.speed_kmh,
+                    lastUpdated: new Date(loc.updated_at || Date.now()).toISOString(),
+                  },
+                  timestamp: loc.updated_at || Date.now(),
+                },
+              });
+            }
+          });
+        }
+      });
+
+      this.firebaseUnsubscribers.push(
+        () => off(ordersRef, 'value', ordersUnsub),
+        () => off(shipmentsRef, 'value', shipmentsUnsub)
+      );
+    } catch (err) {
+      console.warn('Firebase RTDB subscription init notice:', err);
+    }
+  }
+
+  /**
    * Broadcast a logistics event to all active portals in real time
+   * Writes directly to Firebase Realtime Database & local channels
    */
   public broadcast(type: LogisticsEventType, payload: Partial<LogisticsSyncPayload>): void {
     const fullPayload: LogisticsSyncPayload = {
@@ -111,29 +189,79 @@ class LogisticsRealtimeSync {
       payload: fullPayload,
     };
 
-    // 1. Notify listeners in current process/window
+    // 1. Notify local in-memory listeners
     this.notifyListeners(event);
 
     if (typeof window === 'undefined') return;
 
-    // 2. Broadcast to other browser windows/tabs
+    // 2. Broadcast via Local BroadcastChannel
     try {
       if (this.channel) {
         this.channel.postMessage(event);
       }
-    } catch (e) {
-      // fallback
-    }
+    } catch (e) {}
 
-    // 3. Fallback via localStorage for maximum cross-tab compatibility
+    // 3. Fallback via localStorage for cross-tab speed
     try {
       localStorage.setItem('krishisetu_last_logistics_event', JSON.stringify(event));
-      // Store current active trip state
       if (payload.tripId || payload.orderId) {
         const stateKey = `krishisetu_trip_state_${payload.tripId || payload.orderId}`;
         localStorage.setItem(stateKey, JSON.stringify(fullPayload));
       }
     } catch (e) {}
+
+    // 4. Primary Backend Write: Sync to Firebase Realtime Database
+    try {
+      // (a) Telemetry / GPS location update
+      if (type === 'LOCATION_TELEMETRY' && (payload.shipmentId || payload.tripId) && payload.location) {
+        const shipId = payload.shipmentId || payload.tripId || '';
+        const driverId = payload.transporter?.id || 'transporter_default';
+        updateShipmentLocation(
+          shipId,
+          driverId,
+          payload.location.lat,
+          payload.location.lng,
+          0,
+          payload.location.speedKmh || 0
+        );
+      }
+
+      // (b) Order status progression
+      if (
+        (type === 'ORDER_PLACED' || type === 'ORDER_ACCEPTED' || type === 'ORDER_PACKED' || type === 'TRIP_STATUS_UPDATED') &&
+        payload.orderId
+      ) {
+        updateOrderStatusRealtime(
+          payload.orderId,
+          payload.status || 'UPDATED',
+          payload.stepNumber,
+          payload.order
+        );
+      }
+
+      // (c) Driver duty & availability status
+      if (type === 'DUTY_STATUS_TOGGLED' && payload.transporter?.id) {
+        updateTransporterAvailability(
+          payload.transporter.id,
+          payload.transporter.isOnline ?? true,
+          payload.location?.lat,
+          payload.location?.lng,
+          payload.tripId
+        );
+      }
+
+      // (d) Produce listing stock update
+      if (type === 'LISTING_CREATED' && payload.listingId && payload.quantityKg !== undefined) {
+        updateListingStockRealtime(
+          payload.listingId,
+          payload.quantityKg,
+          payload.pricePerKg,
+          payload.status
+        );
+      }
+    } catch (firebaseErr) {
+      console.warn('Firebase RTDB real-time broadcast sync warning:', firebaseErr);
+    }
   }
 
   /**

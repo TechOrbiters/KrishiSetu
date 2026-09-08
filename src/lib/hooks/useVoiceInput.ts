@@ -101,13 +101,14 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
       let languageCode = "hi-IN";
       let provider = "sarvam";
 
-      // 1. Try Sarvam AI STT directly from browser
+      // 1. Try Sarvam AI STT directly from browser with official Saaras v3 model
       try {
         const formData = new FormData();
-        const file = new File([audioBlob], "recording.webm", { type: audioBlob.type || "audio/webm" });
+        const file = new File([audioBlob], "recording.wav", { type: audioBlob.type || "audio/wav" });
         formData.append("file", file);
         formData.append("language_code", "hi-IN");
-        formData.append("model", "saarika:v2.5");
+        formData.append("model", "saaras:v3");
+        formData.append("mode", "transcribe");
 
         const sttRes = await fetch("https://api.sarvam.ai/speech-to-text", {
           method: "POST",
@@ -122,30 +123,12 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
             languageCode = sttData.language_code || "hi-IN";
             provider = "sarvam_stt_live";
           }
+        } else {
+          const errData = await sttRes.json().catch(() => ({}));
+          console.warn("[useVoiceInput] Sarvam STT returned status:", sttRes.status, errData);
         }
       } catch (sttErr) {
         console.warn("[useVoiceInput] Sarvam STT notice:", sttErr);
-      }
-
-      // 2. Try server route if direct STT failed
-      if (!transcript) {
-        try {
-          const formData = new FormData();
-          formData.append("file", audioBlob, "recording.webm");
-          const response = await fetch("/api/ai/speech-to-text", {
-            method: "POST",
-            body: formData,
-            signal: AbortSignal.timeout(5000),
-          });
-          const text = await response.text();
-          let data: any = null;
-          try { data = JSON.parse(text); } catch {}
-          if (response.ok && data?.success && data.transcript) {
-            transcript = (data.transcript || "").trim();
-            languageCode = data.languageCode || "hi-IN";
-            provider = data.provider || "server";
-          }
-        } catch { /* fallthrough */ }
       }
 
       if (!transcript) {

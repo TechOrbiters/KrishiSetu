@@ -19,6 +19,9 @@ import { getAccurateCropImage } from "../cropImages";
 const IS_DEMO_MODE = typeof process !== 'undefined' && 
   (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.DEMO_MODE === 'true');
 
+const HAS_API_SERVER = typeof process !== 'undefined' && 
+  (process.env.NEXT_PUBLIC_ENABLE_API_SERVER === 'true' || process.env.ENABLE_API_SERVER === 'true');
+
 /** Sarvam AI API key — used for direct browser-side LLM/TTS/STT calls */
 const SARVAM_API_KEY = 'sk_rsyrmj5p_FJlxTNuiqLJA1y3RpMVNZrJo';
 const SARVAM_CHAT_URL = 'https://api.sarvam.ai/v1/chat/completions';
@@ -78,35 +81,37 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
 /* ========================================================================= */
 
 export async function fetchFarmerProfile(): Promise<ApiResult<{ user: UserProfile }>> {
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(getApiUrl('/api/users/me'), { headers });
-    const json = await res.json();
-    if (res.ok && json.success && json.user) {
-      const dbUser = json.user;
-      const profile = json.profile || {};
-      const formattedUser: UserProfile = {
-        id: dbUser.id || 'usr_farmer',
-        fullName: dbUser.full_name || 'Kisan Partner',
-        fatherOrSpouseName: profile.father_or_husband_name || '',
-        phone: dbUser.phone || '9876543210',
-        dob: '15/06/1985',
-        gender: 'पुरुष',
-        role: 'FARMER_FPO',
-        entityKind: 'farmer',
-        verificationStatus: profile.verification_status || 'PENDING',
-        aadhaarLast4: profile.aadhaar_last4 || '1234',
-        registrationDate: dbUser.created_at ? new Date(dbUser.created_at).toLocaleDateString('hi-IN') : '2024-05-20',
-        avatarUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300',
-        village: profile.village || 'Barabanki',
-        postOffice: profile.post_office || 'Barabanki',
-        district: profile.district || 'Barabanki',
-        state: profile.state || 'Uttar Pradesh',
-        pincode: profile.pincode || '221204',
-      };
-      return { success: true, data: { user: formattedUser }, source: json.source };
-    }
-  } catch (err: any) {}
+  if (HAS_API_SERVER) {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(getApiUrl('/api/users/me'), { headers });
+      const json = await res.json();
+      if (res.ok && json.success && json.user) {
+        const dbUser = json.user;
+        const profile = json.profile || {};
+        const formattedUser: UserProfile = {
+          id: dbUser.id || 'usr_farmer',
+          fullName: dbUser.full_name || 'Kisan Partner',
+          fatherOrSpouseName: profile.father_or_husband_name || '',
+          phone: dbUser.phone || '9876543210',
+          dob: '15/06/1985',
+          gender: 'पुरुष',
+          role: 'FARMER_FPO',
+          entityKind: 'farmer',
+          verificationStatus: profile.verification_status || 'PENDING',
+          aadhaarLast4: profile.aadhaar_last4 || '1234',
+          registrationDate: dbUser.created_at ? new Date(dbUser.created_at).toLocaleDateString('hi-IN') : '2024-05-20',
+          avatarUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300',
+          village: profile.village || 'Barabanki',
+          postOffice: profile.post_office || 'Barabanki',
+          district: profile.district || 'Barabanki',
+          state: profile.state || 'Uttar Pradesh',
+          pincode: profile.pincode || '221204',
+        };
+        return { success: true, data: { user: formattedUser }, source: json.source };
+      }
+    } catch (err: any) {}
+  }
 
   // Fallback: Try Supabase client SDK directly (works on static hosting)
   try {
@@ -220,47 +225,49 @@ export async function bootstrapFarmer(data: { full_name?: string; village?: stri
 /* ========================================================================= */
 
 export async function fetchFarmerListings(farmerId?: string): Promise<ApiResult<ProduceItem[]>> {
-  try {
-    const headers = await getAuthHeaders();
-    const url = farmerId ? `/api/listings?farmerId=${encodeURIComponent(farmerId)}` : '/api/listings';
-    const res = await fetch(getApiUrl(url), { headers });
-    const text = await res.text();
-    let json: any = null;
-    try { json = JSON.parse(text); } catch {}
-    if (res.ok && json && json.success && Array.isArray(json.listings)) {
-      const rawListings = json.listings || [];
-      const formattedListings: ProduceItem[] = rawListings.map((item: any) => ({
-        id: item.id,
-        farmerId: item.farmer_id || '',
-        cropNameHindi: item.crop_name || 'उपज',
-        cropNameEnglish: item.crop_name_english || item.crop_name || 'Produce',
-        category: item.category || 'सब्जी',
-        quantityKg: Number(item.total_quantity || item.quantity || 0),
-        availableQtyKg: Number(item.available_quantity || item.quantity || 0),
-        minOrderQtyKg: Number(item.min_order_quantity || 10),
-        unit: 'kg',
-        grade: item.grade || 'A',
-        askingPricePerKg: Number(item.price_per_kg || 0),
-        marketPriceRange: `₹${item.price_per_kg || 20} - ₹${(item.price_per_kg || 20) + 4} / kg`,
-        freshnessWindowHours: Number(item.shelf_life_days ? item.shelf_life_days * 24 : 24),
-        harvestDate: item.harvest_date || new Date().toISOString(),
-        locationVillage: item.location_name ? item.location_name.split(',')[0] : 'बाराबंकी',
-        locationDistrict: item.location_name ? item.location_name.split(',')[1] || 'बाराबंकी' : 'बाराबंकी',
-        locationState: 'उत्तर प्रदेश',
-        availability: 'TODAY',
-        status: item.status === 'INACTIVE' ? 'PAUSED' : (item.status || 'ACTIVE'),
-        viewsCount: Number(item.views_count || 0),
-        ordersCount: Number(item.orders_count || 0),
-        updatedAt: item.updated_at || new Date().toISOString(),
-        imageUrl: getAccurateCropImage(
-          item.crop_name || item.cropNameEnglish || item.crop,
-          item.images && item.images[0],
-          item.crop_hindi || item.cropNameHindi
-        ),
-      }));
-      return { success: true, data: formattedListings, source: json.source };
-    }
-  } catch (err: any) {}
+  if (HAS_API_SERVER) {
+    try {
+      const headers = await getAuthHeaders();
+      const url = farmerId ? `/api/listings?farmerId=${encodeURIComponent(farmerId)}` : '/api/listings';
+      const res = await fetch(getApiUrl(url), { headers });
+      const text = await res.text();
+      let json: any = null;
+      try { json = JSON.parse(text); } catch {}
+      if (res.ok && json && json.success && Array.isArray(json.listings)) {
+        const rawListings = json.listings || [];
+        const formattedListings: ProduceItem[] = rawListings.map((item: any) => ({
+          id: item.id,
+          farmerId: item.farmer_id || '',
+          cropNameHindi: item.crop_name || 'उपज',
+          cropNameEnglish: item.crop_name_english || item.crop_name || 'Produce',
+          category: item.category || 'सब्जी',
+          quantityKg: Number(item.total_quantity || item.quantity || 0),
+          availableQtyKg: Number(item.available_quantity || item.quantity || 0),
+          minOrderQtyKg: Number(item.min_order_quantity || 10),
+          unit: 'kg',
+          grade: item.grade || 'A',
+          askingPricePerKg: Number(item.price_per_kg || 0),
+          marketPriceRange: `₹${item.price_per_kg || 20} - ₹${(item.price_per_kg || 20) + 4} / kg`,
+          freshnessWindowHours: Number(item.shelf_life_days ? item.shelf_life_days * 24 : 24),
+          harvestDate: item.harvest_date || new Date().toISOString(),
+          locationVillage: item.location_name ? item.location_name.split(',')[0] : 'बाराबंकी',
+          locationDistrict: item.location_name ? item.location_name.split(',')[1] || 'बाराबंकी' : 'बाराबंकी',
+          locationState: 'उत्तर प्रदेश',
+          availability: 'TODAY',
+          status: item.status === 'INACTIVE' ? 'PAUSED' : (item.status || 'ACTIVE'),
+          viewsCount: Number(item.views_count || 0),
+          ordersCount: Number(item.orders_count || 0),
+          updatedAt: item.updated_at || new Date().toISOString(),
+          imageUrl: getAccurateCropImage(
+            item.crop_name || item.cropNameEnglish || item.crop,
+            item.images && item.images[0],
+            item.crop_hindi || item.cropNameHindi
+          ),
+        }));
+        return { success: true, data: formattedListings, source: json.source };
+      }
+    } catch (err: any) {}
+  }
 
   // Fallback: Read from Firebase RTDB
   try {
@@ -307,7 +314,7 @@ export async function fetchFarmerListings(farmerId?: string): Promise<ApiResult<
     console.warn('RTDB read error:', rtdbErr);
   }
 
-  return { success: true, data: INITIAL_PRODUCE, source: 'local_fallback' };
+  return { success: true, data: [], source: 'empty_clean' };
 }
 
 export async function createFarmerListing(payload: any): Promise<ApiResult<any>> {
@@ -539,38 +546,40 @@ export async function pauseFarmerListing(id: string, currentStatus: string): Pro
 /* ========================================================================= */
 
 export async function fetchFarmerOrders(): Promise<ApiResult<OrderItem[]>> {
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(getApiUrl('/api/orders'), { headers });
-    const text = await res.text();
-    let json: any = null;
-    try { json = JSON.parse(text); } catch {}
-    if (res.ok && json && json.success && Array.isArray(json.orders)) {
-      const rawOrders = json.orders || [];
-      const formattedOrders: OrderItem[] = rawOrders.map((ord: any) => ({
-        id: ord.id || `ord_${Date.now()}`,
-        orderNumber: ord.order_number || `ORD-${Date.now()}`,
-        listingId: ord.listing_id || '',
-        buyerId: ord.buyer_id || '',
-        buyerName: ord.buyer_name || (ord.destination_address ? ord.destination_address.split(',')[0] : 'खरीदार'),
-        buyerLocation: ord.destination_address || ord.buyer_location || 'लखनऊ मंडी, यूपी',
-        buyerType: ord.buyer_type || 'RETAILER',
-        cropNameHindi: ord.produce_listings?.crop_name || ord.listings?.crop_name || ord.crop_name || 'उपज',
-        cropNameEnglish: ord.produce_listings?.crop_name_english || ord.listings?.crop_name_english || ord.crop_name_english || 'Produce',
-        quantityKg: Number(ord.quantity || 0),
-        unitPrice: Number(ord.unit_price || ord.produce_listings?.price_per_kg || 0),
-        productPricePerKg: Number(ord.unit_price || ord.produce_listings?.price_per_kg || 0),
-        productAmount: Number(ord.product_amount || (ord.quantity * ord.unit_price) || 0),
-        deliveryCharge: Number(ord.delivery_fee || 0),
-        buyerTotal: Number(ord.total_amount || ord.product_amount || 0),
-        deliveryMode: ord.delivery_mode || 'DELIVERY_PARTNER',
-        status: ord.status || 'PLACED',
-        createdAt: ord.created_at || new Date().toISOString(),
-        acceptDeadline: ord.expires_at || new Date(Date.now() + 12 * 3600 * 1000).toISOString(),
-      }));
-      return { success: true, data: formattedOrders, source: json.source };
-    }
-  } catch (err: any) {}
+  if (HAS_API_SERVER) {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(getApiUrl('/api/orders'), { headers });
+      const text = await res.text();
+      let json: any = null;
+      try { json = JSON.parse(text); } catch {}
+      if (res.ok && json && json.success && Array.isArray(json.orders)) {
+        const rawOrders = json.orders || [];
+        const formattedOrders: OrderItem[] = rawOrders.map((ord: any) => ({
+          id: ord.id || `ord_${Date.now()}`,
+          orderNumber: ord.order_number || `ORD-${Date.now()}`,
+          listingId: ord.listing_id || '',
+          buyerId: ord.buyer_id || '',
+          buyerName: ord.buyer_name || (ord.destination_address ? ord.destination_address.split(',')[0] : 'खरीदार'),
+          buyerLocation: ord.destination_address || ord.buyer_location || 'लखनऊ मंडी, यूपी',
+          buyerType: ord.buyer_type || 'RETAILER',
+          cropNameHindi: ord.produce_listings?.crop_name || ord.listings?.crop_name || ord.crop_name || 'उपज',
+          cropNameEnglish: ord.produce_listings?.crop_name_english || ord.listings?.crop_name_english || ord.crop_name_english || 'Produce',
+          quantityKg: Number(ord.quantity || 0),
+          unitPrice: Number(ord.unit_price || ord.produce_listings?.price_per_kg || 0),
+          productPricePerKg: Number(ord.unit_price || ord.produce_listings?.price_per_kg || 0),
+          productAmount: Number(ord.product_amount || (ord.quantity * ord.unit_price) || 0),
+          deliveryCharge: Number(ord.delivery_fee || 0),
+          buyerTotal: Number(ord.total_amount || ord.product_amount || 0),
+          deliveryMode: ord.delivery_mode || 'DELIVERY_PARTNER',
+          status: ord.status || 'PLACED',
+          createdAt: ord.created_at || new Date().toISOString(),
+          acceptDeadline: ord.expires_at || new Date(Date.now() + 12 * 3600 * 1000).toISOString(),
+        }));
+        return { success: true, data: formattedOrders, source: json.source };
+      }
+    } catch (err: any) {}
+  }
 
   // Fallback: Read from RTDB
   try {
@@ -607,7 +616,7 @@ export async function fetchFarmerOrders(): Promise<ApiResult<OrderItem[]>> {
     }
   } catch (rtdbErr) {}
 
-  return { success: true, data: INITIAL_ORDERS, source: 'local_fallback' };
+  return { success: true, data: [], source: 'empty_clean' };
 }
 
 export async function createBuyerOrder(payload: any, idempotencyKey?: string): Promise<ApiResult<any>> {
@@ -2550,7 +2559,8 @@ export async function transcribeAudioBlob(blob: Blob): Promise<ApiResult<any>> {
       const file = new File([blob], 'recording.wav', { type: blob.type || 'audio/webm' });
       formData.append('file', file);
       formData.append('language_code', 'hi-IN');
-      formData.append('model', 'saarika:v2.5');
+      formData.append('model', 'saaras:v3');
+      formData.append('mode', 'transcribe');
 
       const res = await fetch(SARVAM_STT_URL, {
         method: 'POST',
@@ -2638,22 +2648,24 @@ export async function fetchWeatherData(
   lon?: number,
   city?: string
 ): Promise<ApiResult<WeatherData>> {
-  try {
-    const params = new URLSearchParams();
-    if (lat !== undefined) params.append('lat', lat.toString());
-    if (lon !== undefined) params.append('lon', lon.toString());
-    if (city) params.append('city', city);
+  if (HAS_API_SERVER) {
+    try {
+      const params = new URLSearchParams();
+      if (lat !== undefined) params.append('lat', lat.toString());
+      if (lon !== undefined) params.append('lon', lon.toString());
+      if (city) params.append('city', city);
 
-    const query = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(getApiUrl(`/api/weather${query}`));
-    const json = await res.json();
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(getApiUrl(`/api/weather${query}`));
+      const json = await res.json();
 
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || `HTTP ${res.status}`);
-    }
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || `HTTP ${res.status}`);
+      }
 
-    return { success: true, data: json.data };
-  } catch (err: any) {}
+      return { success: true, data: json.data };
+    } catch (err: any) {}
+  }
 
   // Fallback: Read from Firebase RTDB (seeded on startup)
   try {

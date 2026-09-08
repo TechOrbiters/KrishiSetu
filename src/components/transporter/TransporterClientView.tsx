@@ -18,7 +18,7 @@ import { ref, get } from 'firebase/database';
 
 export function TransporterClientView() {
   const router = useRouter();
-  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>(INITIAL_TRANSPORTER_TRIPS);
+  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>([]);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   // Sync role & cached trips in localStorage after client mount
@@ -32,7 +32,6 @@ export function TransporterClientView() {
           if (Array.isArray(parsed) && parsed.length > 0) {
             setAvailableTrips((prev) => {
               const tripMap = new Map<string, TransporterTrip>();
-              INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
               prev.forEach((t) => tripMap.set(t.id, t));
               parsed.forEach((t: any) => tripMap.set(t.id, t));
               return Array.from(tripMap.values());
@@ -58,7 +57,6 @@ export function TransporterClientView() {
               if (rtdbTrips.length > 0) {
                 setAvailableTrips((prev) => {
                   const tripMap = new Map<string, TransporterTrip>();
-                  INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
                   prev.forEach((t) => tripMap.set(t.id, t));
                   rtdbTrips.forEach((t) => tripMap.set(t.id, t));
                   const combined = Array.from(tripMap.values());
@@ -82,7 +80,6 @@ export function TransporterClientView() {
               if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
                 setAvailableTrips((prev) => {
                   const tripMap = new Map<string, TransporterTrip>();
-                  INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
                   prev.forEach((t) => tripMap.set(t.id, t));
                   parsed.forEach((t: any) => tripMap.set(t.id, t));
                   return Array.from(tripMap.values());
@@ -154,7 +151,6 @@ export function TransporterClientView() {
         if (totalBackend.length > 0) {
           setAvailableTrips((prev) => {
             const tripMap = new Map<string, TransporterTrip>();
-            INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
             prev.forEach((t) => tripMap.set(t.id, t));
             totalBackend.forEach((t) => tripMap.set(t.id, t));
             return Array.from(tripMap.values());
@@ -169,10 +165,9 @@ export function TransporterClientView() {
 
     // 1. RTDB real-time trips subscription for zero-latency sync
     const unsubTrips = subscribeTransporterTrips((liveTrips) => {
-      if (isMounted && Array.isArray(liveTrips) && liveTrips.length > 0) {
+      if (isMounted && Array.isArray(liveTrips)) {
         setAvailableTrips((prev) => {
           const tripMap = new Map<string, TransporterTrip>();
-          INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
           prev.forEach((t) => tripMap.set(t.id, t));
           liveTrips.forEach((t) => tripMap.set(t.id, t));
           return Array.from(tripMap.values());

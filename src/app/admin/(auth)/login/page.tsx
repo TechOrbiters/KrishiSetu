@@ -27,9 +27,9 @@ export default function AdminLoginPage() {
   const [authMethod, setAuthMethod] = useState<'EMAIL' | 'PHONE'>('EMAIL');
 
   // Fields
-  const [email, setEmail] = useState('admin@krishisetu.in');
-  const [phone, setPhone] = useState('9999999999');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -92,12 +92,6 @@ export default function AdminLoginPage() {
     }
 
     handleLogin(authMethod === 'EMAIL' ? email : phone, password);
-  };
-
-  const handleDemoLogin = () => {
-    setEmail('admin@krishisetu.in');
-    setPassword('admin123');
-    handleLogin('admin@krishisetu.in', 'admin123');
   };
 
   return (
@@ -206,37 +200,6 @@ export default function AdminLoginPage() {
             <p className="text-xs sm:text-sm text-slate-400 mt-1.5">
               Authorized personnel only. Sessions are logged and audited under DoCA security protocols.
             </p>
-          </div>
-
-          {/* Quick Demo Button for Evaluators */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-900/40 via-teal-900/30 to-emerald-950/40 border border-emerald-700/40 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-300 uppercase tracking-wide">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                Evaluator Quick Access
-              </span>
-              <span className="text-[10px] text-emerald-200/70 font-mono bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-600/30">
-                1-Click Demo
-              </span>
-            </div>
-            <p className="text-xs text-slate-300">
-              Sign in immediately as National Platform Administrator (DoCA Officer).
-            </p>
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-lg shadow-emerald-900/40 disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  Enter Admin Control Center (DoCA ID)
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
           </div>
 
           {/* Method Toggle: Email / Password vs Phone */}

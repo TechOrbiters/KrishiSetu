@@ -1,0 +1,36 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "shipments": {
+      "$shipmentId": {
+        ".read": true,
+        "location": {
+          ".write": true
+        }
+      }
+    },
+    "orders": {
+      ".read": true,
+      ".write": true
+    },
+    "produceListings": {
+      ".read": true,
+      ".write": true
+    },
+    "transporters": {
+      ".read": true,
+      ".write": true
+    },
+    "marketPrices": {
+      ".read": true,
+      ".write": true
+    },
+    "notifications": {
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}

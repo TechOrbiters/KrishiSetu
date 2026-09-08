@@ -34,14 +34,14 @@ export default function FarmerAuthPage() {
   const [loginMethod, setLoginMethod] = useState<'SELECT' | 'MOBILE_OTP' | 'PASSWORD'>('SELECT');
 
   // Form State
-  const [fullName, setFullName] = useState('रमेश कुमार');
-  const [phone, setPhone] = useState('9876543210');
-  const [village, setVillage] = useState('बैजनापुर');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [village, setVillage] = useState('');
   const [district, setDistrict] = useState('बाराबंकी');
   const [state, setState] = useState('उत्तर प्रदेश');
-  const [otp, setOtp] = useState(['1', '2', '3', '4', '5', '6']);
-  const [aadhaarNumber, setAadhaarNumber] = useState('4589 1234 8765');
-  const [password, setPassword] = useState('kisan123');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -163,13 +163,13 @@ export default function FarmerAuthPage() {
                 </div>
 
                 {/* Farmer Hero Photo */}
-                <div className="w-full h-32 rounded-2xl overflow-hidden border border-emerald-100 relative shadow-2xs">
+                <div className="w-full h-36 rounded-2xl overflow-hidden border border-emerald-100 relative shadow-2xs">
                   <img
-                    src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600"
+                    src="/assets/kisan-setu/Farmer.jpg"
                     alt="Kisan Registration"
                     className="w-full h-full object-cover object-top"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-3">
                     <p className="text-white text-xs font-bold">समृद्ध किसान, सशक्त भारत 🇮🇳</p>
                   </div>
                 </div>
@@ -258,6 +258,29 @@ export default function FarmerAuthPage() {
                         <option value="मध्य प्रदेश">मध्य प्रदेश</option>
                         <option value="बिहार">बिहार</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      पासवर्ड सेट करें (लॉगिन हेतु) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="कम से कम 6 अक्षरों का पासवर्ड"
+                        className="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
+                      />
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -462,9 +485,9 @@ export default function FarmerAuthPage() {
                   {/* Circular Portrait with Verified Badge Overlay */}
                   <div className="relative w-28 h-28 mx-auto">
                     <img
-                      src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300"
+                      src="/assets/kisan-setu/Farmer.jpg"
                       alt="Verified Farmer"
-                      className="w-full h-full rounded-full object-cover border-4 border-white shadow-md"
+                      className="w-full h-full rounded-full object-cover border-4 border-white shadow-md object-top"
                     />
                     <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border-2 border-white">
                       <CheckCircle2 className="w-5 h-5" />
