@@ -376,37 +376,28 @@ function WizardContent() {
         </div>
       )}
 
-      {/* Step Indicator Bar */}
-      {step <= 3 && (
+      {/* 2-Step Indicator Bar */}
+      {step <= 2 && (
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between text-xs font-bold shadow-2xs">
           <div className="flex items-center justify-around flex-1">
-            <div className={`flex items-center gap-1.5 ${step === 1 ? 'text-emerald-700 font-extrabold' : step > 1 ? 'text-emerald-700' : 'text-slate-400'}`}>
+            <div className={`flex items-center gap-1.5 ${step === 1 ? 'text-emerald-700 font-extrabold' : 'text-emerald-700'}`}>
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step >= 1 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
                 {step > 1 ? '✓' : '1'}
               </span>
               <span>1. जानकारी</span>
             </div>
 
-            <div className="h-0.5 w-6 sm:w-10 bg-slate-200" />
+            <div className="h-0.5 w-12 sm:w-20 bg-slate-200" />
 
-            <div className={`flex items-center gap-1.5 ${step === 2 ? 'text-emerald-700 font-extrabold' : step > 2 ? 'text-emerald-700' : 'text-slate-400'}`}>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step >= 2 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
-                {step > 2 ? '✓' : '2'}
+            <div className={`flex items-center gap-1.5 ${step === 2 ? 'text-emerald-700 font-extrabold' : 'text-slate-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 2 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
+                2
               </span>
-              <span>2. कीमत</span>
-            </div>
-
-            <div className="h-0.5 w-6 sm:w-10 bg-slate-200" />
-
-            <div className={`flex items-center gap-1.5 ${step === 3 ? 'text-emerald-700 font-extrabold' : 'text-slate-400'}`}>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 3 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
-                3
-              </span>
-              <span>3. स्थान</span>
+              <span>2. कीमत व डिलीवरी</span>
             </div>
           </div>
           <span className="ml-3 text-[11px] font-extrabold bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200 flex-shrink-0">
-            चरण {step}/3
+            चरण {step}/2
           </span>
         </div>
       )}
@@ -437,7 +428,7 @@ function WizardContent() {
       )}
 
       {/* Voice Mode Toggle Bar */}
-      {step <= 3 && (
+      {step <= 2 && (
         <div className="space-y-3">
           <div className="flex justify-end">
             <button
@@ -1052,35 +1043,8 @@ function WizardContent() {
               </p>
             </div>
 
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setStep(1)}
-              className="w-1/3 bg-white border border-slate-300 text-slate-700 font-bold text-xs py-3.5 rounded-xl hover:bg-slate-50"
-            >
-              ← वापस
-            </button>
-            <button
-              onClick={() => setStep(3)}
-              className="w-2/3 bg-emerald-700 text-white font-extrabold text-xs py-3.5 rounded-xl hover:bg-emerald-800 transition-colors shadow-xs"
-            >
-              आगे बढ़ें →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 3: 3. स्थान और डिलीवरी */}
-      {step === 3 && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
-          <h2 className="font-bold text-base text-slate-900 border-b border-slate-100 pb-2">
-            3. स्थान और डिलीवरी
-          </h2>
-
-          <div className="space-y-4 text-xs">
             {/* Location Display */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pt-2">
               <label className="font-bold text-slate-800 block">उठाने का स्थान (आपका स्थान)</label>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1090,7 +1054,7 @@ function WizardContent() {
                     <p className="text-[11px] text-slate-500">जिला: {user.district}, {user.state}</p>
                   </div>
                 </div>
-                <button className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
+                <button type="button" className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>बदलें</span>
                 </button>
@@ -1098,7 +1062,7 @@ function WizardContent() {
             </div>
 
             {/* Selling Delivery Method Choice */}
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               <label className="font-bold text-slate-800 block">आपकी बिक्री का तरीका</label>
 
               {/* Choice A: Self Pickup */}
@@ -1161,17 +1125,18 @@ function WizardContent() {
               <ShieldCheck className="w-4 h-4 text-emerald-700 flex-shrink-0" />
               <span>सुरक्षित लेन-देन के लिए KrishiSetu आपकी मदद करेगा।</span>
             </div>
+
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setStep(2)}
+              onClick={() => setStep(1)}
               className="w-1/3 bg-white border border-slate-300 text-slate-700 font-bold text-xs py-3.5 rounded-xl hover:bg-slate-50"
             >
               ← वापस
             </button>
             <button
-              onClick={() => setStep(4)}
+              onClick={() => setStep(3)}
               className="w-2/3 bg-emerald-700 text-white font-extrabold text-xs py-3.5 rounded-xl hover:bg-emerald-800 transition-colors shadow-xs"
             >
               पूर्वावलोकन देखें →
@@ -1180,8 +1145,8 @@ function WizardContent() {
         </div>
       )}
 
-      {/* STEP 4: पूर्वावलोकन (Preview Screen) */}
-      {step === 4 && (
+      {/* STEP 3: पूर्वावलोकन (Preview Screen) */}
+      {step === 3 && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
           <div className="relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
             <img
@@ -1240,7 +1205,7 @@ function WizardContent() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setStep(1)}
+              onClick={() => setStep(2)}
               disabled={submitting}
               className="w-1/2 bg-white border border-slate-300 text-slate-700 font-bold text-xs py-3.5 rounded-xl hover:bg-slate-50 flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
