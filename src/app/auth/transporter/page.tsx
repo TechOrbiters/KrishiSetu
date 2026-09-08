@@ -23,11 +23,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 import {
-  loginWithEmailPassword,
-  registerWithEmailPassword,
-  sendPasswordReset,
-  UserProfileData,
-} from '@/lib/firebase/authClient';
+  signInWithSupabase,
+  signUpWithSupabase,
+  resetPasswordSupabase,
+  SupabaseUserProfile,
+} from '@/lib/supabase/authClient';
 
 export default function TransporterAuthPage() {
   const router = useRouter();
@@ -54,7 +54,7 @@ export default function TransporterAuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // 1. Handle Email/Password Login
+  // 1. Handle Email/Password Login via Supabase
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -67,7 +67,7 @@ export default function TransporterAuthPage() {
 
     setLoading(true);
     try {
-      const res = await loginWithEmailPassword(email, password, 'TRANSPORTER');
+      const res = await signInWithSupabase(email, password, 'TRANSPORTER');
       if (res.success) {
         setSuccessMsg('लॉगिन सफल! ट्रांसपोर्टर पोर्टल लोड हो रहा है...');
         setTimeout(() => {
@@ -83,7 +83,7 @@ export default function TransporterAuthPage() {
     }
   };
 
-  // 2. Handle Transporter Registration
+  // 2. Handle Transporter Registration via Supabase
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -108,7 +108,7 @@ export default function TransporterAuthPage() {
 
     setLoading(true);
     try {
-      const profile: UserProfileData = {
+      const profile: SupabaseUserProfile = {
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim() || '+91 98765 43210',
@@ -119,9 +119,9 @@ export default function TransporterAuthPage() {
         role: 'TRANSPORTER',
       };
 
-      const res = await registerWithEmailPassword(email, password, profile);
+      const res = await signUpWithSupabase(email, password, profile);
       if (res.success) {
-        setSuccessMsg('पंजीकरण सफल! आपका वाहन नेटवर्क से जुड़ गया है...');
+        setSuccessMsg('पंजीकरण सफल! आपका वाहन Supabase नेटवर्क से जुड़ गया है...');
         setTimeout(() => {
           router.push('/transporter');
         }, 600);
@@ -144,7 +144,7 @@ export default function TransporterAuthPage() {
     }
     setLoading(true);
     try {
-      await sendPasswordReset(email);
+      await resetPasswordSupabase(email);
       setSuccessMsg(`पासवर्ड रीसेट लिंक ${email} पर प्रेषित किया गया है`);
       setTimeout(() => setMode('LOGIN'), 3000);
     } catch (err: any) {
@@ -173,7 +173,7 @@ export default function TransporterAuthPage() {
         </Link>
         <span className="text-xs font-bold text-amber-900 bg-amber-100 border border-amber-300/60 px-2.5 py-1 rounded-full flex items-center gap-1">
           <Truck className="w-3.5 h-3.5 text-amber-700" />
-          <span>कृषि परिवहन • Transporter Portal</span>
+          <span>कृषि परिवहन • Supabase Auth</span>
         </span>
       </div>
 
@@ -187,7 +187,7 @@ export default function TransporterAuthPage() {
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold mb-3 border border-white/25">
               <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-              <span>फार्म-टू-मंडी डिलीवरी नेटवर्क • Zero Commission</span>
+              <span>फार्म-टू-मंडी डिलीवरी नेटवर्क • Supabase Verified</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -263,16 +263,16 @@ export default function TransporterAuthPage() {
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  पंजीकृत ईमेल (Registered Email)
+                  पंजीकृत ईमेल या फ़ोन (Email or Phone)
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
-                    type="email"
+                    type="text"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="driver@transport.com"
+                    placeholder="driver@transport.com या 9876543210"
                     className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:border-amber-600 focus:outline-none focus:ring-3 focus:ring-amber-100 transition-all"
                   />
                 </div>
@@ -330,7 +330,7 @@ export default function TransporterAuthPage() {
                 className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
-                <span>ट्रांसपोर्टर पोर्टल में प्रवेश करें (Enter Portal)</span>
+                <span>ट्रांसपोर्टर पोर्टल में प्रवेश करें (Sign In with Supabase)</span>
               </button>
 
               {/* Demo Account Fill */}
@@ -506,7 +506,7 @@ export default function TransporterAuthPage() {
                 className="w-full mt-3 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                <span>वाहन जोड़ें और ट्रिप्स प्राप्त करें (Complete Partner Registration)</span>
+                <span>वाहन जोड़ें (Register in Supabase)</span>
               </button>
             </form>
           )}
@@ -517,7 +517,7 @@ export default function TransporterAuthPage() {
           {mode === 'FORGOT' && (
             <form onSubmit={handleForgotPass} className="space-y-4">
               <p className="text-xs text-slate-600">
-                अपना पंजीकृत ईमेल पता दर्ज करें। हम आपको पासवर्ड रीसेट करने का लिंक भेजेंगे।
+                अपना पंजीकृत ईमेल पता दर्ज करें। हम आपको Supabase पासवर्ड रीसेट करने का लिंक भेजेंगे।
               </p>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">

@@ -23,12 +23,12 @@ import {
   Layers,
 } from 'lucide-react';
 import {
-  signInWithGooglePopup,
-  loginWithEmailPassword,
-  registerWithEmailPassword,
-  sendPasswordReset,
-  UserProfileData,
-} from '@/lib/firebase/authClient';
+  signInWithGoogleSupabase,
+  signInWithSupabase,
+  signUpWithSupabase,
+  resetPasswordSupabase,
+  SupabaseUserProfile,
+} from '@/lib/supabase/authClient';
 
 export default function BuyerAuthPage() {
   const router = useRouter();
@@ -57,20 +57,21 @@ export default function BuyerAuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // 1. Handle Google Sign-In
+  // 1. Handle Google Sign-In with Supabase OAuth
   const handleGoogleSignIn = async () => {
     setError(null);
     setGoogleLoading(true);
 
     try {
-      const res = await signInWithGooglePopup('BUYER');
-      if (res.success) {
+      const res = await signInWithGoogleSupabase('BUYER');
+      if (res.success && res.url) {
+        window.location.href = res.url;
+      } else if (res.success) {
         setSuccessMsg('Google से सफलतापूर्वक साइन इन हुआ! पोर्टल पर जा रहे हैं...');
-        setTimeout(() => {
-          router.push('/buyer');
-        }, 600);
+        setTimeout(() => router.push('/buyer'), 600);
       } else {
-        setError(res.error || 'Google साइन-इन विफल रहा। कृपया पुनः प्रयास करें।');
+        // Graceful fallback for local test
+        setError(res.error || 'Google साइन-इन विफल रहा।');
       }
     } catch (err: any) {
       setError(err.message || 'Google Auth Error');
@@ -79,7 +80,7 @@ export default function BuyerAuthPage() {
     }
   };
 
-  // 2. Handle Email Login
+  // 2. Handle Email/Password Login via Supabase Auth
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -92,12 +93,10 @@ export default function BuyerAuthPage() {
 
     setLoading(true);
     try {
-      const res = await loginWithEmailPassword(email, password, 'BUYER');
+      const res = await signInWithSupabase(email, password, 'BUYER');
       if (res.success) {
         setSuccessMsg('लॉगिन सफल! किसान बाजार में स्वागत है...');
-        setTimeout(() => {
-          router.push('/buyer');
-        }, 500);
+        setTimeout(() => router.push('/buyer'), 500);
       } else {
         setError(res.error || 'लॉगिन असफल हुआ। कृपया क्रेडेंशियल जांचें।');
       }
@@ -108,7 +107,7 @@ export default function BuyerAuthPage() {
     }
   };
 
-  // 3. Handle Registration
+  // 3. Handle Registration via Supabase Auth & Users DB Sync
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -129,7 +128,7 @@ export default function BuyerAuthPage() {
 
     setLoading(true);
     try {
-      const profile: UserProfileData = {
+      const profile: SupabaseUserProfile = {
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
         phone: regPhone.trim() || '+91 98765 00000',
@@ -141,12 +140,10 @@ export default function BuyerAuthPage() {
         role: 'BUYER',
       };
 
-      const res = await registerWithEmailPassword(email, password, profile);
+      const res = await signUpWithSupabase(email, password, profile);
       if (res.success) {
-        setSuccessMsg('पंजीकरण सफल! आपका क्रेता खाता सक्रिय हो गया है...');
-        setTimeout(() => {
-          router.push('/buyer');
-        }, 600);
+        setSuccessMsg('पंजीकरण सफल! आपका Supabase क्रेता खाता सक्रिय हो गया है...');
+        setTimeout(() => router.push('/buyer'), 600);
       } else {
         setError(res.error || 'पंजीकरण विफल रहा');
       }
@@ -166,7 +163,7 @@ export default function BuyerAuthPage() {
     }
     setLoading(true);
     try {
-      await sendPasswordReset(email);
+      await resetPasswordSupabase(email);
       setSuccessMsg(`पासवर्ड रीसेट ईमेल ${email} पर भेजा गया है`);
       setTimeout(() => setMode('LOGIN'), 3000);
     } catch (err: any) {
@@ -189,7 +186,7 @@ export default function BuyerAuthPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6F8] flex flex-col items-center justify-center p-3 sm:p-6 font-sans select-none antialiased">
-      {/* Back button */}
+      {/* Top Bar */}
       <div className="w-full max-w-lg flex items-center justify-between mb-4">
         <Link
           href="/"
@@ -200,7 +197,7 @@ export default function BuyerAuthPage() {
         </Link>
         <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200/60 px-2.5 py-1 rounded-full flex items-center gap-1">
           <ShoppingBag className="w-3.5 h-3.5" />
-          <span>किसान बाजार • Buyer Access</span>
+          <span>किसान बाजार • Supabase Auth</span>
         </span>
       </div>
 
@@ -214,7 +211,7 @@ export default function BuyerAuthPage() {
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold mb-3 border border-white/20">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>सीधे खेत से थोक खरीद • Farmgate Sourcing</span>
+              <span>सीधे खेत से थोक खरीद • Supabase Powered</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -284,7 +281,7 @@ export default function BuyerAuthPage() {
           )}
 
           {/* ============================================================ */}
-          {/* 1. GOOGLE SIGN-IN BUTTON (Highlighted per user instruction)   */}
+          {/* 1. GOOGLE SIGN-IN BUTTON (Powered by Supabase OAuth)          */}
           {/* ============================================================ */}
           {mode !== 'FORGOT' && (
             <div className="mb-6">
@@ -318,8 +315,8 @@ export default function BuyerAuthPage() {
                 )}
                 <span>
                   {mode === 'REGISTER'
-                    ? 'Google से त्वरित पंजीकरण करें (Sign Up with Google)'
-                    : 'Google से साइन इन करें (Sign in with Google)'}
+                    ? 'Google से त्वरित पंजीकरण करें (Supabase OAuth)'
+                    : 'Google से साइन इन करें (Supabase OAuth)'}
                 </span>
               </button>
 
@@ -408,7 +405,7 @@ export default function BuyerAuthPage() {
                 className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
-                <span>क्रेता पोर्टल में प्रवेश करें (Sign In to Buyer Portal)</span>
+                <span>क्रेता पोर्टल में प्रवेश करें (Sign In with Supabase)</span>
               </button>
 
               {/* Quick Demo Autofill */}
@@ -573,7 +570,7 @@ export default function BuyerAuthPage() {
                 className="w-full mt-3 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                <span>क्रेता खाता बनाएं और शुरू करें (Complete Registration)</span>
+                <span>क्रेता खाता बनाएं (Register in Supabase)</span>
               </button>
             </form>
           )}
@@ -584,7 +581,7 @@ export default function BuyerAuthPage() {
           {mode === 'FORGOT' && (
             <form onSubmit={handleForgotPass} className="space-y-4">
               <p className="text-xs text-slate-600">
-                अपना पंजीकृत ईमेल पता दर्ज करें। हम आपको पासवर्ड रीसेट करने का लिंक भेजेंगे।
+                अपना पंजीकृत ईमेल पता दर्ज करें। हम आपको Supabase पासवर्ड रीसेट करने का लिंक भेजेंगे।
               </p>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">

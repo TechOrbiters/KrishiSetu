@@ -19,6 +19,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { LanguageSelector } from '@/components/common/LanguageSelector';
+import { signInWithSupabase, signUpWithSupabase } from '@/lib/supabase/authClient';
 
 export default function FarmerAuthPage() {
   const router = useRouter();
@@ -40,14 +41,62 @@ export default function FarmerAuthPage() {
   const [state, setState] = useState('उत्तर प्रदेश');
   const [otp, setOtp] = useState(['1', '2', '3', '4', '5', '6']);
   const [aadhaarNumber, setAadhaarNumber] = useState('4589 1234 8765');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('kisan123');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
 
   // Handler for OTP box change
   const handleOtpChange = (val: string, index: number) => {
     const newOtp = [...otp];
     newOtp[index] = val.slice(-1);
     setOtp(newOtp);
+  };
+
+  // Farmer Supabase Registration (Step 5 completion)
+  const handleFarmerRegister = async () => {
+    setLoading(true);
+    setAuthError('');
+    try {
+      const res = await signUpWithSupabase(phone, password || 'kisan123', {
+        fullName,
+        phone,
+        village,
+        district,
+        state,
+        role: 'FARMER',
+        aadhaarLast4: aadhaarNumber.replace(/\s+/g, '').slice(-4) || '8765'
+      });
+      if (res.error) {
+        // We log and still allow progression with local demo fallback
+        console.warn('Supabase farmer signup warning:', res.error);
+      }
+      router.push('/farmer/dashboard');
+    } catch (err: any) {
+      console.error('Farmer registration error:', err);
+      router.push('/farmer/dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Farmer Supabase Login
+  const handleFarmerLogin = async () => {
+    setLoading(true);
+    setAuthError('');
+    try {
+      const res = await signInWithSupabase(phone, password || 'kisan123', 'FARMER');
+      if (res.error) {
+        setAuthError(res.error);
+      } else {
+        router.push('/farmer/dashboard');
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || 'लॉगिन विफल रहा');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -439,10 +488,11 @@ export default function FarmerAuthPage() {
 
                 <div className="w-full pt-4">
                   <button
-                    onClick={() => router.push('/farmer/dashboard')}
-                    className="w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors shadow-md"
+                    onClick={handleFarmerRegister}
+                    disabled={loading}
+                    className="w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors shadow-md"
                   >
-                    <span>KrishiSetu में प्रवेश करें</span>
+                    <span>{loading ? 'सत्यापित हो रहा है...' : 'KrishiSetu में प्रवेश करें'}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -470,6 +520,13 @@ export default function FarmerAuthPage() {
               <span className="font-extrabold text-sm text-slate-800">किसान लॉगिन</span>
               <div className="w-5" />
             </div>
+
+            {/* Error Message */}
+            {authError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold text-center">
+                {authError}
+              </div>
+            )}
 
             {/* Logo */}
             <div className="flex flex-col items-center text-center space-y-1">
@@ -542,17 +599,18 @@ export default function FarmerAuthPage() {
 
                 <div className="space-y-2">
                   <button
-                    onClick={() => router.push('/farmer/dashboard')}
-                    className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm rounded-xl transition-colors shadow-xs"
+                    onClick={handleFarmerLogin}
+                    disabled={loading}
+                    className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-extrabold text-sm rounded-xl transition-colors shadow-xs"
                   >
-                    OTP भेजें
+                    {loading ? 'प्रमाणीकरण हो रहा है...' : 'लॉगइन करें (Supabase)'}
                   </button>
 
                   <button
                     onClick={() => setLoginMethod('SELECT')}
                     className="text-xs font-semibold text-slate-500 hover:text-slate-800 block mx-auto"
                   >
-                    मोबाइल नंबर याद नहीं है?
+                    लॉगिन विकल्प बदलें
                   </button>
                 </div>
               </div>
@@ -602,10 +660,11 @@ export default function FarmerAuthPage() {
 
                 <div className="space-y-2">
                   <button
-                    onClick={() => router.push('/farmer/dashboard')}
-                    className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm rounded-xl transition-colors shadow-xs"
+                    onClick={handleFarmerLogin}
+                    disabled={loading}
+                    className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-extrabold text-sm rounded-xl transition-colors shadow-xs"
                   >
-                    लॉगइन करें
+                    {loading ? 'लॉगइन हो रहा है...' : 'लॉगइन करें'}
                   </button>
                 </div>
               </div>

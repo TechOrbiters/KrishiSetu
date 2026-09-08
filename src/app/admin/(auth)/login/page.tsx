@@ -18,7 +18,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { loginWithEmailPassword, authenticateWithCustomToken } from '@/lib/firebase/authClient';
+import { signInWithSupabase } from '@/lib/supabase/authClient';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -41,45 +41,21 @@ export default function AdminLoginPage() {
     setError(null);
 
     try {
-      // 1. Firebase Auth Email/Password Integration
-      const cleanEmail = authMethod === 'EMAIL' ? identifier.trim() : `admin_${identifier}@krishisetu.in`;
-      try {
-        await loginWithEmailPassword(cleanEmail, pass, 'ADMIN');
-      } catch (fbErr: any) {
-        console.warn('[AdminLogin] Firebase email login notice:', fbErr);
+      // 1. Supabase Auth Integration
+      const res = await signInWithSupabase(identifier, pass, 'ADMIN');
+
+      if (!res.success) {
+        setError(res.error || 'लॉगिन असफल रहा (Admin login failed)');
+        return;
       }
 
-      // 2. Try Server API if active
-      try {
-        const res = await fetch('/api/auth/admin-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: authMethod === 'PHONE' ? identifier : '9999999999',
-            email: authMethod === 'EMAIL' ? identifier : undefined,
-          }),
-        });
-
-        const text = await res.text();
-        let data: any = null;
-        try { data = JSON.parse(text); } catch {}
-
-        if (res.ok && data && data.success && data.customToken) {
-          try {
-            await authenticateWithCustomToken(data.customToken);
-          } catch (firebaseErr: any) {
-            console.warn('[AdminLogin] Firebase token sign-in notice:', firebaseErr.message);
-          }
-        }
-      } catch (err: any) {}
-
-      // 3. Set verified local session for static edge resilience
+      // 2. Set audited admin session in local storage
       localStorage.setItem('krishi_active_role', 'ADMIN');
       localStorage.setItem(
         'krishi_admin_session',
         JSON.stringify({
-          uid: `admin_${identifier}`,
-          email: cleanEmail,
+          uid: res.user?.id || `admin_${identifier}`,
+          email: res.user?.email || identifier,
           phone: authMethod === 'PHONE' ? identifier : '9999999999',
           name: 'National Platform Administrator',
           designation: 'DoCA Surveillance Officer',
@@ -153,7 +129,7 @@ export default function AdminLoginPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-medium tracking-wide">
-                Department of Consumer Affairs (DoCA)
+                Department of Consumer Affairs (DoCA) • Supabase Auth
               </p>
             </div>
           </div>
@@ -222,7 +198,7 @@ export default function AdminLoginPage() {
 
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-semibold mb-3 border border-slate-700">
               <Lock className="w-3.5 h-3.5 text-emerald-400" />
-              Restricted Administrative Access
+              Restricted Administrative Access • Supabase Secured
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
               Control Center Login
@@ -350,7 +326,7 @@ export default function AdminLoginPage() {
                 <label className="text-xs font-medium text-slate-300">
                   Security Passcode / Master Password
                 </label>
-                <span className="text-[11px] text-slate-500">Encrypted AES-256</span>
+                <span className="text-[11px] text-slate-500">Supabase Encrypted</span>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -395,7 +371,7 @@ export default function AdminLoginPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  Authenticate & Open Console
+                  Authenticate with Supabase
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
