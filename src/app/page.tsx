@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 /* SVG ICONS & ILLUSTRATIONS                                                  */
 /* ========================================================================= */
 
-function KisanSetuLogo() {
+function KrishiSetuLogo() {
   return (
     <Link href="/" className="flex items-center gap-3 cursor-pointer group">
       <svg className="w-10 h-10 flex-shrink-0" viewBox="0 0 100 100" fill="none">
@@ -195,7 +195,7 @@ export default function MasterLandingPage() {
           boxShadow: '0 1px 6px 0 rgba(0, 0, 0, 0.04)',
         }}
       >
-        <KisanSetuLogo />
+        <KrishiSetuLogo />
         <div className="flex items-center gap-2.5">
           <Link
             href="/auth/farmer"

@@ -889,7 +889,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     if (!dismissedNotificationIds.includes(sysId)) {
       list.push({
         id: sysId,
-        title: 'KisanSetu ई-मंडी लाइव नेटवर्क अपडेट 🌾',
+        title: 'KrishiSetu ई-मंडी लाइव नेटवर्क अपडेट 🌾',
         desc: 'आपके क्षेत्र के सभी FPO सक्रिय हैं। शून्य बिचौलिया शुल्क पर सीधे उपज खरीदें।',
         time: 'आज',
         read: true,
@@ -1188,7 +1188,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   // Initialize theme from localStorage on client mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('kisansetu_theme') as 'light' | 'dark' | null;
+      const savedTheme = (localStorage.getItem('krishisetu_theme') || localStorage.getItem('kisansetu_theme')) as 'light' | 'dark' | null;
       if (savedTheme === 'light' || savedTheme === 'dark') {
         setThemePreference(savedTheme);
         if (savedTheme === 'dark') {
@@ -1203,7 +1203,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   // Sync theme class and localStorage whenever themePreference changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('kisansetu_theme', themePreference);
+      localStorage.setItem('krishisetu_theme', themePreference);
       if (themePreference === 'dark') {
         document.documentElement.classList.add('dark');
       } else {
@@ -1216,7 +1216,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setThemePreference(newTheme);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('kisansetu_theme', newTheme);
+      localStorage.setItem('krishisetu_theme', newTheme);
       if (newTheme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {
@@ -1746,10 +1746,10 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             </div>
             <div>
               <div className="font-extrabold text-[#03542B] text-base leading-none tracking-tight flex items-center gap-1">
-                Kisan Bazaar
+                KrishiSetu
               </div>
               <div className="text-[9px] text-emerald-700 font-bold uppercase tracking-wider mt-0.5">
-                Direct from Farmer
+                क्रेता पोर्टल • Buyer Portal
               </div>
             </div>
           </div>
@@ -2043,10 +2043,10 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm text-[#03542B] dark:text-emerald-400 leading-none">
-                    Kisan Bazaar
+                    KrishiSetu
                   </h3>
                   <p className="text-[9px] text-emerald-700 dark:text-emerald-300 font-bold uppercase tracking-wider mt-0.5">
-                    Buyer Portal Features
+                    क्रेता पोर्टल • Buyer Portal
                   </p>
                 </div>
               </div>
@@ -3934,7 +3934,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                     </div>
 
                     <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-2">
-                      <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">कुल बचत (Kisan Setu)</div>
+                      <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">कुल बचत (KrishiSetu)</div>
                       <div className="text-2xl font-black text-emerald-800">₹4,850.00</div>
                       <p className="text-[10px] text-slate-500">मंडी बिचौलिया कमीशन की तुलना में बचत</p>
                     </div>
@@ -4650,7 +4650,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex justify-between items-center">
-              <div className="font-black text-base text-emerald-900">Kisan Bazaar</div>
+              <div className="font-black text-base text-emerald-900">KrishiSetu</div>
               <button onClick={() => setIsAuthModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-800">
                 <X className="w-5 h-5" />
               </button>
@@ -4658,7 +4658,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
             {authStep === 1 && (
               <div className="space-y-3 text-center text-xs">
-                <h3 className="font-bold text-slate-900 text-sm">स्वागत है! Kisan Bazaar में</h3>
+                <h3 className="font-bold text-slate-900 text-sm">स्वागत है! KrishiSetu में</h3>
                 <p className="text-slate-500 text-[11px]">सीधे किसानों से खरीदें, बेहतर दाम • भरोसे के साथ</p>
 
                 <div className="text-left space-y-1 pt-2">
@@ -4760,7 +4760,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             </div>
 
             <div className="text-center space-y-1">
-              <h3 className="font-extrabold text-slate-900 text-sm">Kisan Bazaar</h3>
+              <h3 className="font-extrabold text-slate-900 text-sm">KrishiSetu</h3>
               <p className="text-[10px] text-slate-500">
                 Order Code: {selectedReceiptOrder.orderCode?.startsWith('#') ? selectedReceiptOrder.orderCode : `#${selectedReceiptOrder.orderCode || 'ORD'}`}
               </p>

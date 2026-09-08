@@ -313,7 +313,7 @@ export default function FarmerAuthPage() {
 
                   <h2 className="font-black text-xl text-slate-900">अपनी पहचान सत्यापित करें</h2>
                   <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto leading-relaxed">
-                    KisanSetu पर सुरक्षित और भरोसेमंद लेन-देन के लिए पहचान सत्यापन आवश्यक है।
+                    KrishiSetu पर सुरक्षित और भरोसेमंद लेन-देन के लिए पहचान सत्यापन आवश्यक है।
                   </p>
 
                   <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-left flex items-start gap-3 text-xs">
@@ -433,7 +433,7 @@ export default function FarmerAuthPage() {
                   </div>
 
                   <p className="text-xs text-slate-600 font-medium max-w-xs mx-auto leading-relaxed pt-2">
-                    अब आप KisanSetu पर अपनी उपज बेच सकते हैं, खरीदारों से जुड़ सकते हैं और बेहतर दाम पा सकते हैं।
+                    अब आप KrishiSetu पर अपनी उपज बेच सकते हैं, खरीदारों से जुड़ सकते हैं और बेहतर दाम पा सकते हैं।
                   </p>
                 </div>
 
@@ -442,7 +442,7 @@ export default function FarmerAuthPage() {
                     onClick={() => router.push('/farmer/dashboard')}
                     className="w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors shadow-md"
                   >
-                    <span>KisanSetu में प्रवेश करें</span>
+                    <span>KrishiSetu में प्रवेश करें</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -501,7 +501,7 @@ export default function FarmerAuthPage() {
 
                 {/* Benefits Card */}
                 <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4 space-y-2 mt-4 text-left">
-                  <h4 className="font-extrabold text-xs text-emerald-900">KisanSetu के फायदे:</h4>
+                  <h4 className="font-extrabold text-xs text-emerald-900">KrishiSetu के फायदे:</h4>
                   <ul className="text-[11px] text-slate-600 space-y-1.5 font-semibold">
                     <li className="flex items-center gap-1.5 text-emerald-800">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />

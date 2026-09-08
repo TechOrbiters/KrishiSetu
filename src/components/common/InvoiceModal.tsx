@@ -42,7 +42,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           <body>
             <div class="header">
               <div>
-                <div class="logo">🌾 KisanSetu ई-मंडी (e-Mandi Invoice)</div>
+                <div class="logo">🌾 KrishiSetu ई-मंडी (e-Mandi Invoice)</div>
                 <p>ऑर्डर रसीद / Tax Invoice</p>
               </div>
               <div style="text-align: right;">
@@ -73,7 +73,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               कुल भुगतान (Total Amount Paid): ₹${order.totalAmount?.toLocaleString() || 1000}
             </div>
             <div class="footer">
-              <p>यह KisanSetu डिजिटल ई-मंडी प्लेटफॉर्म द्वारा जनरेटेड इलेक्ट्रॉनिक इनवॉइस है।</p>
+              <p>यह KrishiSetu डिजिटल ई-मंडी प्लेटफॉर्म द्वारा जनरेटेड इलेक्ट्रॉनिक इनवॉइस है।</p>
               <p>धन्यवाद! जय जवान, जय किसान।</p>
             </div>
           </body>
@@ -98,7 +98,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-base">ऑर्डर इनवॉइस / रसीद</h3>
-              <p className="text-xs text-emerald-100">ऑर्डर #{order.orderCode} • KisanSetu ई-मंडी</p>
+              <p className="text-xs text-emerald-100">ऑर्डर #{order.orderCode} • KrishiSetu ई-मंडी</p>
             </div>
           </div>
           <button
@@ -115,7 +115,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             {/* Top Info */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
-                <h4 className="font-black text-emerald-800 text-lg">KisanSetu ई-मंडी</h4>
+                <h4 className="font-black text-emerald-800 text-lg">KrishiSetu ई-मंडी</h4>
                 <p className="text-xs text-slate-500">प्रत्यक्ष कृषि उपज व्यापार एवं लॉजिस्टिक्स प्लेटफॉर्म</p>
               </div>
               <div className="text-right sm:text-right">

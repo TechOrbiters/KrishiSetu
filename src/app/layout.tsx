@@ -5,20 +5,20 @@ import { FarmerStoreProvider } from '@/lib/store/farmerStore';
 import { AppInitializer } from '@/components/AppInitializer';
 
 export const metadata: Metadata = {
-  title: 'KRISHISETU | किसान का अपना डिजिटल बाज़ार',
+  title: 'KrishiSetu | किसान का अपना डिजिटल बाज़ार',
   description:
-    'KRISHISETU — किसानों को सीधे खरीदारों से जोड़ने वाला स्मार्ट डिजिटल बाज़ार। बेहतर दाम, आसान बिक्री, स्मार्ट डिलीवरी।',
+    'KrishiSetu — किसानों को सीधे खरीदारों से जोड़ने वाला स्मार्ट डिजिटल बाज़ार। बेहतर दाम, आसान बिक्री, स्मार्ट डिलीवरी।',
   keywords: ['krishisetu', 'kisan', 'farmer', 'agri market', 'digital mandi', 'krishi', 'agriculture'],
-  authors: [{ name: 'KRISHISETU Team' }],
+  authors: [{ name: 'KrishiSetu Team' }],
   openGraph: {
-    title: 'KRISHISETU | किसान का अपना डिजिटल बाज़ार',
+    title: 'KrishiSetu | किसान का अपना डिजिटल बाज़ार',
     description: 'किसानों को सीधे खरीदारों से जोड़ने वाला स्मार्ट डिजिटल बाज़ार।',
     type: 'website',
     locale: 'hi_IN',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'KRISHISETU',
+    title: 'KrishiSetu',
     description: 'किसान का अपना डिजिटल बाज़ार',
   },
 };

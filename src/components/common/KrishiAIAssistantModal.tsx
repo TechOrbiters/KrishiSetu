@@ -87,7 +87,7 @@ export const KrishiAIAssistantModal: React.FC<KrishiAIAssistantModalProps> = ({
         ...prev,
         {
           sender: 'ai',
-          text: '📊 DemandSense विश्लेषण: लखनऊ मंडी में आज टमाटर का भाव ₹1,525/क्विंटल है। KisanSetu B2B पर सीधे बेचने पर आपको ₹24/kg तक का भाव मिल सकता है।',
+          text: '📊 DemandSense विश्लेषण: लखनऊ मंडी में आज टमाटर का भाव ₹1,525/क्विंटल है। KrishiSetu B2B पर सीधे बेचने पर आपको ₹24/kg तक का भाव मिल सकता है।',
           actionText: 'खरीदार देखें',
           actionType: 'VIEW_BUYERS',
         },

@@ -96,9 +96,9 @@ export const FarmerSidebar: React.FC<FarmerSidebarProps> = ({
             </div>
             <div>
               <h1 className="font-extrabold text-xl text-emerald-800 leading-tight tracking-tight">
-                KRISHISETU
+                KrishiSetu
               </h1>
-              <p className="text-[11px] font-semibold text-slate-500">आपका अपना बाजार</p>
+              <p className="text-[11px] font-semibold text-slate-500">किसान पोर्टल • Farmer Portal</p>
             </div>
           </div>
         )}
