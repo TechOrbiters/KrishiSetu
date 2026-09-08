@@ -202,10 +202,30 @@ export default function MasterLandingPage() {
             onClick={() => {
               if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'FARMER');
             }}
-            className="text-xs font-bold text-[#15803D] bg-[#E6F4EA] hover:bg-[#CEEAD6] px-3.5 py-1.5 rounded-xl border border-[#CEEAD6] transition-colors shadow-2xs flex items-center gap-1.5"
+            className="text-xs font-bold text-[#15803D] bg-[#E6F4EA] hover:bg-[#CEEAD6] px-3 py-1.5 rounded-xl border border-[#CEEAD6] transition-colors shadow-2xs flex items-center gap-1.5"
           >
-            <span>👤</span>
+            <span>🌾</span>
             <span>{t('farmerLogin')}</span>
+          </Link>
+          <Link
+            href="/auth/buyer"
+            onClick={() => {
+              if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER');
+            }}
+            className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-200 transition-colors hidden sm:flex items-center gap-1.5"
+          >
+            <span>🛒</span>
+            <span>क्रेता / Buyer</span>
+          </Link>
+          <Link
+            href="/auth/transporter"
+            onClick={() => {
+              if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER');
+            }}
+            className="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 transition-colors hidden md:flex items-center gap-1.5"
+          >
+            <span>🚚</span>
+            <span>परिवहन / Transporter</span>
           </Link>
           <div className="relative" data-no-translate="true">
             <button
@@ -423,7 +443,7 @@ export default function MasterLandingPage() {
 
           {/* Buyer */}
           <Link
-            href="/buyer"
+            href="/auth/buyer"
             onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'BUYER'); }}
             className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer group block"
             style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
@@ -445,7 +465,7 @@ export default function MasterLandingPage() {
 
           {/* Transporter */}
           <Link
-            href="/transporter"
+            href="/auth/transporter"
             onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'TRANSPORTER'); }}
             className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer group block"
             style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
@@ -467,7 +487,7 @@ export default function MasterLandingPage() {
 
           {/* Admin */}
           <Link
-            href="/admin"
+            href="/admin/login"
             onClick={() => { if (typeof window !== 'undefined') localStorage.setItem('krishi_active_role', 'ADMIN'); }}
             className="bg-white flex items-center justify-between gap-4 p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer group block"
             style={{ borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.04)' }}
