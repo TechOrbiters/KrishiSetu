@@ -481,7 +481,7 @@ export const BuyerPricesView: React.FC<BuyerPricesViewProps> = ({
                 सही समय पर खरीदें, ज्यादा बचत करें!
               </h3>
               <p className="text-xs text-emerald-200/90 mb-4">
-                AI Mandi मूल्य-रुझान मॉडल आपको आगामी भाव का पूर्वानुमान देकर थोक खरीद में सहायता करता है।
+                KrishiSetu मूल्य-रुझान मॉडल आपको आगामी भाव का पूर्वानुमान देकर थोक खरीद में सहायता करता है।
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -349,7 +349,7 @@ export default function AdminDashboardPage() {
           <div className="mt-4 p-3 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>AI Mandi Disintermediation Guard</span>
+              <span>KrishiSetu Disintermediation Guard</span>
             </div>
             <span className="font-semibold text-emerald-400">Status: Nominal</span>
           </div>

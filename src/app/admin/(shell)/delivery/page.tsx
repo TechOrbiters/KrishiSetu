@@ -20,7 +20,8 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import DataTable, { Column } from '@/components/admin/DataTable';
 import DetailDrawer, { DrawerSection, DrawerField } from '@/components/admin/DetailDrawer';
 import { ErrorState } from '@/components/admin/EmptyState';
-import { getAuthHeaders, getApiUrl } from '@/lib/api/client';
+import { fetchShipments } from '@/lib/api/client';
+import { LiveTrackingMap } from '@/components/maps/LiveTrackingMap';
 import { logisticsSync } from '@/lib/realtime/logisticsSync';
 
 export default function AdminDeliveryPage() {
@@ -31,20 +32,16 @@ export default function AdminDeliveryPage() {
   const [selectedShipment, setSelectedShipment] = useState<any | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const fetchShipments = async () => {
+  const loadShipments = async () => {
     try {
       setLoading(true);
       setError(null);
-      const headers = await getAuthHeaders();
-      const res = await fetch(getApiUrl('/api/shipments'), { headers });
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || `HTTP ${res.status}`);
+      const res = await fetchShipments();
+      if (res.success && Array.isArray(res.data)) {
+        setShipments(res.data);
+      } else {
+        throw new Error(res.error || 'Failed to fetch active shipments.');
       }
-
-      const rawShipments = json.shipments || json.data?.shipments || (Array.isArray(json.data) ? json.data : []);
-      setShipments(Array.isArray(rawShipments) ? rawShipments : []);
     } catch (err: any) {
       console.error('[AdminDelivery] Fetch error:', err);
       setError(err.message || 'Failed to fetch active shipments.');
@@ -54,10 +51,10 @@ export default function AdminDeliveryPage() {
   };
 
   useEffect(() => {
-    fetchShipments();
+    loadShipments();
 
     const unsubscribe = logisticsSync.subscribe(() => {
-      fetchShipments();
+      loadShipments();
     });
 
     return () => unsubscribe();
@@ -153,7 +150,7 @@ export default function AdminDeliveryPage() {
         ]}
         actions={
           <button
-            onClick={fetchShipments}
+            onClick={loadShipments}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -206,7 +203,7 @@ export default function AdminDeliveryPage() {
         <ErrorState
           title="Failed to Load Shipments"
           description={error}
-          onRetry={fetchShipments}
+          onRetry={loadShipments}
         />
       ) : (
         <DataTable
@@ -230,7 +227,7 @@ export default function AdminDeliveryPage() {
       >
         {selectedShipment && (
           <div className="space-y-6">
-            <DrawerSection title="Logistics Corridor">
+            <DrawerSection title="Logistics Corridor & Live GPS">
               <DrawerField
                 label="Origin Farm Hub"
                 value={selectedShipment.origin_address || 'Barabanki Hub, UP'}
@@ -243,6 +240,32 @@ export default function AdminDeliveryPage() {
                 label="Transit Route Distance"
                 value={selectedShipment.distance_km ? `${selectedShipment.distance_km} km` : '42 km'}
               />
+
+              {/* Realtime OpenStreetMap Route */}
+              <div className="mt-3 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-2">
+                <LiveTrackingMap
+                  origin={{
+                    lat: Number(selectedShipment.pickup_lat || 26.9284),
+                    lng: Number(selectedShipment.pickup_lng || 81.1834),
+                    label: selectedShipment.origin_address || 'पिकअप फार्म',
+                    address: selectedShipment.origin_address,
+                  }}
+                  destination={{
+                    lat: Number(selectedShipment.delivery_lat || 26.8524),
+                    lng: Number(selectedShipment.delivery_lng || 80.9412),
+                    label: selectedShipment.destination_address || 'गंतव्य मंडी',
+                    address: selectedShipment.destination_address,
+                  }}
+                  transporterLocation={{
+                    lat: Number(selectedShipment.current_lat || 26.8904),
+                    lng: Number(selectedShipment.current_lng || 81.0623),
+                    updatedAt: Date.now(),
+                    speedKmh: 42,
+                  }}
+                  height="260px"
+                  showEta={true}
+                />
+              </div>
             </DrawerSection>
 
             <DrawerSection title="FreshRoute Sensor Diagnostics">

@@ -179,7 +179,7 @@ export default function AdminSettingsPage() {
               <div className="flex items-center justify-between mb-1">
                 <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5 text-blue-500" />
-                  AI Mandi Microservices
+                  KrishiSetu Microservices
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>

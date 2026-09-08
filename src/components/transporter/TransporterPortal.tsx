@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { GoogleMandiMap } from '../common/GoogleMandiMap';
+import { LiveTrackingMap } from '../maps/LiveTrackingMap';
 import { TransporterTrip } from '../../types';
 import {
   Truck,
@@ -942,23 +942,18 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
                       </button>
                     </div>
 
-                    {/* Google Maps Live Snapshot */}
-                    <div className="rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
-                      <GoogleMandiMap
+                    {/* OpenStreetMap Live Route & Tracking */}
+                    <div className="rounded-2xl overflow-hidden border border-slate-300 shadow-sm p-2 bg-slate-50">
+                      <LiveTrackingMap
                         origin={originCoords}
                         destination={destinationCoords}
-                        transporterLocation={liveTransporterLocation}
-                        tripStatus={currentTrip?.status}
-                        height="300px"
-                        onLocationUpdate={(loc) => {
-                          if (onUpdateTripLocation && currentTrip) {
-                            onUpdateTripLocation(currentTrip.id, {
-                              lat: loc.lat,
-                              lng: loc.lng,
-                              address: 'लाइव डिवाइस GPS',
-                            });
-                          }
+                        transporterLocation={{
+                          lat: liveTransporterLocation.lat,
+                          lng: liveTransporterLocation.lng,
+                          updatedAt: Date.now(),
                         }}
+                        height="320px"
+                        showEta={true}
                       />
                     </div>
                   </div>

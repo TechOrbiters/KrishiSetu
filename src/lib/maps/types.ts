@@ -28,13 +28,15 @@ export interface RouteResult {
 }
 
 export interface TrackingLocation extends LatLng {
-  label: string;
-  address: string;
+  label?: string;
+  address?: string;
 }
 
 export interface TransporterLiveLocation extends LatLng {
   updatedAt: number; // Unix timestamp in milliseconds
   transporterId?: string;
+  speedKmh?: number;
+  heading?: number;
 }
 
 export interface LocationStaleStatus {

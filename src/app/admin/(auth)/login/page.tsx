@@ -151,7 +151,7 @@ export default function AdminLoginPage() {
             <div className="flex items-start gap-3 text-xs text-slate-300 bg-white/5 p-3 rounded-xl border border-white/10">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>AI Mandi Surveillance:</strong> Anomaly detection against price gouging and APMC hoarding.
+                <strong>KrishiSetu Surveillance:</strong> Anomaly detection against price gouging and APMC hoarding.
               </span>
             </div>
           </div>

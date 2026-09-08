@@ -23,7 +23,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Order, OrderStatus } from '@/types';
-import { GoogleMandiMap } from '@/components/common/GoogleMandiMap';
+import { LiveTrackingMap } from '@/components/maps/LiveTrackingMap';
 
 interface BuyerOrdersViewProps {
   orders: Order[];
@@ -454,19 +454,18 @@ export const BuyerOrdersView: React.FC<BuyerOrdersViewProps> = ({
               </button>
             </div>
 
-            {/* Map */}
-            <div className="h-64 rounded-2xl overflow-hidden border border-slate-200 mb-4">
-              <GoogleMandiMap
-                origin={{ lat: 26.9284, lng: 81.1834, label: trackingModalOrder.pickupLocation }}
-                destination={{ lat: 26.8524, lng: 80.9412, label: trackingModalOrder.dropLocation }}
+            {/* OpenStreetMap Live Route & Tracking */}
+            <div className="rounded-2xl overflow-hidden border border-slate-200 mb-4 p-2 bg-slate-50">
+              <LiveTrackingMap
+                origin={{ lat: 26.9284, lng: 81.1834, label: trackingModalOrder.pickupLocation || 'खेत / FPO फार्म' }}
+                destination={{ lat: 26.8524, lng: 80.9412, label: trackingModalOrder.dropLocation || 'क्रेता गंतव्य मंडी' }}
                 transporterLocation={{
                   lat: 26.8904,
                   lng: 81.0623,
-                  driverName: trackingModalOrder.transporterName || 'राजेश कुमार (राज ट्रांसपोर्ट)',
-                  vehicleNumber: trackingModalOrder.transporterVehicle || 'UP 32 BK 4821',
+                  updatedAt: Date.now(),
                 }}
-                showDetails={true}
-                tripStatus="IN_TRANSIT"
+                height="280px"
+                showEta={true}
               />
             </div>
 

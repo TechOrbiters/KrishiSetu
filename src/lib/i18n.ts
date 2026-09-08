@@ -208,7 +208,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     switchRole: 'Change Role',
     realtimeDb: 'Realtime DB',
     syncing: 'Syncing...',
-    aiMandi: 'AI Mandi',
+    aiMandi: 'KrishiSetu',
     apisLive: 'APIs Live',
     role: 'Role',
     landing: 'Home',

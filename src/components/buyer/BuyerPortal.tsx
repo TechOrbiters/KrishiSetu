@@ -21,6 +21,7 @@ import { subscribeBuyerProfile, updateBuyerProfile } from '../../lib/firebase';
 import { logisticsSync } from '../../lib/realtime/logisticsSync';
 import { ProduceCard } from './ProduceCard';
 import { CategoryFilter } from './CategoryFilter';
+import { LiveTrackingMap } from '../maps/LiveTrackingMap';
 import { getAccurateCropImage } from '@/lib/cropImages';
 import {
   Store,
@@ -3729,6 +3730,41 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                           <div className="bg-emerald-900/60 border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-300 font-bold text-[11px]">
                             ⏱️ अनुमानित समय: {selectedTrip.eta || '42 मिनट शेष'}
                           </div>
+                        </div>
+
+                        {/* Interactive OpenStreetMap & OSRM Live Tracking Map */}
+                        <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-2 shadow-inner">
+                          <LiveTrackingMap
+                            origin={{
+                              lat: selectedTrip.pickupCoords?.lat || 26.9284,
+                              lng: selectedTrip.pickupCoords?.lng || 81.1834,
+                              label: selectedTrip.pickupLocation || selectedTrip.fpoName || 'FPO फार्म',
+                              address: selectedTrip.pickupLocation,
+                            }}
+                            destination={{
+                              lat: selectedTrip.dropCoords?.lat || 26.8524,
+                              lng: selectedTrip.dropCoords?.lng || 80.9412,
+                              label: selectedLocation || 'गंतव्य गोदाम',
+                              address: selectedLocation || 'लखनऊ गोदाम',
+                            }}
+                            transporterLocation={
+                              selectedTrip.currentLocation
+                                ? {
+                                    lat: selectedTrip.currentLocation.lat,
+                                    lng: selectedTrip.currentLocation.lng,
+                                    updatedAt: Date.now(),
+                                    speedKmh: selectedTrip.currentLocation.speedKmh,
+                                  }
+                                : {
+                                    lat: 26.8904,
+                                    lng: 81.0623,
+                                    updatedAt: Date.now(),
+                                    speedKmh: 42,
+                                  }
+                            }
+                            height="340px"
+                            showEta={true}
+                          />
                         </div>
 
                         {/* Route Graphic */}

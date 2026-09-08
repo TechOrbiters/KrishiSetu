@@ -104,9 +104,10 @@ export default function DeliveryTrackingPage({ params }: { params?: { id?: strin
     loadShipment();
   }, [shipmentId]);
 
-  // Real-time synchronization with Transporter Portal
+  // Real-time synchronization with Transporter Portal (logisticsSync + Firebase RTDB)
   useEffect(() => {
-    const unsubscribe = logisticsSync.subscribe((event) => {
+    // 1. Cross-portal zero latency event bus
+    const unsubscribeSync = logisticsSync.subscribe((event) => {
       if (event.type === 'LOCATION_TELEMETRY' && event.payload.location) {
         const loc = event.payload.location;
         setTransporterLoc({ lat: loc.lat, lng: loc.lng, updatedAt: Date.now() });
@@ -123,8 +124,31 @@ export default function DeliveryTrackingPage({ params }: { params?: { id?: strin
       }
     });
 
-    return () => unsubscribe();
-  }, []);
+    // 2. Direct cloud RTDB telemetry stream for cross-device sync
+    let unsubscribeRtdb: (() => void) | null = null;
+    if (firebaseRtdb && shipmentId) {
+      try {
+        const locRef = ref(firebaseRtdb, `shipments/${shipmentId}/location`);
+        const listener = onValue(locRef, (snap) => {
+          const val = snap.val();
+          if (val && typeof val.latitude === 'number' && typeof val.longitude === 'number') {
+            setTransporterLoc({
+              lat: val.latitude,
+              lng: val.longitude,
+              updatedAt: val.updated_at || Date.now(),
+            });
+            setIsStale(false);
+          }
+        });
+        unsubscribeRtdb = () => off(locRef, 'value', listener);
+      } catch (e) {}
+    }
+
+    return () => {
+      unsubscribeSync();
+      if (unsubscribeRtdb) unsubscribeRtdb();
+    };
+  }, [shipmentId]);
 
   if (loading) {
     return (

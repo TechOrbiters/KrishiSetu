@@ -126,7 +126,7 @@ export const BuyerHomeView: React.FC<BuyerHomeViewProps> = ({
         <div className="relative z-10 px-6 sm:px-8 py-8 md:py-10 max-w-4xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-3 backdrop-blur-xs">
             <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>AI Mandi • किसान-क्रेता सेतु (Direct Farm Network)</span>
+            <span>KrishiSetu • किसान-क्रेता सेतु (Direct Farm Network)</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight mb-2 text-white">
@@ -474,7 +474,7 @@ export const BuyerHomeView: React.FC<BuyerHomeViewProps> = ({
       {/* 5. TRUST STRIP (scr-009) */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-          AI Mandi गारंटी • Why Buy Direct
+          KrishiSetu गारंटी • Why Buy Direct
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="flex items-start gap-3">
