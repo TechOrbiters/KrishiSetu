@@ -91,9 +91,11 @@ export const FarmerSidebar: React.FC<FarmerSidebarProps> = ({
         ) : (
           /* Brand Logo Variant (on dashboard and profile pages) */
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-extrabold text-2xl shadow-xs">
-              🌿
-            </div>
+            <img
+              src="/favicon.svg"
+              alt="KrishiSetu Logo"
+              className="w-11 h-11 object-contain shrink-0"
+            />
             <div>
               <h1 className="font-extrabold text-xl text-emerald-800 leading-tight tracking-tight">
                 KrishiSetu

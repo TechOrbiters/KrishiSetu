@@ -1930,9 +1930,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             title="मुख्य पृष्ठ (Home) पर जाएं"
             className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#03542B] flex items-center justify-center text-white shadow-2xs">
-              <Leaf className="w-4 h-4 fill-emerald-400 text-emerald-400" />
-            </div>
+            <img src="/favicon.svg" alt="KrishiSetu Logo" className="w-9 h-9 object-contain shrink-0" />
             <div>
               <div className="font-extrabold text-[#03542B] text-base leading-none tracking-tight flex items-center gap-1">
                 KrishiSetu

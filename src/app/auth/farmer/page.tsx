@@ -154,9 +154,7 @@ export default function FarmerAuthPage() {
                 {/* Brand Banner Header */}
                 <div className="flex flex-col items-center text-center space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-extrabold text-lg">
-                      🌿
-                    </div>
+                    <img src="/favicon.svg" alt="KrishiSetu Logo" className="w-8 h-8 object-contain shrink-0" />
                     <span className="font-extrabold text-xl text-emerald-800 tracking-tight">KrishiSetu</span>
                   </div>
                   <p className="text-[11px] font-medium text-slate-500">किसान से सीधा बाज़ार तक</p>
@@ -553,9 +551,7 @@ export default function FarmerAuthPage() {
 
             {/* Logo */}
             <div className="flex flex-col items-center text-center space-y-1">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-extrabold text-2xl shadow-xs">
-                🌿
-              </div>
+              <img src="/favicon.svg" alt="KrishiSetu Logo" className="w-12 h-12 object-contain shrink-0" />
               <h2 className="font-black text-xl text-slate-900">किसान लॉगिन</h2>
               <p className="text-xs text-slate-500 font-semibold">अपने खाते में लॉगइन करें</p>
             </div>

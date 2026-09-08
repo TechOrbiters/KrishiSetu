@@ -393,9 +393,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
           {/* Logo & Brand */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center font-black text-base shadow-xs">
-                KS
-              </div>
+              <img src="/favicon.svg" alt="KrishiSetu Logo" className="w-9 h-9 object-contain shrink-0" />
               <div>
                 <h1 className="font-extrabold text-sm text-slate-900 leading-tight">
                   KrishiSetu

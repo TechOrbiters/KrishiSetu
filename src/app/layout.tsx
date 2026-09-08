@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     title: 'KrishiSetu',
     description: 'किसान का अपना डिजिटल बाज़ार',
   },
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export const viewport: Viewport = {

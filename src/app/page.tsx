@@ -13,11 +13,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 function KrishiSetuLogo() {
   return (
     <Link href="/" className="flex items-center gap-3 cursor-pointer group">
-      <svg className="w-10 h-10 flex-shrink-0" viewBox="0 0 100 100" fill="none">
-        <path d="M50 92C50 92 48 54 22 32C16 27 8 24 2 26C14 46 34 60 50 92Z" fill="#15803D" />
-        <path d="M50 92C50 92 52 50 80 27C86 22 94 19 100 21C90 42 68 55 50 92Z" fill="#16A34A" />
-        <path d="M50 92C50 92 46 38 50 10C53 26 60 46 50 92Z" fill="#22C55E" />
-      </svg>
+      <img src="/favicon.svg" alt="KrishiSetu Logo" className="w-10 h-10 flex-shrink-0 object-contain group-hover:scale-105 transition-transform" />
       <span className="font-extrabold text-[28px] tracking-tight leading-none" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
         <span style={{ color: '#15803D' }}>Krishi</span>
         <span style={{ color: '#1a1a1a' }}>Setu</span>
