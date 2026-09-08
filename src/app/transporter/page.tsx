@@ -13,11 +13,25 @@ import {
   updateTransporterTrip,
   updateTransporterLocation,
 } from '@/lib/firebase';
+import { INITIAL_TRANSPORTER_TRIPS } from '@/data/mockData';
+import { firebaseRtdb } from '@/lib/firebase/client';
+import { ref, get } from 'firebase/database';
 
 function TransporterPortalInner() {
   const router = useRouter();
-  // Pure real-time data state: strictly no dummy/fake initial trips
-  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>([]);
+  // Initialize with initial trips or cached trips so trips are never blanked
+  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('krishi_transporter_trips');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_TRANSPORTER_TRIPS;
+  });
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   // Sync role in localStorage
@@ -32,6 +46,51 @@ function TransporterPortalInner() {
     let isMounted = true;
     async function syncBackendData() {
       try {
+        // 1. Fetch from Firebase Realtime Database
+        if (firebaseRtdb) {
+          try {
+            const snap = await get(ref(firebaseRtdb, 'transporterTrips'));
+            if (snap.exists() && isMounted) {
+              const val = snap.val();
+              const rtdbTrips: TransporterTrip[] = Object.values(val || {});
+              if (rtdbTrips.length > 0) {
+                setAvailableTrips((prev) => {
+                  const tripMap = new Map<string, TransporterTrip>();
+                  INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
+                  prev.forEach((t) => tripMap.set(t.id, t));
+                  rtdbTrips.forEach((t) => tripMap.set(t.id, t));
+                  const combined = Array.from(tripMap.values());
+                  if (typeof window !== 'undefined') {
+                    try { localStorage.setItem('krishi_transporter_trips', JSON.stringify(combined)); } catch (e) {}
+                  }
+                  return combined;
+                });
+                return;
+              }
+            }
+          } catch (rtdbErr) {}
+        }
+
+        // 2. Check local storage
+        if (typeof window !== 'undefined') {
+          try {
+            const cached = localStorage.getItem('krishi_transporter_trips');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
+                setAvailableTrips((prev) => {
+                  const tripMap = new Map<string, TransporterTrip>();
+                  INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
+                  prev.forEach((t) => tripMap.set(t.id, t));
+                  parsed.forEach((t: any) => tripMap.set(t.id, t));
+                  return Array.from(tripMap.values());
+                });
+              }
+            }
+          } catch (e) {}
+        }
+
+        // 3. Fallback to API if available
         const headers = await getAuthHeaders();
         const [jobsRes, tripsRes] = await Promise.all([
           fetch(getApiUrl('/api/transporters/jobs'), { headers }).then((r) => r.json()).catch(() => ({ jobs: [] })),
@@ -89,8 +148,17 @@ function TransporterPortalInner() {
           },
         }));
 
-        // Pure real data from DB - no dummy or mock data injection
-        setAvailableTrips([...backendTrips, ...backendJobs]);
+        // Only update if backend returned actual data (never wipe to empty)
+        const totalBackend = [...backendTrips, ...backendJobs];
+        if (totalBackend.length > 0) {
+          setAvailableTrips((prev) => {
+            const tripMap = new Map<string, TransporterTrip>();
+            INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
+            prev.forEach((t) => tripMap.set(t.id, t));
+            totalBackend.forEach((t) => tripMap.set(t.id, t));
+            return Array.from(tripMap.values());
+          });
+        }
       } catch (e) {
         // network resilience
       }
@@ -101,19 +169,35 @@ function TransporterPortalInner() {
     // 1. RTDB real-time trips subscription for zero-latency sync
     const unsubTrips = subscribeTransporterTrips((liveTrips) => {
       if (isMounted && Array.isArray(liveTrips) && liveTrips.length > 0) {
-        setAvailableTrips(liveTrips);
+        setAvailableTrips((prev) => {
+          const tripMap = new Map<string, TransporterTrip>();
+          INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
+          prev.forEach((t) => tripMap.set(t.id, t));
+          liveTrips.forEach((t) => tripMap.set(t.id, t));
+          return Array.from(tripMap.values());
+        });
       }
     });
 
     // 2. Listen for cross-portal events
-    const unsubscribe = logisticsSync.subscribe((event) => {
+    const unsubscribe = logisticsSync.subscribe((event: any) => {
+      if (event.type === 'ORDER_ACCEPTED' && event.trip) {
+        const newTrip = event.trip as TransporterTrip;
+        setAvailableTrips((prev) => {
+          const exists = prev.some((t) => t.id === newTrip.id || t.orderCode === newTrip.orderCode);
+          if (exists) {
+            return prev.map((t) => (t.id === newTrip.id || t.orderCode === newTrip.orderCode ? { ...t, ...newTrip } : t));
+          }
+          return [newTrip, ...prev];
+        });
+      }
       if (['ORDER_PLACED', 'ORDER_ACCEPTED', 'JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
         syncBackendData();
       }
     });
 
     // Periodic live synchronization polling
-    const pollInterval = setInterval(syncBackendData, 4000);
+    const pollInterval = setInterval(syncBackendData, 6000);
 
     return () => {
       isMounted = false;

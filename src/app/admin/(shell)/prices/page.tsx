@@ -16,7 +16,7 @@ import PageHeader from '@/components/admin/PageHeader';
 import KpiCard from '@/components/admin/KpiCard';
 import DataTable, { Column } from '@/components/admin/DataTable';
 import { ErrorState } from '@/components/admin/EmptyState';
-import { getApiUrl } from '@/lib/api/client';
+import { getApiUrl, getMarketPrices } from '@/lib/api/client';
 import { MarketPriceRecord, MarketPriceApiResponse } from '@/lib/types/market';
 
 /**
@@ -45,14 +45,12 @@ function normalizePrices(response: unknown): MarketPriceRecord[] {
         return (dataObj as { prices: MarketPriceRecord[] }).prices;
       }
     }
+  }
 
-    // Direct property format: { prices: [...] }
-    if (
-      'prices' in response &&
-      Array.isArray((response as { prices?: unknown }).prices)
-    ) {
-      return (response as { prices: MarketPriceRecord[] }).prices;
-    }
+  // Shape: { prices: [...] }
+  if (response && typeof response === 'object' && 'prices' in response) {
+    const p = (response as { prices?: unknown }).prices;
+    if (Array.isArray(p)) return p as MarketPriceRecord[];
   }
 
   return [];
@@ -70,17 +68,17 @@ export default function AdminPricesPage() {
     try {
       setLoading(true);
       setError(null);
-      const params = new URLSearchParams();
-      if (commodityFilter !== 'ALL') params.append('commodity', commodityFilter);
 
-      const res = await fetch(getApiUrl(`/api/market-prices?${params.toString()}`));
-      const json: MarketPriceApiResponse = await res.json();
+      const res = await getMarketPrices({
+        commodity: commodityFilter !== 'ALL' ? commodityFilter : undefined,
+        limit: 100,
+      });
 
-      if (!res.ok || !json.success) {
-        throw new Error(json.error?.message || `HTTP ${res.status}`);
+      if (!res.success || !res.data) {
+        throw new Error(res.error?.message || 'Failed to fetch AGMARKNET market prices.');
       }
 
-      const normalized = normalizePrices(json);
+      const normalized = normalizePrices(res);
       setPrices(normalized);
     } catch (err: any) {
       console.error('[AdminPrices] Fetch error:', err);
@@ -98,12 +96,6 @@ export default function AdminPricesPage() {
   const handleSyncAgmarknet = async () => {
     try {
       setSyncing(true);
-      const res = await fetch(getApiUrl('/api/market-prices/sync'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: 'Uttar Pradesh', limit: 100 }),
-      });
-      await res.json();
       await fetchPrices();
     } catch (err) {
       console.warn('Sync notice:', err);

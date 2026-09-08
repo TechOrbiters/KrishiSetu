@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="hi">
+    <html lang="hi" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -46,7 +46,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="shortcut icon" href="/favicon.svg" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <AppInitializer />
         <LanguageProvider>
           <FarmerStoreProvider>{children}</FarmerStoreProvider>

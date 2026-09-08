@@ -23,6 +23,11 @@ export default function MarketPricesPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>('आज, AGMARKNET');
+  const [currentDateText, setCurrentDateText] = useState<string>('आज का भाव');
+
+  useEffect(() => {
+    setCurrentDateText(`${new Date().toLocaleDateString('hi-IN')} (आज का भाव)`);
+  }, []);
 
   const mandiOptions = [
     { label: 'लखनऊ, उत्तर प्रदेश', district: 'Lucknow' },
@@ -156,7 +161,7 @@ export default function MarketPricesPage() {
           <div className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
               <Calendar className="w-4 h-4 text-slate-500" />
-              <span>{new Date().toLocaleDateString('hi-IN')} (आज का भाव)</span>
+              <span suppressHydrationWarning>{currentDateText}</span>
             </div>
             <ChevronDown className="w-4 h-4 text-slate-400" />
           </div>

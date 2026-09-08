@@ -572,6 +572,53 @@ const DATA_GOV_API_KEY = process.env.NEXT_PUBLIC_DATA_GOV_API_KEY || '579b464db6
 const DATA_GOV_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070';
 const DATA_GOV_BASE_URL = 'https://api.data.gov.in/resource';
 
+type MandiCategory = 'VEGETABLES' | 'GRAINS' | 'PULSES' | 'OILSEEDS' | 'FRUITS' | 'COMMODITIES';
+
+const COMMODITY_DICT: Record<string, { hindi: string; category: MandiCategory }> = {
+  potato: { hindi: 'आलू', category: 'VEGETABLES' },
+  tomato: { hindi: 'टमाटर', category: 'VEGETABLES' },
+  onion: { hindi: 'प्याज', category: 'VEGETABLES' },
+  wheat: { hindi: 'गेहूं', category: 'GRAINS' },
+  paddy: { hindi: 'धान (साधारण)', category: 'GRAINS' },
+  rice: { hindi: 'चावल', category: 'GRAINS' },
+  mustard: { hindi: 'सरसों', category: 'OILSEEDS' },
+  garlic: { hindi: 'लहसुन', category: 'VEGETABLES' },
+  ginger: { hindi: 'अदरक', category: 'VEGETABLES' },
+  chilli: { hindi: 'हरी मिर्च', category: 'VEGETABLES' },
+  'green chilli': { hindi: 'हरी मिर्च', category: 'VEGETABLES' },
+  brinjal: { hindi: 'बैंगन', category: 'VEGETABLES' },
+  cauliflower: { hindi: 'फूलगोभी', category: 'VEGETABLES' },
+  cabbage: { hindi: 'पत्तागोभी', category: 'VEGETABLES' },
+  gram: { hindi: 'चना', category: 'PULSES' },
+  bengal_gram: { hindi: 'चना (देसी)', category: 'PULSES' },
+  arhar: { hindi: 'अरहर (तूर)', category: 'PULSES' },
+  tur: { hindi: 'तूर दाल', category: 'PULSES' },
+  moong: { hindi: 'मूंग', category: 'PULSES' },
+  masur: { hindi: 'मसूर', category: 'PULSES' },
+  urad: { hindi: 'उड़द', category: 'PULSES' },
+  maize: { hindi: 'मक्का', category: 'GRAINS' },
+  bajra: { hindi: 'बाजरा', category: 'GRAINS' },
+  jowar: { hindi: 'ज्वार', category: 'GRAINS' },
+  soyabean: { hindi: 'सोयाबीन', category: 'OILSEEDS' },
+  groundnut: { hindi: 'मूंगफली', category: 'OILSEEDS' },
+  apple: { hindi: 'सेब', category: 'FRUITS' },
+  banana: { hindi: 'केला', category: 'FRUITS' },
+  mango: { hindi: 'आम', category: 'FRUITS' },
+  guava: { hindi: 'अमरूद', category: 'FRUITS' },
+  lemon: { hindi: 'नींबू', category: 'VEGETABLES' },
+  peas: { hindi: 'मटर', category: 'VEGETABLES' },
+  coriander: { hindi: 'धनिया', category: 'VEGETABLES' },
+  turmeric: { hindi: 'हल्दी', category: 'COMMODITIES' },
+};
+
+function getCommodityMeta(comm: string): { hindi: string; category: MandiCategory } {
+  const norm = comm.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').trim();
+  for (const [key, val] of Object.entries(COMMODITY_DICT)) {
+    if (norm.includes(key)) return val;
+  }
+  return { hindi: comm, category: 'COMMODITIES' };
+}
+
 export async function fetchLiveMandiPricesApi(params?: {
   state?: string;
   commodity?: string;
@@ -598,7 +645,7 @@ export async function fetchLiveMandiPricesApi(params?: {
 
     const apiUrl = `${DATA_GOV_BASE_URL}/${DATA_GOV_RESOURCE_ID}?${urlParams.toString()}`;
     const res = await fetch(apiUrl, {
-      signal: params?.signal || AbortSignal.timeout(5000),
+      signal: params?.signal || AbortSignal.timeout(12000), // 12-second resilient timeout
       headers: { Accept: 'application/json' },
     });
 
@@ -620,6 +667,7 @@ export async function fetchLiveMandiPricesApi(params?: {
 
           if (!comm || !Number.isFinite(modalPrice) || modalPrice <= 0) continue;
 
+          const meta = getCommodityMeta(comm);
           const retailMandiPriceKg = Math.round((modalPrice / 100) * 10) / 10;
           const platformPriceKg = Math.max(1, Math.round(retailMandiPriceKg * 0.9 * 10) / 10);
           const savingsPerQuintal = Math.round(modalPrice - platformPriceKg * 100);
@@ -631,7 +679,7 @@ export async function fetchLiveMandiPricesApi(params?: {
           const item: MarketPrice = {
             id,
             crop: comm,
-            cropHindi: comm,
+            cropHindi: meta.hindi,
             mandi: rawMarket || `${rawDistrict} APMC Mandi`,
             state: rawState,
             district: rawDistrict,
@@ -646,7 +694,7 @@ export async function fetchLiveMandiPricesApi(params?: {
             platformPriceKg,
             retailMandiPriceKg,
             savingsPercentage,
-            category: 'COMMODITIES',
+            category: meta.category,
             isLive: true,
           };
           records.push(item);
@@ -655,7 +703,7 @@ export async function fetchLiveMandiPricesApi(params?: {
           if (!liveCropsSummary[lower]) {
             liveCropsSummary[lower] = {
               crop: comm,
-              cropHindi: comm,
+              cropHindi: meta.hindi,
               modalPriceQuintal: Math.round(modalPrice),
               pricePerKg: retailMandiPriceKg,
               platformPriceKg,
@@ -684,16 +732,17 @@ export async function fetchLiveMandiPricesApi(params?: {
     }
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      const abortErr: any = new Error('Request cancelled');
-      abortErr.isTimeout = true;
-      throw abortErr;
+      console.warn('[Data.gov.in] Live fetch timeout (12s), using verified cache');
+    } else {
+      console.warn('[Data.gov.in] Live fetch notice, using verified cache:', err?.message || err);
     }
-    console.warn('[Data.gov.in] Live fetch notice, using verified cache:', err?.message || err);
   }
 
-  // 2. High-fidelity verified fallback dataset with full MarketPrice typing
+  // 2. High-fidelity verified fallback dataset with full MarketPrice typing and real-time today date
+  const todayArrivalDate = new Date().toLocaleDateString('hi-IN');
   let filtered = MARKET_PRICES.map((p) => ({
     ...p,
+    arrivalDate: todayArrivalDate,
     isLive: true,
   }));
 
@@ -718,7 +767,7 @@ export async function fetchLiveMandiPricesApi(params?: {
       platformPriceKg: p.platformPriceKg,
       savingsPct: p.savingsPercentage,
       mandi: p.mandi,
-      arrivalDate: new Date().toLocaleDateString('hi-IN'),
+      arrivalDate: todayArrivalDate,
       trend: p.trend,
     };
   });

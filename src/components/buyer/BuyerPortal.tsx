@@ -1262,101 +1262,116 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [activeChatOrder, setActiveChatOrder] = useState<any | null>(null);
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<any | null>(null);
 
-  const trendDataMap: Record<string, Record<'7D' | '15D' | '1M' | '3M', { label: string; price: number }[]>> = {
-    'Tomato': {
-      '7D': [
-        { label: '29 मई', price: 1650 },
-        { label: '30 मई', price: 1600 },
-        { label: '31 मई', price: 1420 },
-        { label: '1 जून', price: 1520 },
-        { label: '2 जून', price: 1410 },
-        { label: '3 जून', price: 1550 },
-        { label: '4 जून', price: 1625 }
-      ],
-      '15D': [
-        { label: '20 मई', price: 1500 },
-        { label: '23 मई', price: 1580 },
-        { label: '26 मई', price: 1620 },
-        { label: '29 मई', price: 1650 },
-        { label: '1 जून', price: 1520 },
-        { label: '4 जून', price: 1625 }
-      ],
-      '1M': [
-        { label: '1 मई', price: 1350 },
-        { label: '10 मई', price: 1450 },
-        { label: '20 मई', price: 1500 },
-        { label: '4 जून', price: 1625 }
-      ],
-      '3M': [
-        { label: 'मार्च', price: 1200 },
-        { label: 'अप्रैल', price: 1350 },
-        { label: 'मई', price: 1500 },
-        { label: 'जून', price: 1625 }
-      ]
-    },
-    'Potato': {
-      '7D': [
-        { label: '29 मई', price: 1150 },
-        { label: '30 मई', price: 1120 },
-        { label: '31 मई', price: 1100 },
-        { label: '1 जून', price: 1140 },
-        { label: '2 जून', price: 1125 },
-        { label: '3 जून', price: 1160 },
-        { label: '4 जून', price: 1180 }
-      ],
-      '15D': [
-        { label: '20 मई', price: 1100 },
-        { label: '23 मई', price: 1120 },
-        { label: '26 मई', price: 1140 },
-        { label: '29 मई', price: 1150 },
-        { label: '1 जून', price: 1140 },
-        { label: '4 जून', price: 1180 }
-      ],
-      '1M': [
-        { label: '1 मई', price: 1050 },
-        { label: '10 मई', price: 1080 },
-        { label: '20 मई', price: 1120 },
-        { label: '4 जून', price: 1180 }
-      ],
-      '3M': [
-        { label: 'मार्च', price: 1000 },
-        { label: 'अप्रैल', price: 1050 },
-        { label: 'मई', price: 1100 },
-        { label: 'जून', price: 1180 }
-      ]
-    },
-    'Wheat': {
-      '7D': [
-        { label: '29 मई', price: 2200 },
-        { label: '30 मई', price: 2210 },
-        { label: '31 मई', price: 2215 },
-        { label: '1 जून', price: 2220 },
-        { label: '2 जून', price: 2218 },
-        { label: '3 जून', price: 2222 },
-        { label: '4 जून', price: 2225 }
-      ],
-      '15D': [
-        { label: '20 मई', price: 2180 },
-        { label: '23 मई', price: 2195 },
-        { label: '26 मई', price: 2210 },
-        { label: '29 मई', price: 2200 },
-        { label: '1 जून', price: 2220 },
-        { label: '4 जून', price: 2225 }
-      ],
-      '1M': [
-        { label: '1 मई', price: 2150 },
-        { label: '10 मई', price: 2180 },
-        { label: '20 मई', price: 2200 },
-        { label: '4 जून', price: 2225 }
-      ],
-      '3M': [
-        { label: 'मार्च', price: 2100 },
-        { label: 'अप्रैल', price: 2130 },
-        { label: 'मई', price: 2180 },
-        { label: 'जून', price: 2225 }
-      ]
-    }
-  };
+  const trendDataMap: Record<string, Record<'7D' | '15D' | '1M' | '3M', { label: string; price: number }[]>> = useMemo(() => {
+    const getDaysAgoLabel = (daysAgo: number): string => {
+      if (daysAgo === 0) return 'आज';
+      const d = new Date();
+      d.setDate(d.getDate() - daysAgo);
+      return d.toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' });
+    };
+
+    const getMonthsAgoLabel = (monthsAgo: number): string => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - monthsAgo);
+      return d.toLocaleDateString('hi-IN', { month: 'short' });
+    };
+
+    return {
+      'Tomato': {
+        '7D': [
+          { label: getDaysAgoLabel(6), price: 1650 },
+          { label: getDaysAgoLabel(5), price: 1600 },
+          { label: getDaysAgoLabel(4), price: 1420 },
+          { label: getDaysAgoLabel(3), price: 1520 },
+          { label: getDaysAgoLabel(2), price: 1410 },
+          { label: getDaysAgoLabel(1), price: 1550 },
+          { label: getDaysAgoLabel(0), price: 1625 },
+        ],
+        '15D': [
+          { label: getDaysAgoLabel(15), price: 1500 },
+          { label: getDaysAgoLabel(12), price: 1580 },
+          { label: getDaysAgoLabel(9), price: 1620 },
+          { label: getDaysAgoLabel(6), price: 1650 },
+          { label: getDaysAgoLabel(3), price: 1520 },
+          { label: getDaysAgoLabel(0), price: 1625 },
+        ],
+        '1M': [
+          { label: getDaysAgoLabel(30), price: 1350 },
+          { label: getDaysAgoLabel(20), price: 1450 },
+          { label: getDaysAgoLabel(10), price: 1500 },
+          { label: getDaysAgoLabel(0), price: 1625 },
+        ],
+        '3M': [
+          { label: getMonthsAgoLabel(3), price: 1200 },
+          { label: getMonthsAgoLabel(2), price: 1350 },
+          { label: getMonthsAgoLabel(1), price: 1500 },
+          { label: getMonthsAgoLabel(0), price: 1625 },
+        ],
+      },
+      'Potato': {
+        '7D': [
+          { label: getDaysAgoLabel(6), price: 1150 },
+          { label: getDaysAgoLabel(5), price: 1120 },
+          { label: getDaysAgoLabel(4), price: 1100 },
+          { label: getDaysAgoLabel(3), price: 1140 },
+          { label: getDaysAgoLabel(2), price: 1125 },
+          { label: getDaysAgoLabel(1), price: 1160 },
+          { label: getDaysAgoLabel(0), price: 1180 },
+        ],
+        '15D': [
+          { label: getDaysAgoLabel(15), price: 1100 },
+          { label: getDaysAgoLabel(12), price: 1120 },
+          { label: getDaysAgoLabel(9), price: 1140 },
+          { label: getDaysAgoLabel(6), price: 1150 },
+          { label: getDaysAgoLabel(3), price: 1140 },
+          { label: getDaysAgoLabel(0), price: 1180 },
+        ],
+        '1M': [
+          { label: getDaysAgoLabel(30), price: 1050 },
+          { label: getDaysAgoLabel(20), price: 1080 },
+          { label: getDaysAgoLabel(10), price: 1120 },
+          { label: getDaysAgoLabel(0), price: 1180 },
+        ],
+        '3M': [
+          { label: getMonthsAgoLabel(3), price: 1000 },
+          { label: getMonthsAgoLabel(2), price: 1050 },
+          { label: getMonthsAgoLabel(1), price: 1100 },
+          { label: getMonthsAgoLabel(0), price: 1180 },
+        ],
+      },
+      'Wheat': {
+        '7D': [
+          { label: getDaysAgoLabel(6), price: 2200 },
+          { label: getDaysAgoLabel(5), price: 2210 },
+          { label: getDaysAgoLabel(4), price: 2215 },
+          { label: getDaysAgoLabel(3), price: 2220 },
+          { label: getDaysAgoLabel(2), price: 2218 },
+          { label: getDaysAgoLabel(1), price: 2222 },
+          { label: getDaysAgoLabel(0), price: 2225 },
+        ],
+        '15D': [
+          { label: getDaysAgoLabel(15), price: 2180 },
+          { label: getDaysAgoLabel(12), price: 2195 },
+          { label: getDaysAgoLabel(9), price: 2210 },
+          { label: getDaysAgoLabel(6), price: 2200 },
+          { label: getDaysAgoLabel(3), price: 2220 },
+          { label: getDaysAgoLabel(0), price: 2225 },
+        ],
+        '1M': [
+          { label: getDaysAgoLabel(30), price: 2150 },
+          { label: getDaysAgoLabel(20), price: 2180 },
+          { label: getDaysAgoLabel(10), price: 2200 },
+          { label: getDaysAgoLabel(0), price: 2225 },
+        ],
+        '3M': [
+          { label: getMonthsAgoLabel(3), price: 2100 },
+          { label: getMonthsAgoLabel(2), price: 2130 },
+          { label: getMonthsAgoLabel(1), price: 2180 },
+          { label: getMonthsAgoLabel(0), price: 2225 },
+        ],
+      },
+    };
+  }, []);
 
   // Default Cart initialized to match Image 1 & 5 (Tomato 20kg ₹900, Potato 20kg ₹560, Wheat 1 Quintal ₹2225)
   const [cart, setCart] = useState<CartItem[]>([

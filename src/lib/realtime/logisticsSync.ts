@@ -51,6 +51,7 @@ export interface LogisticsSyncPayload {
   podOtp?: string;
   order?: any;
   listing?: any;
+  trip?: any;
   deletedId?: string;
   timestamp: number;
 }
