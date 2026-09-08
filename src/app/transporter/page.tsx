@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TransporterPortal } from '@/components/transporter/TransporterPortal';
+import dynamic from 'next/dynamic';
 import { KrishiAIAssistantModal } from '@/components/common/KrishiAIAssistantModal';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { TransporterTrip } from '@/types';
@@ -17,27 +17,45 @@ import { INITIAL_TRANSPORTER_TRIPS } from '@/data/mockData';
 import { firebaseRtdb } from '@/lib/firebase/client';
 import { ref, get } from 'firebase/database';
 
+// Dynamically import TransporterPortal with ssr: false to completely eliminate hydration errors #425, #418, #423
+const TransporterPortal = dynamic(
+  () => import('@/components/transporter/TransporterPortal').then((m) => m.TransporterPortal),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white space-y-4">
+        <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-bold text-slate-300">ट्रांसपोर्टर पोर्टल लोड हो रहा है...</p>
+      </div>
+    ),
+  }
+);
+
 function TransporterPortalInner() {
   const router = useRouter();
-  // Initialize with initial trips or cached trips so trips are never blanked
-  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>(() => {
+  // Safe SSR-consistent initial state
+  const [availableTrips, setAvailableTrips] = useState<TransporterTrip[]>(INITIAL_TRANSPORTER_TRIPS);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
+  // Sync role & cached trips in localStorage after client mount
+  useEffect(() => {
     if (typeof window !== 'undefined') {
+      localStorage.setItem('krishi_active_role', 'TRANSPORTER');
       try {
         const cached = localStorage.getItem('krishi_transporter_trips');
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAvailableTrips((prev) => {
+              const tripMap = new Map<string, TransporterTrip>();
+              INITIAL_TRANSPORTER_TRIPS.forEach((t) => tripMap.set(t.id, t));
+              prev.forEach((t) => tripMap.set(t.id, t));
+              parsed.forEach((t: any) => tripMap.set(t.id, t));
+              return Array.from(tripMap.values());
+            });
+          }
         }
       } catch (e) {}
-    }
-    return INITIAL_TRANSPORTER_TRIPS;
-  });
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-
-  // Sync role in localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('krishi_active_role', 'TRANSPORTER');
     }
   }, []);
 
@@ -376,6 +394,21 @@ function TransporterPortalInner() {
 }
 
 export default function TransporterPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white space-y-4">
+        <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-bold text-slate-300">ट्रांसपोर्टर पोर्टल लोड हो रहा है...</p>
+      </div>
+    );
+  }
+
   return (
     <LanguageProvider>
       <TransporterPortalInner />

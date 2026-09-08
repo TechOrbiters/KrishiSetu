@@ -111,7 +111,7 @@ function loadGoogleMapsScript(apiKey: string): Promise<boolean> {
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
