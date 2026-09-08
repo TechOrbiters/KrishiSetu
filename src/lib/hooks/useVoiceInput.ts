@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { parseMandiIntent, ExtractedIntent as MandiExtractedIntent } from "@/lib/mandiIntent";
 
 export interface VoiceIntent {
   intent: string;
   crop?: string;
+  category?: string;
   quantity?: number;
   unit?: string;
   pricePerKg?: number;
+  minOrder?: number;
+  quality?: 'सामान्य' | 'अच्छी' | 'प्रीमियम';
   location?: string;
   rawText?: string;
 }
@@ -174,6 +178,23 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
 
       if (!transcript) {
         throw new Error("कोई स्पष्ट आवाज़ सुनाई नहीं दी। कृपया माइक के पास बोलें या टाइप करें।");
+      }
+
+      // Always parse Mandi entities from transcript to guarantee full entity extraction
+      const localIntent = parseMandiIntent(transcript);
+      if (!extractedIntent) {
+        extractedIntent = localIntent;
+      } else {
+        extractedIntent = {
+          ...localIntent,
+          ...extractedIntent,
+          crop: extractedIntent.crop || localIntent.crop,
+          category: extractedIntent.category || localIntent.category,
+          quantity: extractedIntent.quantity || localIntent.quantity,
+          pricePerKg: extractedIntent.pricePerKg || localIntent.pricePerKg,
+          minOrder: extractedIntent.minOrder || localIntent.minOrder,
+          quality: extractedIntent.quality || localIntent.quality,
+        };
       }
 
       setState("success");

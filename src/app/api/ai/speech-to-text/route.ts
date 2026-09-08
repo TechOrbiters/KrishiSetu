@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseIntentFromTranscript } from "@/lib/sarvam/stt";
+import { parseMandiIntent } from "@/lib/mandiIntent";
 
 export const dynamic = "force-dynamic";
 
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
 
     const data = await sarvamRes.json();
     const transcript = (data.transcript || data.transcription || "").trim();
-    const extractedIntent = parseIntentFromTranscript(transcript);
+    const extractedIntent = parseMandiIntent(transcript);
 
     return NextResponse.json({
       success: true,

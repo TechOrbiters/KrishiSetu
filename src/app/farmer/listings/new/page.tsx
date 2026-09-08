@@ -21,6 +21,7 @@ import {
   X,
   Trash2,
   RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 import { FarmerLayout } from '@/components/layout/FarmerLayout';
 import { useFarmerStore } from '@/lib/store/farmerStore';
@@ -29,6 +30,7 @@ import { useVoiceInput, VoiceInputResult } from '@/lib/hooks/useVoiceInput';
 import { logisticsSync } from '@/lib/realtime/logisticsSync';
 import { createProduceListing } from '@/lib/firebase';
 import { getAccurateCropImage } from '@/lib/cropImages';
+import { parseMandiIntent } from '@/lib/mandiIntent';
 
 function WizardContent() {
   const router = useRouter();
@@ -165,44 +167,82 @@ function WizardContent() {
   } = useVoiceInput({
     onSuccess: (result: VoiceInputResult) => {
       const cleanText = result.transcript.replace(/[।.,?!]/g, '').trim();
-      setVoiceToast(`पहचाना गया: "${cleanText}"`);
-      setTimeout(() => setVoiceToast(null), 4000);
 
-      if (result.field === 'cropName') {
-        const detected = result.extractedIntent?.crop || cleanText;
-        setCropName(detected);
-        setCropCategory(deduceCategory(detected));
-      } else if (result.field === 'quantity') {
-        if (result.extractedIntent?.quantity) {
-          setQuantity(result.extractedIntent.quantity);
-        } else {
-          const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-          setQuantity(!isNaN(num) && num > 0 ? num : cleanText);
-        }
-      } else if (result.field === 'minOrder') {
-        const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-        setMinOrder(!isNaN(num) && num > 0 ? num : cleanText);
-      } else if (result.field === 'price') {
-        if (result.extractedIntent?.pricePerKg) {
-          setPrice(result.extractedIntent.pricePerKg);
-        } else {
-          const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-          setPrice(!isNaN(num) && num > 0 ? num : cleanText);
-        }
-      } else {
-        // Global mode — extract all entities from full utterance
-        if (result.extractedIntent?.crop) {
-          setCropName(result.extractedIntent.crop);
-          setCropCategory(deduceCategory(result.extractedIntent.crop));
-        } else if (cleanText) {
+      // Use server-extracted intent or run our comprehensive mandi intent parser directly on transcript
+      const intent = result.extractedIntent || parseMandiIntent(cleanText);
+
+      // Check if multiple entities were identified (e.g. crop + quantity, or quantity + price, or global assistant used)
+      const hasMultipleEntities =
+        (Boolean(intent.crop) && (Boolean(intent.quantity) || Boolean(intent.pricePerKg))) ||
+        (Boolean(intent.quantity) && Boolean(intent.pricePerKg)) ||
+        result.field === 'global' ||
+        !result.field;
+
+      if (hasMultipleEntities) {
+        // Multi-field speech input: Populate ALL detected fields across the form
+        if (intent.crop) {
+          setCropName(intent.crop);
+          setCropCategory(intent.category || deduceCategory(intent.crop));
+        } else if (cleanText && (result.field === 'cropName' || !result.field)) {
           setCropName(cleanText);
         }
 
-        if (result.extractedIntent?.quantity) {
-          setQuantity(result.extractedIntent.quantity);
+        if (intent.quantity) {
+          setQuantity(intent.quantity);
         }
-        if (result.extractedIntent?.pricePerKg) {
-          setPrice(result.extractedIntent.pricePerKg);
+        if (intent.pricePerKg) {
+          setPrice(intent.pricePerKg);
+        }
+        if (intent.minOrder) {
+          setMinOrder(intent.minOrder);
+        }
+        if (intent.quality) {
+          setQuality(intent.quality);
+        }
+
+        // Build descriptive confirmation toast
+        const filledParts: string[] = [];
+        if (intent.crop) filledParts.push(`फसल: ${intent.crop}`);
+        if (intent.quantity) filledParts.push(`मात्रा: ${intent.quantity} kg`);
+        if (intent.pricePerKg) filledParts.push(`भाव: ₹${intent.pricePerKg}/kg`);
+        if (intent.minOrder) filledParts.push(`न्यूनतम: ${intent.minOrder} kg`);
+
+        if (filledParts.length > 0) {
+          setVoiceToast(`✓ सभी विवरण भर दिए गए हैं: ${filledParts.join(' | ')}`);
+        } else {
+          setVoiceToast(`पहचाना गया: "${cleanText}"`);
+        }
+        setTimeout(() => setVoiceToast(null), 6000);
+      } else {
+        // Single field target
+        setVoiceToast(`पहचाना गया: "${cleanText}"`);
+        setTimeout(() => setVoiceToast(null), 4000);
+
+        if (result.field === 'cropName') {
+          const detected = intent.crop || cleanText;
+          setCropName(detected);
+          setCropCategory(intent.category || deduceCategory(detected));
+        } else if (result.field === 'quantity') {
+          if (intent.quantity) {
+            setQuantity(intent.quantity);
+          } else {
+            const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+            setQuantity(!isNaN(num) && num > 0 ? num : cleanText);
+          }
+        } else if (result.field === 'minOrder') {
+          if (intent.minOrder) {
+            setMinOrder(intent.minOrder);
+          } else {
+            const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+            setMinOrder(!isNaN(num) && num > 0 ? num : cleanText);
+          }
+        } else if (result.field === 'price') {
+          if (intent.pricePerKg) {
+            setPrice(intent.pricePerKg);
+          } else {
+            const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+            setPrice(!isNaN(num) && num > 0 ? num : cleanText);
+          }
         }
       }
     },
@@ -493,6 +533,46 @@ function WizardContent() {
                 <div className="flex items-center gap-2 text-[11px] text-amber-800 bg-amber-100/70 p-2 rounded-lg border border-amber-200">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-700 flex-shrink-0" />
                   <span>Sarvam AI आवाज़ से डेटा निकाल रहा है...</span>
+                </div>
+              )}
+
+              {/* Visual summary of speech-extracted fields */}
+              {(cropName || quantity || price) && (
+                <div className="mt-3 bg-white/95 rounded-xl p-3 border border-emerald-300 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      सफलतापूर्वक भरे गए विवरण (Filled Details):
+                    </span>
+                    {step === 1 && (quantity || price) && (
+                      <button
+                        type="button"
+                        onClick={() => setStep(2)}
+                        className="text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <span>मात्रा व कीमत देखें (Step 2)</span>
+                        <span>→</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200">
+                      <span className="text-[10px] text-slate-500 block font-medium">फसल (Crop)</span>
+                      <span className="font-bold text-slate-900">{cropName || '—'}</span>
+                    </div>
+                    <div className="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200">
+                      <span className="text-[10px] text-slate-500 block font-medium">मात्रा (Quantity)</span>
+                      <span className="font-bold text-slate-900">{quantity ? `${quantity} kg` : '—'}</span>
+                    </div>
+                    <div className="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200">
+                      <span className="text-[10px] text-slate-500 block font-medium">भाव (Price)</span>
+                      <span className="font-bold text-slate-900">{price ? `₹${price}/kg` : '—'}</span>
+                    </div>
+                    <div className="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200">
+                      <span className="text-[10px] text-slate-500 block font-medium">न्यूनतम (Min Order)</span>
+                      <span className="font-bold text-slate-900">{minOrder ? `${minOrder} kg` : '—'}</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

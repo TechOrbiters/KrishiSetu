@@ -87,108 +87,20 @@ const CROP_MAP: Record<string, string> = {
   okra: "Okra/Ladyfinger",
 };
 
+import { parseMandiIntent, ExtractedIntent as MandiExtractedIntent } from "../mandiIntent";
+
 /**
  * Parses code-mixed Hindi/English speech text for Mandi domain intent and entities.
  */
 export function parseIntentFromTranscript(text: string): ExtractedIntent {
-  const lower = text.toLowerCase().trim();
-  let intent: ExtractedIntent["intent"] = "UNKNOWN";
-  let crop: string | undefined;
-  let quantity: number | undefined;
-  let unit = "kg";
-  let pricePerKg: number | undefined;
-  let location: string | undefined;
-
-  // Intent Detection
-  if (
-    lower.includes("list") ||
-    lower.includes("bechna") ||
-    lower.includes("बेचना") ||
-    lower.includes("sell") ||
-    lower.includes("paas") ||
-    lower.includes("पास") ||
-    lower.includes("उपज") ||
-    lower.includes("फसल") ||
-    lower.includes("crop")
-  ) {
-    intent = "CREATE_LISTING";
-  } else if (lower.includes("buyer") || lower.includes("kharidne") || lower.includes("khareed") || lower.includes("खरीदार")) {
-    intent = "FIND_BUYER";
-  } else if (lower.includes("bhav") || lower.includes("rate") || lower.includes("price") || lower.includes("daam") || lower.includes("भाव") || lower.includes("दाम")) {
-    intent = "CHECK_PRICES";
-  } else if (lower.includes("kamaee") || lower.includes("earning") || lower.includes("revenue") || lower.includes("hisab") || lower.includes("कमाई")) {
-    intent = "CALCULATE_REVENUE";
-  } else if (lower.includes("transporter") || lower.includes("gadi") || lower.includes("truck") || lower.includes("गाड़ी")) {
-    intent = "GET_TRANSPORTERS";
-  } else if (lower.includes("track") || lower.includes("kahan hai") || lower.includes("status")) {
-    intent = "TRACK_ORDER";
-  } else if (lower.includes("demand") || lower.includes("demand forecast")) {
-    intent = "DEMAND_FORECAST";
-  }
-
-  // Crop Detection
-  for (const [key, val] of Object.entries(CROP_MAP)) {
-    if (lower.includes(key.toLowerCase())) {
-      crop = val;
-      break;
-    }
-  }
-
-  // Price Extraction (e.g. 24 rupey, rs 24, 24/kg, 24 रुपये, ₹24, भाव 24)
-  const priceSuffixMatch = lower.match(
-    /(\d+)\s*(?:रुपये|रुपए|rupey|rupees|rs|\/kg|per kg|प्रति किलो|प्रति किग्रा|प्रति kg)/i
-  );
-  const pricePrefixMatch = lower.match(/(?:₹|rs\.?|rupees|rupey|rate|bhav|भाव|कीमत)\s*(\d+)/i);
-
-  if (priceSuffixMatch && priceSuffixMatch[1]) {
-    const val = parseInt(priceSuffixMatch[1], 10);
-    if (val > 0 && val < 100000) pricePerKg = val;
-  } else if (pricePrefixMatch && pricePrefixMatch[1]) {
-    const val = parseInt(pricePrefixMatch[1], 10);
-    if (val > 0 && val < 100000) pricePerKg = val;
-  }
-
-  // Quantity Extraction (e.g. 500 kilo, 500 kg, 20 quintal, 20 क्विंटल, 500 किलो)
-  const qtyMatch = lower.match(
-    /(\d+)\s*(kilo|kg|quintal|ton|tonnes|किलो|क्विंटल|कुंतल|टन|किग्रा)/i
-  );
-  if (qtyMatch && qtyMatch[1]) {
-    const rawQty = parseInt(qtyMatch[1], 10);
-    const rawUnit = (qtyMatch[2] || "").toLowerCase();
-    if (rawUnit === "quintal" || rawUnit === "क्विंटल" || rawUnit === "कुंतल") {
-      quantity = rawQty * 100;
-      unit = "kg";
-    } else if (rawUnit === "ton" || rawUnit === "tonnes" || rawUnit === "टन") {
-      quantity = rawQty * 1000;
-      unit = "kg";
-    } else {
-      quantity = rawQty;
-      unit = "kg";
-    }
-  } else {
-    // If no explicit unit, find any number that isn't the price
-    const allNumbers = Array.from(lower.matchAll(/\b(\d+)\b/g)).map((m) => parseInt(m[1], 10));
-    const nonPrice = allNumbers.find((n) => n !== pricePerKg && n > 0);
-    if (nonPrice) {
-      quantity = nonPrice;
-      unit = "kg";
-    }
-  }
-
-
-  // Location Extraction (e.g. in Lucknow, at Barabanki)
-  const cityMatch = lower.match(/(in|mein|में|at|se|से)\s+([a-zA-Z\u0900-\u097F]+)/i);
-  if (cityMatch && cityMatch[2]) {
-    location = cityMatch[2].charAt(0).toUpperCase() + cityMatch[2].slice(1);
-  }
-
+  const parsed = parseMandiIntent(text);
   return {
-    intent,
-    crop,
-    quantity,
-    unit,
-    pricePerKg,
-    location,
+    intent: (parsed.intent as any) || "CREATE_LISTING",
+    crop: parsed.crop,
+    quantity: parsed.quantity,
+    unit: parsed.unit || "kg",
+    pricePerKg: parsed.pricePerKg,
+    location: parsed.location,
     rawText: text,
   };
 }
