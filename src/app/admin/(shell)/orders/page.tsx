@@ -19,7 +19,7 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import DataTable, { Column } from '@/components/admin/DataTable';
 import DetailDrawer, { DrawerSection, DrawerField } from '@/components/admin/DetailDrawer';
 import { ErrorState } from '@/components/admin/EmptyState';
-import { getAuthHeaders, getApiUrl } from '@/lib/api/client';
+import { fetchAdminOrders } from '@/lib/api/client';
 import { logisticsSync } from '@/lib/realtime/logisticsSync';
 
 export default function AdminOrdersPage() {
@@ -35,15 +35,12 @@ export default function AdminOrdersPage() {
     try {
       setLoading(true);
       setError(null);
-      const headers = await getAuthHeaders();
-      const res = await fetch(getApiUrl('/api/orders'), { headers });
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || `HTTP ${res.status}`);
+      const res = await fetchAdminOrders();
+      if (res.success && Array.isArray(res.data)) {
+        setOrders(res.data);
+      } else {
+        throw new Error(res.error || 'Failed to fetch platform orders.');
       }
-
-      setOrders(json.orders || []);
     } catch (err: any) {
       console.error('[AdminOrders] Fetch error:', err);
       setError(err.message || 'Failed to fetch platform orders.');

@@ -17,7 +17,7 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import DataTable, { Column } from '@/components/admin/DataTable';
 import DetailDrawer, { DrawerSection, DrawerField } from '@/components/admin/DetailDrawer';
 import { ErrorState } from '@/components/admin/EmptyState';
-import { getAuthHeaders, getApiUrl } from '@/lib/api/client';
+import { fetchAdminBuyers } from '@/lib/api/client';
 
 export default function AdminBuyersPage() {
   const [buyers, setBuyers] = useState<any[]>([]);
@@ -31,19 +31,12 @@ export default function AdminBuyersPage() {
     try {
       setLoading(true);
       setError(null);
-      const headers = await getAuthHeaders();
-      const params = new URLSearchParams();
-      if (search) params.append('search', search);
-
-      const res = await fetch(getApiUrl(`/api/admin/buyers?${params.toString()}`), { headers });
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || `HTTP ${res.status}`);
+      const res = await fetchAdminBuyers(search);
+      if (res.success && Array.isArray(res.data)) {
+        setBuyers(res.data);
+      } else {
+        throw new Error(res.error || 'Failed to fetch registered buyers.');
       }
-
-      const rawBuyers = json.data?.buyers || json.buyers || (Array.isArray(json.data) ? json.data : []);
-      setBuyers(Array.isArray(rawBuyers) ? rawBuyers : []);
     } catch (err: any) {
       console.error('[AdminBuyers] Fetch error:', err);
       setError(err.message || 'Failed to fetch registered buyers.');

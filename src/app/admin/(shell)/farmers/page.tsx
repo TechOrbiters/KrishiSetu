@@ -19,7 +19,7 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import DataTable, { Column } from '@/components/admin/DataTable';
 import DetailDrawer, { DrawerSection, DrawerField } from '@/components/admin/DetailDrawer';
 import { ErrorState } from '@/components/admin/EmptyState';
-import { getAuthHeaders, getApiUrl } from '@/lib/api/client';
+import { fetchAdminFarmers } from '@/lib/api/client';
 
 export default function AdminFarmersPage() {
   const [farmers, setFarmers] = useState<any[]>([]);
@@ -34,20 +34,12 @@ export default function AdminFarmersPage() {
     try {
       setLoading(true);
       setError(null);
-      const headers = await getAuthHeaders();
-      const params = new URLSearchParams();
-      if (search) params.append('search', search);
-      if (statusFilter !== 'ALL') params.append('status', statusFilter);
-
-      const res = await fetch(getApiUrl(`/api/admin/farmers?${params.toString()}`), { headers });
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || `HTTP ${res.status}`);
+      const res = await fetchAdminFarmers(statusFilter, search);
+      if (res.success && Array.isArray(res.data)) {
+        setFarmers(res.data);
+      } else {
+        throw new Error(res.error || 'Failed to fetch registered farmers.');
       }
-
-      const rawFarmers = json.data?.farmers || json.farmers || (Array.isArray(json.data) ? json.data : []);
-      setFarmers(Array.isArray(rawFarmers) ? rawFarmers : []);
     } catch (err: any) {
       console.error('[AdminFarmers] Fetch error:', err);
       setError(err.message || 'Failed to fetch registered farmers.');

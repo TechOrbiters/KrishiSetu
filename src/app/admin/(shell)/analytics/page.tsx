@@ -30,8 +30,12 @@ export default function AdminAnalyticsPage() {
       setLoading(true);
       const headers = await getAuthHeaders();
       const res = await fetch(getApiUrl('/api/admin/dashboard'), { headers });
-      const json = await res.json();
-      setData(json.data || json);
+      const text = await res.text();
+      let json: any = null;
+      try { json = JSON.parse(text); } catch {}
+      if (res.ok && json) {
+        setData(json.data || json);
+      }
     } catch (err) {
       console.warn('Analytics fetch notice:', err);
     } finally {
