@@ -376,57 +376,38 @@ function WizardContent() {
         </div>
       )}
 
-      {/* Step Header */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.back()} className="p-1 text-slate-700 hover:bg-slate-100 rounded-full">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="font-bold text-lg text-slate-900 leading-tight">
-              {step === 4 ? 'पूर्वावलोकन' : step === 5 ? 'उपज लिस्ट हो गई!' : 'नई उपज लिस्ट करें'}
-            </h1>
-            <p className="text-xs text-slate-500 font-medium">
-              {step === 4 ? 'खरीदार को आपकी उपज कुछ इस तरह दिखेगी' : 'अपनी उपज की जानकारी दें'}
-            </p>
-          </div>
-        </div>
-
-        {step <= 3 && (
-          <span className="text-xs font-bold bg-slate-100 px-3 py-1 rounded-full text-slate-700">
-            {step}/3
-          </span>
-        )}
-        {step === 4 && <Eye className="w-5 h-5 text-emerald-700" />}
-      </div>
-
-      {/* 3 Step Indicator Bar */}
+      {/* Step Indicator Bar */}
       {step <= 3 && (
-        <div className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-around text-xs font-bold shadow-2xs">
-          <div className={`flex items-center gap-1.5 ${step === 1 ? 'text-emerald-700 font-extrabold' : step > 1 ? 'text-emerald-700' : 'text-slate-400'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step >= 1 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
-              {step > 1 ? '✓' : '1'}
-            </span>
-            <span>जानकारी</span>
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between text-xs font-bold shadow-2xs">
+          <div className="flex items-center justify-around flex-1">
+            <div className={`flex items-center gap-1.5 ${step === 1 ? 'text-emerald-700 font-extrabold' : step > 1 ? 'text-emerald-700' : 'text-slate-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step >= 1 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
+                {step > 1 ? '✓' : '1'}
+              </span>
+              <span>1. जानकारी</span>
+            </div>
+
+            <div className="h-0.5 w-6 sm:w-10 bg-slate-200" />
+
+            <div className={`flex items-center gap-1.5 ${step === 2 ? 'text-emerald-700 font-extrabold' : step > 2 ? 'text-emerald-700' : 'text-slate-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step >= 2 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
+                {step > 2 ? '✓' : '2'}
+              </span>
+              <span>2. कीमत</span>
+            </div>
+
+            <div className="h-0.5 w-6 sm:w-10 bg-slate-200" />
+
+            <div className={`flex items-center gap-1.5 ${step === 3 ? 'text-emerald-700 font-extrabold' : 'text-slate-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 3 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
+                3
+              </span>
+              <span>3. स्थान</span>
+            </div>
           </div>
-
-          <div className="h-0.5 w-8 bg-slate-200" />
-
-          <div className={`flex items-center gap-1.5 ${step === 2 ? 'text-emerald-700 font-extrabold' : step > 2 ? 'text-emerald-700' : 'text-slate-400'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step >= 2 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
-              {step > 2 ? '✓' : '2'}
-            </span>
-            <span>कीमत</span>
-          </div>
-
-          <div className="h-0.5 w-8 bg-slate-200" />
-
-          <div className={`flex items-center gap-1.5 ${step === 3 ? 'text-emerald-700 font-extrabold' : 'text-slate-400'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 3 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
-              3
-            </span>
-            <span>स्थान</span>
-          </div>
+          <span className="ml-3 text-[11px] font-extrabold bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200 flex-shrink-0">
+            चरण {step}/3
+          </span>
         </div>
       )}
 
