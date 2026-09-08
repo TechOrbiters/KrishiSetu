@@ -924,6 +924,69 @@ export async function getRoute(origin: LatLng, destination: LatLng): Promise<Rou
   return fallback;
 }
 
+const COMMODITY_HINDI_MAP: Record<string, { hi: string; category: 'VEGETABLES' | 'GRAINS' | 'FRUITS' | 'PULSES' | 'OILSEEDS' | 'OTHERS' }> = {
+  wheat: { hi: 'गेहूं', category: 'GRAINS' },
+  paddy: { hi: 'धान', category: 'GRAINS' },
+  rice: { hi: 'चावल', category: 'GRAINS' },
+  maize: { hi: 'मक्का', category: 'GRAINS' },
+  bajra: { hi: 'बाजरा', category: 'GRAINS' },
+  barley: { hi: 'जौ', category: 'GRAINS' },
+  potato: { hi: 'आलू', category: 'VEGETABLES' },
+  tomato: { hi: 'टमाटर', category: 'VEGETABLES' },
+  onion: { hi: 'प्याज', category: 'VEGETABLES' },
+  garlic: { hi: 'लहसुन', category: 'VEGETABLES' },
+  ginger: { hi: 'अदरक', category: 'VEGETABLES' },
+  chilli: { hi: 'हरी मिर्च', category: 'VEGETABLES' },
+  brinjal: { hi: 'बैंगन', category: 'VEGETABLES' },
+  cabbage: { hi: 'पत्तागोभी', category: 'VEGETABLES' },
+  cauliflower: { hi: 'फूलगोभी', category: 'VEGETABLES' },
+  carrot: { hi: 'गाजर', category: 'VEGETABLES' },
+  radish: { hi: 'मूली', category: 'VEGETABLES' },
+  raddish: { hi: 'मूली', category: 'VEGETABLES' },
+  pumpkin: { hi: 'कद्दू', category: 'VEGETABLES' },
+  cucumber: { hi: 'खीरा', category: 'VEGETABLES' },
+  cucumbar: { hi: 'खीरा', category: 'VEGETABLES' },
+  bhindi: { hi: 'भिंडी', category: 'VEGETABLES' },
+  'bottle gourd': { hi: 'लौकी', category: 'VEGETABLES' },
+  'bitter gourd': { hi: 'करेला', category: 'VEGETABLES' },
+  'pointed gourd': { hi: 'परवल', category: 'VEGETABLES' },
+  ridgeguard: { hi: 'तोरी', category: 'VEGETABLES' },
+  'sponge gourd': { hi: 'नेनुआ / तोरी', category: 'VEGETABLES' },
+  lemon: { hi: 'नींबू', category: 'VEGETABLES' },
+  peas: { hi: 'मटर', category: 'VEGETABLES' },
+  ashgourd: { hi: 'पेठा / कुम्हड़ा', category: 'VEGETABLES' },
+  mustard: { hi: 'सरसों', category: 'OILSEEDS' },
+  groundnut: { hi: 'मूंगफली', category: 'OILSEEDS' },
+  soyabean: { hi: 'सोयाबीन', category: 'OILSEEDS' },
+  gram: { hi: 'चना', category: 'PULSES' },
+  chana: { hi: 'चना', category: 'PULSES' },
+  moong: { hi: 'मूंग दाल', category: 'PULSES' },
+  masur: { hi: 'मसूर दाल', category: 'PULSES' },
+  lentil: { hi: 'दाल', category: 'PULSES' },
+  'black gram': { hi: 'उड़द दाल', category: 'PULSES' },
+  'green gram': { hi: 'मूंग साबुत', category: 'PULSES' },
+  apple: { hi: 'सेब', category: 'FRUITS' },
+  banana: { hi: 'केला', category: 'FRUITS' },
+  mango: { hi: 'आम', category: 'FRUITS' },
+  papaya: { hi: 'पपीता', category: 'FRUITS' },
+  guava: { hi: 'अमरूद', category: 'FRUITS' },
+  orange: { hi: 'संतरा', category: 'FRUITS' },
+  mousambi: { hi: 'मौसमी', category: 'FRUITS' },
+  gur: { hi: 'गुड़ (Jaggery)', category: 'OTHERS' },
+  jaggery: { hi: 'गुड़', category: 'OTHERS' },
+  firewood: { hi: 'जलाऊ लकड़ी', category: 'OTHERS' },
+  'mentha oil': { hi: 'मेंथा तेल', category: 'OTHERS' },
+  tobacco: { hi: 'तंबाकू', category: 'OTHERS' },
+};
+
+function getCommodityInfo(commodity: string): { hi: string; category: 'VEGETABLES' | 'GRAINS' | 'FRUITS' | 'PULSES' | 'OILSEEDS' | 'OTHERS' } {
+  const norm = commodity.toLowerCase();
+  for (const [key, val] of Object.entries(COMMODITY_HINDI_MAP)) {
+    if (norm.includes(key)) return val;
+  }
+  return { hi: commodity, category: 'OTHERS' };
+}
+
 function getCropImage(commodity: string): string {
   const norm = commodity.toLowerCase();
   if (norm.includes('potato') || norm.includes('आलू')) return 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80';
@@ -931,9 +994,21 @@ function getCropImage(commodity: string): string {
   if (norm.includes('onion') || norm.includes('प्याज')) return 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?auto=format&fit=crop&w=200&q=80';
   if (norm.includes('wheat') || norm.includes('गेहूं')) return 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=200&q=80';
   if (norm.includes('mustard') || norm.includes('सरसों')) return 'https://images.unsplash.com/photo-1508747703725-719777637510?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('paddy') || norm.includes('rice') || norm.includes('धान')) return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('chilli') || norm.includes('मिर्च')) return 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('garlic') || norm.includes('लहसुन')) return 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('paddy') || norm.includes('rice') || norm.includes('धान') || norm.includes('चावल')) return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('chilli') || norm.includes('mirch') || norm.includes('मिर्च')) return 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('garlic') || norm.includes('lahsun') || norm.includes('लहसुन')) return 'https://images.unsplash.com/photo-1608686207856-001b95cf60ca?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('ginger') || norm.includes('adrak') || norm.includes('अदरक')) return 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('banana') || norm.includes('kela') || norm.includes('केला')) return 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('apple') || norm.includes('seb') || norm.includes('सेब')) return 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('brinjal') || norm.includes('baingan') || norm.includes('बैंगन')) return 'https://images.unsplash.com/photo-1628771065518-0d82f1938462?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('cabbage') || norm.includes('patta')) return 'https://images.unsplash.com/photo-1598030343246-e55543c55208?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('cauliflower') || norm.includes('gobhi')) return 'https://images.unsplash.com/photo-1568584711075-3d021a7c3ca3?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('gram') || norm.includes('chana') || norm.includes('चना')) return 'https://images.unsplash.com/photo-1515543904379-3d757afe72e3?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('lemon') || norm.includes('nimbu') || norm.includes('नींबू')) return 'https://images.unsplash.com/photo-1534947098675-926ff9d9f584?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('papaya') || norm.includes('papita') || norm.includes('पपीता')) return 'https://images.unsplash.com/photo-1517282009859-f000ec3b26fe?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('gur') || norm.includes('jaggery') || norm.includes('गुड़')) return 'https://images.unsplash.com/photo-1589135233689-d49495e865f1?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('maize') || norm.includes('makka') || norm.includes('मक्का')) return 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=200&q=80';
+  if (norm.includes('firewood') || norm.includes('लकड़ी') || norm.includes('wood')) return 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=200&q=80';
   return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80';
 }
 
@@ -943,25 +1018,20 @@ const DATA_GOV_BASE_URL = 'https://api.data.gov.in/resource';
 
 export async function getMarketPrices(filters: MarketPriceQueryFilters = {}): Promise<MarketPriceApiResponse> {
   const state = filters.state || 'Uttar Pradesh';
-  const limit = filters.limit || 50;
+  const fetchLimit = Math.max(filters.limit || 300, 300);
 
   // 1. Direct browser fetch to Government of India data.gov.in (CORS enabled)
   try {
     const urlParams = new URLSearchParams({
       'api-key': DATA_GOV_API_KEY,
       format: 'json',
-      limit: String(limit),
+      limit: String(fetchLimit),
     });
     if (state && state !== 'ALL') {
       urlParams.append('filters[state]', state);
     }
-    if (filters.district) {
-      urlParams.append('filters[district]', filters.district);
-    }
-    if (filters.market) {
-      urlParams.append('filters[market]', filters.market);
-    }
-    if (filters.commodity && filters.commodity !== 'सभी फसलें') {
+    // Only pass commodity if specific crop filter is set
+    if (filters.commodity && filters.commodity !== 'सभी फसलें' && filters.commodity !== 'ALL') {
       urlParams.append('filters[commodity]', filters.commodity);
     }
 
@@ -990,7 +1060,7 @@ export async function getMarketPrices(filters: MarketPriceQueryFilters = {}): Pr
           if (!commodity || !Number.isFinite(modalPrice) || modalPrice <= 0) continue;
 
           const pricePerKg = Math.round((modalPrice / 100) * 10) / 10;
-          const id = `live-${rawState}-${district}-${market}-${commodity}-${rawArrivalDate}`
+          const id = `live-${rawState}-${district}-${market}-${commodity}-${raw.variety || 'std'}-${rawArrivalDate}`
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '-')
             .replace(/-+/g, '-');
@@ -1006,12 +1076,18 @@ export async function getMarketPrices(filters: MarketPriceQueryFilters = {}): Pr
             }
           }
 
+          const info = getCommodityInfo(commodity);
+          const isLocal = Boolean(filters.district && district.toLowerCase().includes(filters.district.toLowerCase()));
+
           records.push({
             id,
             state: rawState,
             district,
             market,
             commodity,
+            commodityHindi: info.hi,
+            category: info.category,
+            isLocal,
             variety: raw.variety || 'Standard',
             grade: raw.grade || 'FAQ',
             minPrice: Math.round(minPrice || modalPrice * 0.95),
@@ -1031,14 +1107,24 @@ export async function getMarketPrices(filters: MarketPriceQueryFilters = {}): Pr
         }
 
         if (records.length > 0) {
+          // If a specific district was requested, prioritize matching district records at the top,
+          // followed by the remaining state records so farmers have a comprehensive report of 100s of products!
+          let finalRecords = records;
+          if (filters.district) {
+            const targetDistrict = filters.district.toLowerCase();
+            const localRecords = records.filter(r => r.district.toLowerCase().includes(targetDistrict));
+            const otherRecords = records.filter(r => !r.district.toLowerCase().includes(targetDistrict));
+            finalRecords = [...localRecords, ...otherRecords];
+          }
+
           return {
             success: true,
             data: {
-              prices: records,
+              prices: finalRecords,
               pagination: {
                 page: filters.page || 1,
-                limit: records.length,
-                total: json.total || records.length,
+                limit: finalRecords.length,
+                total: json.total || finalRecords.length,
               },
               meta: {
                 source: 'Government of India OGD / AGMARKNET',
@@ -1106,7 +1192,7 @@ export async function getMarketPrices(filters: MarketPriceQueryFilters = {}): Pr
 
 export async function getMarketPriceSummary(): Promise<{ success: boolean; data?: MarketPriceSummaryCard[] }> {
   try {
-    const res = await getMarketPrices({ limit: 50 });
+    const res = await getMarketPrices({ limit: 300 });
     if (res.success && res.data && res.data.prices.length > 0) {
       const allPrices = res.data.prices;
       const keyCrops = [

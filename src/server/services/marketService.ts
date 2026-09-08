@@ -159,7 +159,7 @@ export class MarketPriceService {
   }> {
     const fetchRes = await activeDataGovProvider.fetchPrices({
       state: filters.state || 'Uttar Pradesh',
-      limit: filters.limit || 100,
+      limit: filters.limit || 300,
     });
 
     if (!fetchRes.success || fetchRes.records.length === 0) {
@@ -226,7 +226,7 @@ export class MarketPriceService {
   }> {
     // If memory store is low, attempt an initial sync automatically
     if (memoryStore.length <= INITIAL_GOVT_SEED.length) {
-      await this.syncFromDataGov({ state: filters.state || 'Uttar Pradesh', limit: 100 });
+      await this.syncFromDataGov({ state: filters.state || 'Uttar Pradesh', limit: 300 });
     }
 
     let filtered = [...memoryStore];
@@ -295,7 +295,7 @@ export class MarketPriceService {
    * Get 4 Top KPI Summary Cards for Dashboard and Bazaar Bhav Page
    */
   async getSummaryCards(): Promise<MarketPriceSummaryCard[]> {
-    const { prices } = await this.getMarketPrices({ limit: 50 });
+    const { prices } = await this.getMarketPrices({ limit: 300 });
 
     const targetCrops = [
       { key: 'wheat', hindi: 'गेहूँ', img: CROP_IMAGES.wheat },

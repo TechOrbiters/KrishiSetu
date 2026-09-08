@@ -21,6 +21,9 @@ export interface MarketPriceRecord {
   change?: number | null;
   trend?: 'UP' | 'DOWN' | 'FLAT' | 'NONE';
   cropImage?: string;
+  commodityHindi?: string;
+  category?: 'VEGETABLES' | 'GRAINS' | 'FRUITS' | 'PULSES' | 'OILSEEDS' | 'OTHERS';
+  isLocal?: boolean;
   source: 'Government of India OGD / AGMARKNET' | 'Local Cache Fallback';
   sourceTimestamp: string;
   fetchedAt: string;
