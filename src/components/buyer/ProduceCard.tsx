@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, Star, ShoppingBag } from 'lucide-react';
 import { ProduceListing } from '../../types';
+import { getAccurateCropImage } from '@/lib/cropImages';
 
 interface ProduceCardProps {
   item: ProduceListing;
@@ -15,6 +16,14 @@ export const ProduceCard: React.FC<ProduceCardProps> = React.memo(({
   onToggleBookmark,
   onAddToCart,
 }) => {
+  const [imgSrc, setImgSrc] = useState<string>(() =>
+    getAccurateCropImage(item.crop, item.image, item.cropHindi)
+  );
+
+  useEffect(() => {
+    setImgSrc(getAccurateCropImage(item.crop, item.image, item.cropHindi));
+  }, [item.crop, item.image, item.cropHindi]);
+
   // Helper to clean redundant names (e.g. "Green Gram (Green Gram)")
   const cleanName = (name: string) => {
     if (!name) return '';
@@ -40,8 +49,14 @@ export const ProduceCard: React.FC<ProduceCardProps> = React.memo(({
     <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col h-full group">
       <div className="relative h-40 sm:h-44 bg-slate-100 shrink-0 overflow-hidden">
         <img
-          src={item.image}
+          src={imgSrc}
           alt={item.crop}
+          onError={() => {
+            const fallback = getAccurateCropImage(item.crop, undefined, item.cropHindi);
+            if (imgSrc !== fallback) {
+              setImgSrc(fallback);
+            }
+          }}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           referrerPolicy="no-referrer"
         />

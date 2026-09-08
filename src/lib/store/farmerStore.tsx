@@ -21,6 +21,7 @@ import {
   MarketPriceItem,
   FPOMemberItem,
 } from '../seedData';
+import { getAccurateCropImage } from '../cropImages';
 
 interface FarmerStoreContextType {
   user: UserProfile;
@@ -285,7 +286,7 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
       locationState: user.state,
       availability: 'TODAY',
       status: 'ACTIVE',
-      imageUrl: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=300',
+      imageUrl: getAccurateCropImage(crop),
     });
   };
 

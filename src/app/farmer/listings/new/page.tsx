@@ -28,6 +28,7 @@ import { createFarmerListing } from '@/lib/api/client';
 import { useVoiceInput, VoiceInputResult } from '@/lib/hooks/useVoiceInput';
 import { logisticsSync } from '@/lib/realtime/logisticsSync';
 import { createProduceListing } from '@/lib/firebase';
+import { getAccurateCropImage } from '@/lib/cropImages';
 
 function WizardContent() {
   const router = useRouter();
@@ -272,7 +273,7 @@ function WizardContent() {
         locationState: user.state || 'उत्तर प्रदेश',
         availability: 'TODAY',
         status: 'ACTIVE',
-        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=400',
+        imageUrl: imageUrl || getAccurateCropImage(cropName),
       });
 
       // Synchronize in real time with Buyer Portal & Admin Portal
@@ -300,7 +301,7 @@ function WizardContent() {
           perishable: true,
           status: 'ACTIVE',
           viewsCount: 1,
-          image: imageUrl || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400',
+          image: imageUrl || getAccurateCropImage(cropName),
           farmerName: user.fullName || 'सत्यापित किसान संघ',
           fpoName: user.fullName || 'Kisan FPO',
           distanceKm: 12,
@@ -1123,7 +1124,7 @@ function WizardContent() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
           <div className="relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
             <img
-              src={imagePreview || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=600'}
+              src={imagePreview || getAccurateCropImage(cropName)}
               alt={cropName || 'उपज की फोटो'}
               className="w-full h-56 object-cover"
             />
@@ -1222,7 +1223,7 @@ function WizardContent() {
           {/* Listing Card Snippet */}
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-4 text-left max-w-sm mx-auto text-xs">
             <img
-              src={imageUrl || imagePreview || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=150'}
+              src={imageUrl || imagePreview || getAccurateCropImage(cropName)}
               alt={cropName || 'उपज फोटो'}
               className="w-14 h-14 rounded-xl object-cover border border-slate-200"
             />

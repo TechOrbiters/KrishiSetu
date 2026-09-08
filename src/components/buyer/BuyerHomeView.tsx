@@ -24,6 +24,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { ProduceListing, MarketPrice } from '@/types';
+import { getAccurateCropImage } from '@/lib/cropImages';
 
 interface BuyerHomeViewProps {
   listings: ProduceListing[];
@@ -310,8 +311,11 @@ export const BuyerHomeView: React.FC<BuyerHomeViewProps> = ({
                 {/* Image & Badges */}
                 <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
                   <img
-                    src={item.image}
-                    alt={item.cropHindi}
+                    src={getAccurateCropImage(item.crop, item.image, item.cropHindi)}
+                    alt={item.cropHindi || item.crop}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = getAccurateCropImage(item.crop, undefined, item.cropHindi);
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />

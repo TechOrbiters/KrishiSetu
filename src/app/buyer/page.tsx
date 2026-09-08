@@ -36,6 +36,7 @@ import {
   FPOProfile,
   OrderStatus,
 } from '@/types';
+import { getAccurateCropImage } from '@/lib/cropImages';
 
 function BuyerPortalPageInner() {
   const router = useRouter();
@@ -81,10 +82,11 @@ function BuyerPortalPageInner() {
             perishable: true,
             status: 'ACTIVE',
             viewsCount: 42,
-            image:
-              item.photoUrl ||
-              item.image ||
-              'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400&q=80',
+            image: getAccurateCropImage(
+              item.cropNameEnglish || item.crop_name || item.crop,
+              item.imageUrl || item.image || item.photoUrl || (item.images && item.images[0]),
+              item.cropNameHindi || item.crop_hindi || item.cropHindi
+            ),
             farmerName: item.farmerName || 'सत्यापित किसान संघ',
             fpoName: item.farmerName || 'Kisan FPO',
             distanceKm: 14,
@@ -109,13 +111,16 @@ function BuyerPortalPageInner() {
               {
                 id: `item-${o.id}`,
                 listingId: o.listingId || 'prod-1',
-                crop: o.cropNameEnglish || 'Produce',
-                cropHindi: o.cropNameHindi || 'उपज',
+                crop: o.cropNameEnglish || o.crop || 'Produce',
+                cropHindi: o.cropNameHindi || o.cropHindi || 'उपज',
                 quantityKg: Number(o.quantityKg || 50),
                 pricePerKg: Number(o.unitPrice || 25),
                 lineAmount: Number(o.productAmount || 1250),
-                image:
-                  'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80',
+                image: getAccurateCropImage(
+                  o.cropNameEnglish || o.crop || 'Produce',
+                  o.imageUrl || o.image,
+                  o.cropNameHindi || o.cropHindi
+                ),
               },
             ],
             productAmount: Number(o.productAmount || 1250),

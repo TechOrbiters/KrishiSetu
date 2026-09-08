@@ -86,7 +86,7 @@ function getCropImage(commodity: string): string {
   for (const [key, url] of Object.entries(CROP_IMAGES)) {
     if (norm.includes(key)) return url;
   }
-  return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=100';
+  return 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=100';
 }
 
 function parseArrivalDate(dateStr: string): string {

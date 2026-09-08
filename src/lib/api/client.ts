@@ -14,6 +14,7 @@ import { logisticsSync } from "../realtime/logisticsSync";
 import { firebaseRtdb } from "../firebase/client";
 import { ref, get, set, update, remove } from "firebase/database";
 import { supabaseClient } from "../supabase/client";
+import { getAccurateCropImage } from "../cropImages";
 
 const IS_DEMO_MODE = typeof process !== 'undefined' && 
   (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.DEMO_MODE === 'true');
@@ -251,7 +252,11 @@ export async function fetchFarmerListings(farmerId?: string): Promise<ApiResult<
         viewsCount: Number(item.views_count || 0),
         ordersCount: Number(item.orders_count || 0),
         updatedAt: item.updated_at || new Date().toISOString(),
-        imageUrl: item.images && item.images[0] ? item.images[0] : 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=400',
+        imageUrl: getAccurateCropImage(
+          item.crop_name || item.cropNameEnglish || item.crop,
+          item.images && item.images[0],
+          item.crop_hindi || item.cropNameHindi
+        ),
       }));
       return { success: true, data: formattedListings, source: json.source };
     }
@@ -288,7 +293,11 @@ export async function fetchFarmerListings(farmerId?: string): Promise<ApiResult<
             viewsCount: Number(item.viewsCount || 42),
             ordersCount: Number(item.ordersCount || 3),
             updatedAt: item.updatedAt || new Date().toISOString(),
-            imageUrl: item.image || (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=400',
+            imageUrl: getAccurateCropImage(
+              item.crop || item.crop_name_english || item.cropNameEnglish || 'Produce',
+              item.image || (item.images && item.images[0]),
+              item.cropHindi || item.crop_name || item.cropNameHindi
+            ),
           }));
           return { success: true, data: formatted, source: 'firebase_rtdb' };
         }
@@ -337,7 +346,11 @@ export async function createFarmerListing(payload: any): Promise<ApiResult<any>>
       freshnessWindowHours: Number(payload.shelf_life_days ? payload.shelf_life_days * 24 : 48),
       perishable: true,
       status: 'ACTIVE',
-      image: (payload.images && payload.images[0]) || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400&q=80',
+      image: getAccurateCropImage(
+        payload.crop_name || payload.cropNameEnglish || payload.crop,
+        (payload.images && payload.images[0]) || payload.image,
+        payload.crop_hindi || payload.cropNameHindi
+      ),
       farmerName: 'रामेश्वर प्रसाद (सत्यापित किसान)',
       fpoName: 'अवध किसान उत्पादक संघ (FPO)',
       distanceKm: 14,
@@ -392,7 +405,11 @@ export async function fetchListingById(id: string): Promise<ApiResult<ProduceIte
         viewsCount: Number(item.views_count || 0),
         ordersCount: Number(item.orders_count || 0),
         updatedAt: item.updated_at || new Date().toISOString(),
-        imageUrl: item.images && item.images[0] ? item.images[0] : 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=400',
+        imageUrl: getAccurateCropImage(
+          item.crop_name || item.cropNameEnglish || item.crop,
+          item.images && item.images[0],
+          item.crop_hindi || item.cropNameHindi
+        ),
       };
       return { success: true, data: formatted };
     }
@@ -427,7 +444,11 @@ export async function fetchListingById(id: string): Promise<ApiResult<ProduceIte
           viewsCount: Number(item.viewsCount || 42),
           ordersCount: Number(item.ordersCount || 2),
           updatedAt: item.updatedAt || new Date().toISOString(),
-          imageUrl: item.image || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=400',
+          imageUrl: getAccurateCropImage(
+            item.crop || item.cropNameEnglish,
+            item.image,
+            item.cropHindi || item.cropNameHindi
+          ),
         };
         return { success: true, data: formatted };
       }
@@ -617,7 +638,11 @@ export async function createBuyerOrder(payload: any, idempotencyKey?: string): P
           quantityKg: Number(payload.quantity || 50),
           pricePerKg: Number(payload.unit_price || 22),
           lineAmount: Number(payload.total_amount || 1100),
-          image: payload.image || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80',
+          image: getAccurateCropImage(
+            payload.crop_name || payload.crop || 'Produce',
+            payload.image,
+            payload.crop_hindi || payload.cropNameHindi
+          ),
         },
       ],
       productAmount: Number(payload.total_amount || 1100),
@@ -987,29 +1012,8 @@ function getCommodityInfo(commodity: string): { hi: string; category: 'VEGETABLE
   return { hi: commodity, category: 'OTHERS' };
 }
 
-function getCropImage(commodity: string): string {
-  const norm = commodity.toLowerCase();
-  if (norm.includes('potato') || norm.includes('आलू')) return 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('tomato') || norm.includes('टमाटर')) return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('onion') || norm.includes('प्याज')) return 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('wheat') || norm.includes('गेहूं')) return 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('mustard') || norm.includes('सरसों')) return 'https://images.unsplash.com/photo-1508747703725-719777637510?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('paddy') || norm.includes('rice') || norm.includes('धान') || norm.includes('चावल')) return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('chilli') || norm.includes('mirch') || norm.includes('मिर्च')) return 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('garlic') || norm.includes('lahsun') || norm.includes('लहसुन')) return 'https://images.unsplash.com/photo-1608686207856-001b95cf60ca?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('ginger') || norm.includes('adrak') || norm.includes('अदरक')) return 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('banana') || norm.includes('kela') || norm.includes('केला')) return 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('apple') || norm.includes('seb') || norm.includes('सेब')) return 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('brinjal') || norm.includes('baingan') || norm.includes('बैंगन')) return 'https://images.unsplash.com/photo-1628771065518-0d82f1938462?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('cabbage') || norm.includes('patta')) return 'https://images.unsplash.com/photo-1598030343246-e55543c55208?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('cauliflower') || norm.includes('gobhi')) return 'https://images.unsplash.com/photo-1568584711075-3d021a7c3ca3?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('gram') || norm.includes('chana') || norm.includes('चना')) return 'https://images.unsplash.com/photo-1515543904379-3d757afe72e3?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('lemon') || norm.includes('nimbu') || norm.includes('नींबू')) return 'https://images.unsplash.com/photo-1534947098675-926ff9d9f584?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('papaya') || norm.includes('papita') || norm.includes('पपीता')) return 'https://images.unsplash.com/photo-1517282009859-f000ec3b26fe?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('gur') || norm.includes('jaggery') || norm.includes('गुड़')) return 'https://images.unsplash.com/photo-1589135233689-d49495e865f1?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('maize') || norm.includes('makka') || norm.includes('मक्का')) return 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=200&q=80';
-  if (norm.includes('firewood') || norm.includes('लकड़ी') || norm.includes('wood')) return 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=200&q=80';
-  return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80';
+export function getCropImage(commodity: string): string {
+  return getAccurateCropImage(commodity);
 }
 
 const DATA_GOV_API_KEY = process.env.NEXT_PUBLIC_DATA_GOV_API_KEY || '579b464db66ec23bdd000001ebe9a985b4644cb5728a12ccf6236f06';

@@ -21,6 +21,7 @@ import { subscribeBuyerProfile, updateBuyerProfile } from '../../lib/firebase';
 import { logisticsSync } from '../../lib/realtime/logisticsSync';
 import { ProduceCard } from './ProduceCard';
 import { CategoryFilter } from './CategoryFilter';
+import { getAccurateCropImage } from '@/lib/cropImages';
 import {
   Store,
   Users,
@@ -4488,8 +4489,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                       {cart.map((item, idx) => (
                         <div key={idx} className="p-3 bg-slate-50/50 border border-slate-100 rounded-2xl flex gap-3 relative transition-all hover:bg-white hover:border-emerald-100 group">
                           <img
-                            src={item.listing.image}
+                            src={getAccurateCropImage(item.listing.crop, item.listing.image, item.listing.cropHindi)}
                             alt={item.listing.crop}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = getAccurateCropImage(item.listing.crop, undefined, item.listing.cropHindi);
+                            }}
                             className="w-12 h-12 rounded-xl object-cover border border-slate-200/50 shrink-0"
                           />
                           <div className="flex-1 min-w-0 space-y-1">
@@ -4829,8 +4833,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 cart.map((item, idx) => (
                   <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex gap-3 relative">
                     <img
-                      src={item.listing.image}
+                      src={getAccurateCropImage(item.listing.crop, item.listing.image, item.listing.cropHindi)}
                       alt={item.listing.crop}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = getAccurateCropImage(item.listing.crop, undefined, item.listing.cropHindi);
+                      }}
                       className="w-16 h-16 rounded-xl object-cover border"
                     />
                     <div className="flex-1 space-y-1">
@@ -5013,7 +5020,14 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
               </button>
             </div>
 
-            <img src={selectedProduceDetail.image} alt={selectedProduceDetail.crop} className="w-full h-48 rounded-2xl object-cover" />
+            <img
+              src={getAccurateCropImage(selectedProduceDetail.crop, selectedProduceDetail.image, selectedProduceDetail.cropHindi)}
+              alt={selectedProduceDetail.crop}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = getAccurateCropImage(selectedProduceDetail.crop, undefined, selectedProduceDetail.cropHindi);
+              }}
+              className="w-full h-48 rounded-2xl object-cover"
+            />
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-2.5 bg-slate-50 rounded-xl space-y-0.5">
