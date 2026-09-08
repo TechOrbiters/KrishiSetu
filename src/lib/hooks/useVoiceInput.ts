@@ -32,10 +32,42 @@ interface UseVoiceInputOptions {
   onSuccess?: (result: VoiceInputResult) => void;
   onError?: (error: string) => void;
   maxDurationSeconds?: number;
+  languageCode?: string;
 }
 
+/**
+ * Dynamic MIME type detection for browser MediaRecorder.
+ * Prefers WebM Opus without forced WAV conversions.
+ */
+function getBestSupportedMimeType(): string {
+  if (typeof window === "undefined" || typeof MediaRecorder === "undefined") {
+    return "audio/webm";
+  }
+  const candidateTypes = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+    "audio/wav",
+  ];
+  for (const type of candidateTypes) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      return type;
+    }
+  }
+  return "";
+}
+
+/**
+ * Custom React hook for Voice Input.
+ *
+ * Flow:
+ * MIC CLICK -> permission -> RECORDING -> STOP -> WEBM BLOB
+ * -> POST /api/ai/speech-to-text -> Server -> Sarvam Saaras v3 -> transcript
+ * -> onSuccess() -> Active field updated in form
+ */
 export function useVoiceInput(options: UseVoiceInputOptions = {}) {
-  const { onSuccess, onError, maxDurationSeconds = 30 } = options;
+  const { onSuccess, onError, maxDurationSeconds = 30, languageCode = "hi-IN" } = options;
 
   const [state, setState] = useState<VoiceState>("idle");
   const [activeField, setActiveField] = useState<string | null>(null);
@@ -49,9 +81,9 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
   const autoStopTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeFieldRef = useRef<string | null>(null);
   const speechRecognitionRef = useRef<any>(null);
-  const liveTranscriptRef = useRef<string>("");
+  const fallbackTranscriptRef = useRef<string>("");
 
-  // Clean up media tracks and timers
+  // Clean up media tracks and duration counters
   const cleanupMedia = useCallback(() => {
     if (durationTimerRef.current) {
       clearInterval(durationTimerRef.current);
@@ -62,7 +94,9 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
       autoStopTimerRef.current = null;
     }
     if (speechRecognitionRef.current) {
-      try { speechRecognitionRef.current.stop(); } catch (e) {}
+      try {
+        speechRecognitionRef.current.stop();
+      } catch (e) {}
       speechRecognitionRef.current = null;
     }
     if (audioStreamRef.current) {
@@ -79,117 +113,63 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
     };
   }, [cleanupMedia]);
 
-  const getBestSupportedMimeType = (): string => {
-    if (typeof MediaRecorder === "undefined") return "audio/webm";
-    const types = [
-      "audio/webm;codecs=opus",
-      "audio/webm",
-      "audio/ogg;codecs=opus",
-      "audio/mp4",
-      "audio/wav",
-    ];
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        return type;
-      }
-    }
-    return "";
-  };
-
-  // Convert browser-captured WebM/Opus audio to standard PCM 16-bit WAV for Sarvam STT
-  const convertBlobToWav = async (blob: Blob): Promise<Blob> => {
-    try {
-      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
-      if (!AudioCtx) return blob;
-      const ctx = new AudioCtx();
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-      ctx.close().catch(() => {});
-
-      const channelData = audioBuffer.getChannelData(0);
-      const sampleRate = audioBuffer.sampleRate;
-      const dataLength = channelData.length * 2;
-      const buffer = new ArrayBuffer(44 + dataLength);
-      const view = new DataView(buffer);
-
-      const writeStr = (offset: number, str: string) => {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-      };
-
-      writeStr(0, "RIFF");
-      view.setUint32(4, 36 + dataLength, true);
-      writeStr(8, "WAVE");
-      writeStr(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true); // PCM
-      view.setUint16(22, 1, true); // Mono
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * 2, true); // byte rate
-      view.setUint16(32, 2, true); // block align
-      view.setUint16(34, 16, true); // 16-bit
-      writeStr(36, "data");
-      view.setUint32(40, dataLength, true);
-
-      let offset = 44;
-      for (let i = 0; i < channelData.length; i++) {
-        const s = Math.max(-1, Math.min(1, channelData[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        offset += 2;
-      }
-
-      return new Blob([view], { type: "audio/wav" });
-    } catch (e) {
-      console.warn("[useVoiceInput] WAV conversion notice:", e);
-      return blob;
-    }
-  };
-
+  /**
+   * Uploads the recorded audio Blob to our secure server-side endpoint.
+   * NEVER sends API keys from browser.
+   */
   const uploadAndTranscribe = async (audioBlob: Blob, field: string | null) => {
     setState("processing");
+
     try {
-      if (audioBlob.size === 0 && !liveTranscriptRef.current) {
+      // Validate recorded audio size
+      if (!audioBlob || audioBlob.size === 0) {
         throw new Error("कोई आवाज़ रिकॉर्ड नहीं हुई (No audio recorded). कृपया दोबारा बोलें।");
       }
 
       let transcript = "";
-      let languageCode = "hi-IN";
-      let provider = "sarvam";
+      let resLanguage = languageCode;
+      let resProvider = "sarvam";
+      let extractedIntent: VoiceIntent | undefined;
 
-      // 1. Try Sarvam AI STT directly with compliant 16-bit PCM WAV
-      try {
-        const wavBlob = await convertBlobToWav(audioBlob);
-        const formData = new FormData();
-        const file = new File([wavBlob], "recording.wav", { type: "audio/wav" });
-        formData.append("file", file);
-        formData.append("language_code", "hi-IN");
-        formData.append("model", "saaras:v3");
-        formData.append("mode", "transcribe");
+      const formData = new FormData();
+      // Send original recorded WebM Blob directly to /api/ai/speech-to-text
+      const fileExt = audioBlob.type.includes("webm") ? "webm" : audioBlob.type.includes("wav") ? "wav" : "webm";
+      const file = new File([audioBlob], `recording.${fileExt}`, {
+        type: audioBlob.type || "audio/webm",
+      });
+      formData.append("file", file);
+      formData.append("language_code", languageCode);
+      formData.append("model", "saaras:v3");
+      formData.append("mode", "transcribe");
 
-        const sttRes = await fetch("https://api.sarvam.ai/speech-to-text", {
-          method: "POST",
-          headers: { "api-subscription-key": "sk_rsyrmj5p_FJlxTNuiqLJA1y3RpMVNZrJo" },
-          body: formData,
-        });
-        if (sttRes.ok) {
-          const sttData = await sttRes.json();
-          const sttTranscript = sttData.transcript || sttData.transcription || "";
-          if (sttTranscript.trim()) {
-            transcript = sttTranscript.trim();
-            languageCode = sttData.language_code || "hi-IN";
-            provider = "sarvam_stt_live";
-          }
+      // Post to our own backend API proxy (no trailing slash redirect issues)
+      const res = await fetch("/api/ai/speech-to-text", {
+        method: "POST",
+        body: formData,
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (res.ok && json?.success && json?.transcript) {
+        transcript = json.transcript.trim();
+        resLanguage = json.languageCode || languageCode;
+        resProvider = "sarvam";
+        extractedIntent = json.extractedIntent;
+      } else {
+        // Log safe server error response (no API keys)
+        console.warn("[useVoiceInput] Server STT response:", res.status, json);
+
+        // Optional UX fallback: use browser SpeechRecognition if it captured the speech
+        if (fallbackTranscriptRef.current.trim()) {
+          console.info("[useVoiceInput] Utilizing browser SpeechRecognition fallback.");
+          transcript = fallbackTranscriptRef.current.trim();
+          resProvider = "browser_speech_recognition";
         } else {
-          const errData = await sttRes.json().catch(() => ({}));
-          console.warn("[useVoiceInput] Sarvam STT returned status:", sttRes.status, errData);
+          const userMsg =
+            json?.error?.message ||
+            "आवाज़ पहचानने में समस्या हुई। कृपया पुनः प्रयास करें या मैन्युअल रूप से लिखें।";
+          throw new Error(userMsg);
         }
-      } catch (sttErr) {
-        console.warn("[useVoiceInput] Sarvam STT notice:", sttErr);
-      }
-
-      // 2. Native SpeechRecognition in-browser fallback
-      if (!transcript && liveTranscriptRef.current.trim()) {
-        transcript = liveTranscriptRef.current.trim();
-        provider = "browser_speech_recognition";
       }
 
       if (!transcript) {
@@ -201,9 +181,9 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
 
       const result: VoiceInputResult = {
         transcript,
-        languageCode,
-        provider,
-        extractedIntent: undefined,
+        languageCode: resLanguage,
+        provider: resProvider,
+        extractedIntent,
         field: field || undefined,
       };
 
@@ -211,11 +191,11 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
         onSuccess(result);
       }
 
-      // Reset to idle after a brief indicator
+      // Reset to idle after brief indicator
       setTimeout(() => {
         setState("idle");
         setActiveField(null);
-      }, 1500);
+      }, 1200);
     } catch (err: any) {
       console.error("[useVoiceInput] Transcription error:", err);
       const msg = err.message || "आवाज़ पहचानने में त्रुटि हुई।";
@@ -227,9 +207,12 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
     }
   };
 
+  /**
+   * Starts microphone recording with standard MediaRecorder.
+   */
   const startRecording = useCallback(
     async (fieldId?: string) => {
-      // Check browser support
+      // Check browser MediaDevices support
       if (
         typeof window === "undefined" ||
         !navigator.mediaDevices ||
@@ -251,9 +234,10 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
       cleanupMedia();
       setErrorMessage(null);
       setState("requesting-permission");
-      const field = fieldId || null;
-      setActiveField(field);
-      activeFieldRef.current = field;
+      const targetField = fieldId || null;
+      setActiveField(targetField);
+      activeFieldRef.current = targetField;
+      fallbackTranscriptRef.current = "";
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -267,65 +251,77 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
         audioStreamRef.current = stream;
         audioChunksRef.current = [];
 
-        const mimeType = getBestSupportedMimeType();
-        const recorderOptions: MediaRecorderOptions = mimeType ? { mimeType } : {};
-        const mediaRecorder = new MediaRecorder(stream, recorderOptions);
+        const selectedMime = getBestSupportedMimeType();
+        const options: MediaRecorderOptions = selectedMime ? { mimeType: selectedMime } : {};
+        const mediaRecorder = new MediaRecorder(stream, options);
         mediaRecorderRef.current = mediaRecorder;
 
+        // Collect all data chunks as they become available
         mediaRecorder.ondataavailable = (event: BlobEvent) => {
           if (event.data && event.data.size > 0) {
             audioChunksRef.current.push(event.data);
           }
         };
 
+        // Wait for final recording stop event before constructing Blob
         mediaRecorder.onstop = () => {
-          const finalMimeType = mediaRecorder.mimeType || mimeType || "audio/webm";
-          const audioBlob = new Blob(audioChunksRef.current, { type: finalMimeType });
+          const finalMime = mediaRecorder.mimeType || selectedMime || "audio/webm";
+          const audioBlob = new Blob(audioChunksRef.current, { type: finalMime });
+
+          // Stop all audio hardware tracks immediately after recording stops
+          if (audioStreamRef.current) {
+            audioStreamRef.current.getTracks().forEach((track) => track.stop());
+            audioStreamRef.current = null;
+          }
+
+          // Upload and transcribe the real audio blob
           uploadAndTranscribe(audioBlob, activeFieldRef.current);
         };
 
-        mediaRecorder.start(250); // Slice data every 250ms
-        liveTranscriptRef.current = "";
-
-        // Start browser Web Speech API in parallel for instant Hindi speech capture fallback
+        // Optional parallel Web Speech API fallback for zero-loss UX
         try {
-          const SpeechRec = typeof window !== "undefined" ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : null;
+          const SpeechRec =
+            typeof window !== "undefined"
+              ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+              : null;
           if (SpeechRec) {
             const recognizer = new SpeechRec();
             recognizer.continuous = true;
             recognizer.interimResults = true;
-            recognizer.lang = "hi-IN";
-            recognizer.onresult = (event: any) => {
+            recognizer.lang = languageCode;
+            recognizer.onresult = (e: any) => {
               let text = "";
-              for (let i = 0; i < event.results.length; i++) {
-                text += event.results[i][0].transcript + " ";
+              for (let i = 0; i < e.results.length; i++) {
+                text += e.results[i][0].transcript + " ";
               }
-              liveTranscriptRef.current = text.trim();
+              fallbackTranscriptRef.current = text.trim();
             };
             recognizer.onerror = () => {};
             recognizer.start();
             speechRecognitionRef.current = recognizer;
           }
         } catch (recErr) {
-          // Web Speech API not available or blocked, fallback to Sarvam wav STT
+          // Browser SpeechRecognition not available; standard backend STT will handle audio
         }
 
+        // Start recording and slice data every 250ms
+        mediaRecorder.start(250);
         setState("recording");
 
-        // Duration timer
+        // Duration counter
         setRecordingSeconds(0);
         durationTimerRef.current = setInterval(() => {
           setRecordingSeconds((prev) => prev + 1);
         }, 1000);
 
-        // Auto-stop safety timeout
+        // Auto-stop safety timer at max duration (e.g. 30 seconds)
         autoStopTimerRef.current = setTimeout(() => {
           if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
             mediaRecorderRef.current.stop();
           }
         }, maxDurationSeconds * 1000);
       } catch (err: any) {
-        console.error("[useVoiceInput] Permission/start error:", err);
+        console.error("[useVoiceInput] Permission/access error:", err);
         cleanupMedia();
         setState("error");
         setActiveField(null);
@@ -342,15 +338,21 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
         if (onError) onError(msg);
       }
     },
-    [cleanupMedia, maxDurationSeconds, onError]
+    [cleanupMedia, languageCode, maxDurationSeconds, onError]
   );
 
+  /**
+   * Manually stops the recording; triggers mediaRecorder.onstop.
+   */
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
     }
   }, []);
 
+  /**
+   * Cancels the active recording without uploading.
+   */
   const cancelRecording = useCallback(() => {
     cleanupMedia();
     setState("idle");

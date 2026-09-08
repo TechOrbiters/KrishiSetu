@@ -1,15 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Static export for Firebase Hosting (free tier)
-  // All portals use Supabase client-side SDK so they work without API routes
-  output: 'export',
+  ...(process.env.STATIC_EXPORT === "true" ? { output: "export" } : {}),
   trailingSlash: true,
+  skipTrailingSlashRedirect: true,
   reactStrictMode: true,
   images: {
-    unoptimized: true, // Required for static export
+    unoptimized: true,
   },
   experimental: {
-    optimizePackageImports: ['lucide-react', 'leaflet'],
+    optimizePackageImports: ["lucide-react", "leaflet"],
   },
 };
 
