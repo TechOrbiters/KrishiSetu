@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "kisaan-setu-7d74b"
+  },
+  "targets": {
+    "kisaan-setu-7d74b": {
+      "hosting": {
+        "krishisetu": [
+          "krishisetu"
+        ],
+        "kisaan-setu-7d74b": [
+          "kisaan-setu-7d74b"
+        ]
+      }
+    }
   }
 }

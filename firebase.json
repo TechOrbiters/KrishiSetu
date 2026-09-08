@@ -3,40 +3,80 @@
     "instance": "kisaan-setu-7d74b-default-rtdb",
     "rules": "firebase/database.rules.json"
   },
-  "hosting": {
-    "public": "out",
-    "cleanUrls": true,
-    "trailingSlash": true,
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "!/@(_next|favicon.svg|favicon.ico|manifest.json)/**",
-        "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "source": "**/*.@(js|css|woff2|woff|ttf)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
-          }
-        ]
-      },
-      {
-        "source": "**",
-        "headers": [
-          {
-            "key": "X-Frame-Options",
-            "value": "SAMEORIGIN"
-          }
-        ]
-      }
-    ]
-  }
+  "hosting": [
+    {
+      "target": "krishisetu",
+      "public": "out",
+      "cleanUrls": true,
+      "trailingSlash": true,
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "!/@(_next|favicon.svg|favicon.ico|manifest.json)/**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(js|css|woff2|woff|ttf)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "kisaan-setu-7d74b",
+      "public": "out",
+      "cleanUrls": true,
+      "trailingSlash": true,
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "!/@(_next|favicon.svg|favicon.ico|manifest.json)/**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(js|css|woff2|woff|ttf)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
