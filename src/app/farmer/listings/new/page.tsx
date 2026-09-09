@@ -170,19 +170,27 @@ function WizardContent() {
       // Use server-extracted intent or run our comprehensive mandi intent parser directly on transcript
       const intent = result.extractedIntent || parseMandiIntent(cleanText);
 
-      // Check if multiple entities were identified (e.g. crop + quantity, or quantity + price, or global assistant used)
+      // ROUTING RULE:
+      // - If a specific field mic was used (cropName / quantity / price / minOrder),
+      //   ALWAYS use single-field logic — never the multi-entity path.
+      //   This prevents cross-field contamination (e.g. "24 रुपये" for the price mic
+      //   should NOT also set quantity to 24).
+      // - Multi-entity mode only fires for the global voice assistant (result.field === 'global'
+      //   or no field), where filling all detected fields at once is intentional.
+      const isSpecificField = result.field && result.field !== 'global';
       const hasMultipleEntities =
-        (Boolean(intent.crop) && (Boolean(intent.quantity) || Boolean(intent.pricePerKg))) ||
-        (Boolean(intent.quantity) && Boolean(intent.pricePerKg)) ||
-        result.field === 'global' ||
-        !result.field;
+        !isSpecificField && (
+          (Boolean(intent.crop) && (Boolean(intent.quantity) || Boolean(intent.pricePerKg))) ||
+          (Boolean(intent.quantity) && Boolean(intent.pricePerKg)) ||
+          !result.field
+        );
 
       if (hasMultipleEntities) {
         // Multi-field speech input: Populate ALL detected fields across the form
         if (intent.crop) {
           setCropName(intent.crop);
           setCropCategory(intent.category || deduceCategory(intent.crop));
-        } else if (cleanText && (result.field === 'cropName' || !result.field)) {
+        } else if (cleanText && !result.field) {
           setCropName(cleanText);
         }
 
@@ -213,14 +221,17 @@ function WizardContent() {
         }
         setTimeout(() => setVoiceToast(null), 6000);
       } else {
-        // Single field target
+        // Single field target — ONLY update the targeted field, never other fields
         if (result.field === 'cropName') {
           const detected = intent.crop || cleanText;
           setCropName(detected);
           setCropCategory(intent.category || deduceCategory(detected));
           setVoiceToast(`✓ फसल: ${detected}`);
         } else if (result.field === 'quantity') {
-          const num = intent.quantity || parseSpokenNumber(cleanText);
+          // For quantity field: prioritize parseSpokenNumber for plain number words,
+          // then intent.quantity (which may be set from kg-suffixed match), then digit fallback
+          const spokenNum = parseSpokenNumber(cleanText);
+          const num = spokenNum || intent.quantity;
           if (num && num > 0) {
             setQuantity(num);
             setVoiceToast(`✓ मात्रा: ${num} kg`);
@@ -261,7 +272,9 @@ function WizardContent() {
               setVoiceToast(`पहचाना गया: "${cleanText}" (कीमत में नहीं जोड़ा गया)`);
             }
           } else {
-            const num = intent.pricePerKg || parseSpokenNumber(cleanText);
+            // Priority: explicit price keyword match → parseSpokenNumber → intent.quantity (plain number fallback) → digit extraction
+            const spokenNum = parseSpokenNumber(cleanText);
+            const num = intent.pricePerKg || spokenNum || intent.quantity;
             if (num && num > 0) {
               setPrice(num);
               setVoiceToast(`✓ भाव: ₹${num}/kg`);
