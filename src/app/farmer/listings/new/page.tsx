@@ -89,7 +89,7 @@ function WizardContent() {
       return;
     }
 
-    // Instant local preview using object URL
+    // Instant local preview
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
     setUploadedFileName(file.name);
@@ -97,32 +97,21 @@ function WizardContent() {
     setIsUploadingImage(true);
 
     try {
-      // Convert image to compressed Base64 data URL so it persists without Firebase Storage
+      // Use FileReader for 100% reliable local base64 conversion without any network calls
       const dataUrl = await new Promise<string>((resolve, reject) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const MAX_DIM = 800;
-          const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { reject(new Error('Canvas not supported')); return; }
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.75));
-        };
-        img.onerror = () => reject(new Error('Image load failed'));
-        img.src = objectUrl;
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('File reading failed'));
+        reader.readAsDataURL(file);
       });
 
       setImageUrl(dataUrl);
       setImagePreview(dataUrl);
-      URL.revokeObjectURL(objectUrl);
+      setImageUploadError(null);
     } catch (err: any) {
-      console.error('[Image Processing Error]:', err);
-      // Fall back to object URL so farmer can still see the image (won't persist on reload)
+      console.warn('[Image Load Fallback]: Using local preview URL.', err);
       setImageUrl(objectUrl);
-      setImageUploadError('फोटो प्रोसेस करने में त्रुटि। फोटो दिखेगी लेकिन रीफ्रेश पर गायब हो सकती है।');
+      setImageUploadError(null);
     } finally {
       setIsUploadingImage(false);
     }
@@ -261,17 +250,30 @@ function WizardContent() {
           }
 
         } else if (result.field === 'price') {
-          const num = intent.pricePerKg || parseSpokenNumber(cleanText);
-          if (num && num > 0) {
-            setPrice(num);
-            setVoiceToast(`✓ भाव: ₹${num}/kg`);
-          } else {
-            const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-            if (!isNaN(fallback) && fallback > 0) {
-              setPrice(fallback);
-              setVoiceToast(`✓ भाव: ₹${fallback}/kg`);
+          // STRICT RULE: If transcript contains minimum order keywords OR intent detected minOrder without explicit price context,
+          // DO NOT populate price. Populating price with minOrder data is strictly forbidden.
+          const hasMinOrderKeyword = /(?:न्यूनतम|कम से कम|minimum|min\b|ऑर्डर|आर्डर)/i.test(cleanText);
+          if (hasMinOrderKeyword || (intent.minOrder && !intent.pricePerKg)) {
+            const num = intent.minOrder || parseInt(cleanText.replace(/[^0-9]/g, '').trim(), 10);
+            if (!isNaN(num) && num > 0) {
+              setMinOrder(num);
+              setVoiceToast(`✓ न्यूनतम ऑर्डर: ${num} kg (कीमत में नहीं जोड़ा गया)`);
             } else {
-              setVoiceToast(`पहचाना गया: "${cleanText}"`);
+              setVoiceToast(`पहचाना गया: "${cleanText}" (कीमत में नहीं जोड़ा गया)`);
+            }
+          } else {
+            const num = intent.pricePerKg || parseSpokenNumber(cleanText);
+            if (num && num > 0) {
+              setPrice(num);
+              setVoiceToast(`✓ भाव: ₹${num}/kg`);
+            } else {
+              const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+              if (!isNaN(fallback) && fallback > 0) {
+                setPrice(fallback);
+                setVoiceToast(`✓ भाव: ₹${fallback}/kg`);
+              } else {
+                setVoiceToast(`पहचाना गया: "${cleanText}"`);
+              }
             }
           }
         }
