@@ -96,8 +96,22 @@ function applyDOMTranslation(targetLang: Language) {
     // 2. Single-pass regex replacement:
     // Guarantees each matched token is replaced once and the regex pointer advances past it,
     // making cascading replacements, runaway character duplication, or broken Indic conjuncts impossible!
-    return str.replace(engine.regex, (matched) => {
-      return engine.phraseMap.get(matched) || matched;
+    return str.replace(engine.regex, (matched, offset) => {
+      const replacement = engine.phraseMap.get(matched);
+      if (!replacement) return matched;
+
+      // Prevent replacing Indic substrings inside compound words (e.g. "फल" inside "सफलतापूर्वक")
+      const isIndic = /[\u0900-\u097F]/.test(matched);
+      if (isIndic) {
+        const charBefore = offset > 0 ? str[offset - 1] : '';
+        const charAfter = offset + matched.length < str.length ? str[offset + matched.length] : '';
+        const isDevBefore = /[\u0900-\u097F]/.test(charBefore);
+        const isDevAfter = /[\u0900-\u097F]/.test(charAfter);
+        if (isDevBefore || isDevAfter) {
+          return matched;
+        }
+      }
+      return replacement;
     });
   };
 

@@ -298,11 +298,11 @@ export function parseMandiIntent(text: string): ExtractedIntent {
   // 4. Minimum Order Extraction — MUST run BEFORE the number fallback below
   // Robust pattern matching: supports conversational variations with filler words like "ऑर्डर", "आर्डर", "मात्रा", "का", "खरीद"
   // Prefix patterns: "न्यूनतम ऑर्डर मात्रा 20 किलो", "न्यूनतम ऑर्डर 20 किलो", "कम से कम आर्डर 25", "minimum order 50", "कम से कम बीस", "न्यूनतम बीस किलो"
-  const minOrderPrefixRegex = /(?:कम से कम|न्यूनतम|kam se kam|minimum|min)\s*(?:का|की|के)?\s*(?:ऑर्डर|आर्डर|order)?\s*(?:की|का|के)?\s*(?:मात्रा|quantity|limit)?\s*(?:है|हैं|h|hai)?\s*([0-9]+|[a-zA-Z\u0900-\u097F]+(?:\s+[a-zA-Z\u0900-\u097F]+)?)/i;
+  const minOrderPrefixRegex = /(?:कम से कम|न्यूनतम|kam se kam|minimum|min\s*order|min)\s*(?:का|की|के)?\s*(?:ऑर्डर|आर्डर|order)?\s*(?:की|का|के)?\s*(?:मात्रा|quantity|limit|खरीद)?\s*(?:है|हैं|h|hai)?\s*([0-9]+|[a-zA-Z\u0900-\u097F]+(?:\s+[a-zA-Z\u0900-\u097F]+)?)/i;
   const minOrderPrefixMatch = lower.match(minOrderPrefixRegex);
 
   // Suffix patterns: "20 किलो न्यूनतम", "बीस किलो कम से कम", "50 kg minimum order"
-  const minOrderSuffixRegex = /([0-9]+|[a-zA-Z\u0900-\u097F]+)\s*(?:किलो|kg|किग्रा)?\s*(?:का)?\s*(?:ऑर्डर|आर्डर)?\s*(?:न्यूनतम|कम से कम|minimum)/i;
+  const minOrderSuffixRegex = /([0-9]+|[a-zA-Z\u0900-\u097F]+)\s*(?:किलो|kg|किग्रा)?\s*(?:का)?\s*(?:ऑर्डर|आर्डर|order)?\s*(?:की|का|के)?\s*(?:मात्रा|quantity|limit)?\s*(?:न्यूनतम|कम से कम|minimum|min)/i;
   const minOrderSuffixMatch = lower.match(minOrderSuffixRegex);
 
   if (minOrderPrefixMatch && minOrderPrefixMatch[1]) {
@@ -316,7 +316,19 @@ export function parseMandiIntent(text: string): ExtractedIntent {
       minOrder = parsed;
     }
   }
-  // ZERO HALLUCINATED FALLBACK: If minOrder was not explicitly spoken, leave it undefined.
+
+  // If minOrder context keyword is present in sentence but minOrder hasn't been set, find unassigned number
+  if (!minOrder && /(?:कम से कम|न्यूनतम|kam se kam|minimum|min\b)/i.test(lower)) {
+    const numbersInText = Array.from(lower.matchAll(/\b(\d+)\b/g)).map((m) => parseInt(m[1], 10));
+    const candidate = numbersInText.find((n) => n !== quantity && n !== pricePerKg && n > 0 && n < 50000);
+    if (candidate) {
+      minOrder = candidate;
+    }
+  }
+
+  // NOTE: No automatic default for minOrder here. The form submission in page.tsx
+  // uses `Number(minOrder) || 10` as a safe fallback. Auto-defaults here caused
+  // the bug where speaking a number for the minOrder voice field would be overridden.
 
   // Fallback for multi-field speech: assign remaining numbers to quantity/price
   // CRITICAL: exclude numbers already consumed by minOrder to prevent cross-field contamination

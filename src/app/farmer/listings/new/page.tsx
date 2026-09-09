@@ -235,13 +235,12 @@ function WizardContent() {
           }
         } else if (result.field === 'minOrder') {
           // When recording for minOrder field, ONLY set minOrder — never touch price or quantity
-          // Use intent.minOrder first, then extract any number from the transcript directly
-          const num = intent.minOrder
-            || (() => {
-              // Directly extract first number from transcript as last resort (field-locked)
-              const firstNum = parseInt(cleanText.replace(/[^0-9]/g, '').trim(), 10);
-              return isNaN(firstNum) ? 0 : firstNum;
-            })();
+          // Priority: parseSpokenNumber is most reliable for plain numbers (e.g. "बीस", "20", "20 kg")
+          // intent.minOrder requires keywords (न्यूनतम/minimum) so it's less reliable for field-specific recording
+          const spokenNum = parseSpokenNumber(cleanText);
+          const num = spokenNum
+            || intent.minOrder
+            || parseInt(cleanText.replace(/[^0-9]/g, ''), 10);
           if (num && num > 0) {
             setMinOrder(num);
             setVoiceToast(`✓ न्यूनतम ऑर्डर: ${num} kg`);
