@@ -1,6 +1,7 @@
-/** @type {import('next').NextConfig} */
+const isStatic = process.env.STATIC_EXPORT === "true" || process.env.STATIC_EXPORT?.trim() === "true";
+
 const nextConfig = {
-  ...(process.env.STATIC_EXPORT === "true" ? { output: "export" } : {}),
+  ...(isStatic ? { output: "export" } : {}),
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
   reactStrictMode: true,

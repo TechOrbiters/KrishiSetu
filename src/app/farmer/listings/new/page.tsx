@@ -260,32 +260,19 @@ function WizardContent() {
           }
 
         } else if (result.field === 'price') {
-          // STRICT RULE: If transcript contains minimum order keywords OR intent detected minOrder without explicit price context,
-          // DO NOT populate price. Populating price with minOrder data is strictly forbidden.
-          const hasMinOrderKeyword = /(?:न्यूनतम|कम से कम|minimum|min\b|ऑर्डर|आर्डर)/i.test(cleanText);
-          if (hasMinOrderKeyword || (intent.minOrder && !intent.pricePerKg)) {
-            const num = intent.minOrder || parseInt(cleanText.replace(/[^0-9]/g, '').trim(), 10);
-            if (!isNaN(num) && num > 0) {
-              setMinOrder(num);
-              setVoiceToast(`✓ न्यूनतम ऑर्डर: ${num} kg (कीमत में नहीं जोड़ा गया)`);
-            } else {
-              setVoiceToast(`पहचाना गया: "${cleanText}" (कीमत में नहीं जोड़ा गया)`);
-            }
+          // Dedicated price mic handler: parse spoken number, pricePerKg, or digits
+          const spokenNum = parseSpokenNumber(cleanText);
+          const num = intent.pricePerKg || spokenNum || intent.quantity;
+          if (num && num > 0) {
+            setPrice(num);
+            setVoiceToast(`✓ कीमत: ₹${num}/kg`);
           } else {
-            // Priority: explicit price keyword match → parseSpokenNumber → intent.quantity (plain number fallback) → digit extraction
-            const spokenNum = parseSpokenNumber(cleanText);
-            const num = intent.pricePerKg || spokenNum || intent.quantity;
-            if (num && num > 0) {
-              setPrice(num);
-              setVoiceToast(`✓ भाव: ₹${num}/kg`);
+            const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+            if (!isNaN(fallback) && fallback > 0) {
+              setPrice(fallback);
+              setVoiceToast(`✓ कीमत: ₹${fallback}/kg`);
             } else {
-              const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-              if (!isNaN(fallback) && fallback > 0) {
-                setPrice(fallback);
-                setVoiceToast(`✓ भाव: ₹${fallback}/kg`);
-              } else {
-                setVoiceToast(`पहचाना गया: "${cleanText}"`);
-              }
+              setVoiceToast(`पहचाना गया: "${cleanText}"`);
             }
           }
         }
@@ -1100,8 +1087,8 @@ function WizardContent() {
               <strong className="text-slate-900 font-bold">{quantity} kg</strong>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">📦 न्यूनतम ऑर्डर</span>
-              <strong className="text-slate-900 font-bold">{minOrder} kg</strong>
+              <span className="text-slate-500 font-medium">💰 तय कीमत</span>
+              <strong className="text-slate-900 font-bold">₹{price} / kg</strong>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-100">
               <span className="text-slate-500 font-medium">🌾 गुणवत्ता</span>
