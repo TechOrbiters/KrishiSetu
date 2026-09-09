@@ -220,65 +220,100 @@ const getCropEmoji = (cropName: string): string => {
   return '🌱';
 };
 
-const getCropCategory = (cropName: string): string => {
-  const c = (cropName || '').toLowerCase();
-  if (
-    c.includes('tomato') || c.includes('tamatar') ||
-    c.includes('potato') || c.includes('aloo') ||
-    c.includes('onion') || c.includes('pyaj') ||
-    c.includes('garlic') || c.includes('lahsun') ||
-    c.includes('ginger') || c.includes('adrak') ||
-    c.includes('chilli') || c.includes('mirch') ||
-    c.includes('cabbage') || c.includes('carrot') ||
-    c.includes('gobhi') || c.includes('bhindi')
-  ) {
-    return 'VEGETABLES';
+const getCropCategory = (cropName: string, explicitCategory?: string): string => {
+  if (explicitCategory) {
+    const ec = explicitCategory.toUpperCase().trim();
+    if (ec === 'VEGETABLES' || ec === 'सब्जी' || ec === 'सब्जियां' || ec === 'VEG') return 'VEGETABLES';
+    if (ec === 'GRAINS' || ec === 'अनाज' || ec === 'खाद्यान्न' || ec === 'GRAIN') return 'GRAINS';
+    if (ec === 'PULSES' || ec === 'दाल' || ec === 'दालें' || ec === 'PULSE') return 'PULSES';
+    if (ec === 'FRUITS' || ec === 'फल' || ec === 'FRUIT') return 'FRUITS';
+    if (ec === 'SPICES' || ec === 'मसाले' || ec === 'मसाला' || ec === 'SPICE' || ec === 'OILSEEDS' || ec === 'तिलहन') return 'SPICES';
+    if (ec === 'DAIRY' || ec === 'डेयरी' || ec === 'दुग्ध') return 'DAIRY';
   }
+
+  const c = (cropName || '').toLowerCase();
+
+  // Grains (Devanagari + English + Hinglish)
   if (
-    c.includes('wheat') || c.includes('gehu') || c.includes('gehun') ||
-    c.includes('paddy') || c.includes('dhan') ||
-    c.includes('rice') || c.includes('chawal') ||
-    c.includes('grain') || c.includes('barley') ||
-    c.includes('jowar') || c.includes('bajra')
+    c.includes('wheat') || c.includes('gehu') || c.includes('gehun') || c.includes('गेहूं') || c.includes('गेहूँ') ||
+    c.includes('paddy') || c.includes('dhan') || c.includes('धान') ||
+    c.includes('rice') || c.includes('chawal') || c.includes('चावल') ||
+    c.includes('grain') || c.includes('barley') || c.includes('जौ') ||
+    c.includes('jowar') || c.includes('ज्वार') ||
+    c.includes('bajra') || c.includes('बाजरा') ||
+    c.includes('corn') || c.includes('maize') || c.includes('makka') || c.includes('मक्का')
   ) {
     return 'GRAINS';
   }
+
+  // Pulses (Devanagari + English + Hinglish)
   if (
-    c.includes('dal') || c.includes('pulse') ||
-    c.includes('gram') || c.includes('chana') ||
-    c.includes('moong') || c.includes('lentil') ||
-    c.includes('urad') || c.includes('arhar') ||
-    c.includes('tur')
+    c.includes('dal') || c.includes('दाल') || c.includes('pulse') ||
+    c.includes('gram') || c.includes('chana') || c.includes('चना') ||
+    c.includes('moong') || c.includes('मूंग') || c.includes('lentil') ||
+    c.includes('urad') || c.includes('उड़द') || c.includes('arhar') || c.includes('अरहर') ||
+    c.includes('tur') || c.includes('तूर') || c.includes('matar') || c.includes('मटर')
   ) {
     return 'PULSES';
   }
+
+  // Fruits (Devanagari + English + Hinglish)
   if (
-    c.includes('apple') || c.includes('seb') ||
-    c.includes('banana') || c.includes('kela') ||
-    c.includes('mango') || c.includes('aam') ||
-    c.includes('orange') || c.includes('grape') ||
-    c.includes('guava') || c.includes('fruit') ||
-    c.includes('papaya')
+    c.includes('apple') || c.includes('seb') || c.includes('सेब') ||
+    c.includes('banana') || c.includes('kela') || c.includes('केला') ||
+    c.includes('mango') || c.includes('aam') || c.includes('आम') ||
+    c.includes('orange') || c.includes('santra') || c.includes('संतरा') ||
+    c.includes('grape') || c.includes('angoor') || c.includes('अंगूर') ||
+    c.includes('guava') || c.includes('amrood') || c.includes('अमरूद') ||
+    c.includes('fruit') || c.includes('फल') ||
+    c.includes('papaya') || c.includes('papita') || c.includes('पपीता')
   ) {
     return 'FRUITS';
   }
+
+  // Spices & Oilseeds (Devanagari + English + Hinglish)
   if (
-    c.includes('mustard') || c.includes('sarso') || c.includes('sarson') ||
-    c.includes('oil') || c.includes('cumin') || c.includes('jeera') ||
-    c.includes('turmeric') || c.includes('haldi') ||
-    c.includes('coriander') || c.includes('dhania') ||
-    c.includes('spice')
+    c.includes('mustard') || c.includes('sarso') || c.includes('sarson') || c.includes('सरसों') || c.includes('राई') ||
+    c.includes('oil') || c.includes('cumin') || c.includes('jeera') || c.includes('जीरा') ||
+    c.includes('turmeric') || c.includes('haldi') || c.includes('हल्दी') ||
+    c.includes('coriander') || c.includes('dhania') || c.includes('धनिया') ||
+    c.includes('spice') || c.includes('मसाला') || c.includes('मसाले') ||
+    c.includes('cardamom') || c.includes('elaichi') || c.includes('इलायची') ||
+    c.includes('clove') || c.includes('laung') || c.includes('लौंग')
   ) {
     return 'SPICES';
   }
+
+  // Dairy (Devanagari + English + Hinglish)
   if (
-    c.includes('milk') || c.includes('doodh') ||
-    c.includes('paneer') || c.includes('ghee') ||
-    c.includes('curd') || c.includes('butter') ||
-    c.includes('dairy')
+    c.includes('milk') || c.includes('doodh') || c.includes('दूध') ||
+    c.includes('paneer') || c.includes('पनीर') ||
+    c.includes('ghee') || c.includes('घी') ||
+    c.includes('curd') || c.includes('dahi') || c.includes('दही') ||
+    c.includes('butter') || c.includes('makkhan') || c.includes('मक्खन') ||
+    c.includes('dairy') || c.includes('डेयरी')
   ) {
     return 'DAIRY';
   }
+
+  // Vegetables (Devanagari + English + Hinglish)
+  if (
+    c.includes('tomato') || c.includes('tamatar') || c.includes('टमाटर') ||
+    c.includes('potato') || c.includes('aloo') || c.includes('आलू') ||
+    c.includes('onion') || c.includes('pyaj') || c.includes('प्याज') ||
+    c.includes('garlic') || c.includes('lahsun') || c.includes('लहसुन') ||
+    c.includes('ginger') || c.includes('adrak') || c.includes('अदरक') ||
+    c.includes('chilli') || c.includes('mirch') || c.includes('मिर्च') ||
+    c.includes('cabbage') || c.includes('patta gobhi') || c.includes('पत्ता गोभी') ||
+    c.includes('carrot') || c.includes('gajar') || c.includes('गाजर') ||
+    c.includes('gobhi') || c.includes('phool gobhi') || c.includes('फूल गोभी') ||
+    c.includes('bhindi') || c.includes('भिंडी') || c.includes('ladyfinger') ||
+    c.includes('brinjal') || c.includes('baingan') || c.includes('बैंगन') ||
+    c.includes('lauki') || c.includes('लौकी') || c.includes('तोरई') || c.includes('पालक') || c.includes('palak')
+  ) {
+    return 'VEGETABLES';
+  }
+
   return 'VEGETABLES';
 };
 
@@ -1652,7 +1687,10 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       
       // Category Filter
       if (selectedCategory && selectedCategory !== 'ALL') {
-        const itemCat = getCropCategory(item.crop);
+        const itemCat = getCropCategory(
+          `${item.crop || ''} ${item.cropHindi || ''}`,
+          (item as any).category
+        );
         if (itemCat !== selectedCategory) {
           return false;
         }

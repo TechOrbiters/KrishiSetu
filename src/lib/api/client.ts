@@ -298,41 +298,70 @@ export async function fetchFarmerListings(farmerId?: string): Promise<ApiResult<
       if (val) {
         const rawList = Array.isArray(val) ? val.filter(Boolean) : Object.keys(val).map(k => ({ id: k, ...val[k] }));
         if (rawList.length > 0) {
-          const formatted: ProduceItem[] = rawList.map((item: any) => ({
-            id: item.id || `prod_${Math.random()}`,
-            farmerId: item.farmerId || item.farmer_id || 'farmer_101',
-            cropNameHindi: item.cropHindi || item.crop_name || item.cropNameHindi || 'उपज',
-            cropNameEnglish: item.crop || item.crop_name_english || item.cropNameEnglish || 'Produce',
-            category: item.category || 'सब्जी',
-            quantityKg: Number(item.quantityKg || item.total_quantity || item.quantity || 100),
-            availableQtyKg: Number(item.availableQtyKg || item.available_quantity || item.quantity || 100),
-            minOrderQtyKg: Number(item.minOrderKg || item.min_order_quantity || 10),
-            unit: item.unit || 'kg',
-            grade: (item.quality || item.grade || 'A') as 'A' | 'B' | 'C',
-            askingPricePerKg: Number(item.pricePerKg || item.price_per_kg || 20),
-            marketPriceRange: item.marketPriceRange || `₹${item.pricePerKg || 20} - ₹${(item.pricePerKg || 20) + 4} / kg`,
-            freshnessWindowHours: Number(item.freshnessWindowHours || 48),
-            harvestDate: item.harvestDate || new Date().toISOString(),
-            locationVillage: item.cultivationLocation ? item.cultivationLocation.split(',')[0] : 'बाराबंकी',
-            locationDistrict: item.cultivationLocation ? item.cultivationLocation.split(',')[1] || 'बाराबंकी' : 'बाराबंकी',
-            locationState: 'उत्तर प्रदेश',
-            availability: 'TODAY',
-            status: item.status || 'ACTIVE',
-            viewsCount: Number(item.viewsCount || 42),
-            ordersCount: Number(item.ordersCount || 3),
-            updatedAt: item.updatedAt || new Date().toISOString(),
-            imageUrl: getAccurateCropImage(
-              item.crop || item.crop_name_english || item.cropNameEnglish || 'Produce',
-              item.image || (item.images && item.images[0]),
-              item.cropHindi || item.crop_name || item.cropNameHindi
-            ),
-          }));
+          const formatted: ProduceItem[] = rawList.map((item: any) => {
+            const loc = item.cultivationLocation || item.location_name || '';
+            const village = item.locationVillage || (loc ? loc.split(',')[0].trim() : 'बैजनाथपुर');
+            const district = item.locationDistrict || (loc ? (loc.split(',')[1]?.trim() || loc.split(',')[0].trim()) : 'बाराबंकी');
+            const totalQty = Number(item.quantityKg ?? item.total_quantity ?? item.quantity ?? 100);
+            const availQty = Number(item.availableQtyKg ?? item.available_quantity ?? item.quantityKg ?? item.quantity ?? totalQty);
+            const minOrd = Number(item.minOrderKg ?? item.min_order_quantity ?? item.minOrderQtyKg ?? 10);
+            const price = Number(item.pricePerKg ?? item.price_per_kg ?? item.askingPricePerKg ?? 20);
+
+            return {
+              id: item.id || `prod_${Math.random()}`,
+              farmerId: item.farmerId || item.farmer_id || 'farmer_101',
+              cropNameHindi: item.cropHindi || item.crop_name || item.cropNameHindi || 'उपज',
+              cropNameEnglish: item.cropNameEnglish || item.crop || item.crop_name_english || 'Produce',
+              category: item.category || 'सब्जी',
+              quantityKg: totalQty,
+              availableQtyKg: availQty,
+              minOrderQtyKg: minOrd,
+              unit: item.unit || 'kg',
+              grade: (item.quality || item.grade || 'A') as 'A' | 'B' | 'C',
+              askingPricePerKg: price,
+              marketPriceRange: item.marketPriceRange || `₹${price} - ₹${price + 4} / kg`,
+              freshnessWindowHours: Number(item.freshnessWindowHours || 48),
+              harvestDate: item.harvestDate || new Date().toISOString(),
+              locationVillage: village,
+              locationDistrict: district,
+              locationState: 'उत्तर प्रदेश',
+              availability: 'TODAY',
+              status: item.status || 'ACTIVE',
+              viewsCount: Number(item.viewsCount || 1),
+              ordersCount: Number(item.ordersCount || 0),
+              updatedAt: item.updatedAt || new Date().toISOString(),
+              imageUrl: getAccurateCropImage(
+                item.crop || item.crop_name_english || item.cropNameEnglish || 'Produce',
+                item.image || (item.images && item.images[0]),
+                item.cropHindi || item.crop_name || item.cropNameHindi
+              ),
+            };
+          });
+
+          if (typeof window !== 'undefined' && formatted.length > 0) {
+            try {
+              localStorage.setItem('krishi_farmer_listings', JSON.stringify(formatted));
+            } catch {}
+          }
           return { success: true, data: formatted, source: 'firebase_rtdb' };
         }
       }
     }
   } catch (rtdbErr) {
     console.warn('RTDB read error:', rtdbErr);
+  }
+
+  // Fallback to locally cached listings if RTDB is empty or temporarily offline
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('krishi_farmer_listings');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return { success: true, data: parsed, source: 'localStorage' };
+        }
+      }
+    } catch {}
   }
 
   return { success: true, data: [], source: 'empty_clean' };
@@ -358,19 +387,31 @@ export async function createFarmerListing(payload: any): Promise<ApiResult<any>>
   // Fallback: Write directly to Firebase RTDB and broadcast
   try {
     const customId = `prod_${Date.now()}`;
+    const totalQty = Number(payload.quantity || payload.quantityKg || payload.total_quantity || 100);
+    const availQty = Number(payload.availableQtyKg || payload.quantity || totalQty);
+    const minOrd = Number(payload.min_order_quantity || payload.minOrderKg || payload.minOrder || 10);
+    const price = Number(payload.price_per_kg || payload.askingPricePerKg || 20);
+
     const listingData = {
       id: customId,
       crop: payload.crop_name || payload.cropNameEnglish || 'Produce',
       cropHindi: payload.crop_name || payload.cropNameHindi || 'उपज',
+      cropNameHindi: payload.cropNameHindi || payload.crop_name || 'उपज',
+      cropNameEnglish: payload.cropNameEnglish || payload.crop_name || 'Produce',
+      category: payload.category || 'Vegetables',
       variety: payload.variety || 'Desi',
-      quantityKg: Number(payload.quantity || payload.total_quantity || 100),
-      availableQtyKg: Number(payload.quantity || payload.total_quantity || 100),
-      minOrderKg: Number(payload.min_order_quantity || 10),
-      pricePerKg: Number(payload.price_per_kg || payload.askingPricePerKg || 20),
-      marketPricePerKg: Number(payload.price_per_kg || 20) + 4,
+      quantityKg: totalQty,
+      availableQtyKg: availQty,
+      minOrderKg: minOrd,
+      minOrderQtyKg: minOrd,
+      pricePerKg: price,
+      askingPricePerKg: price,
+      marketPricePerKg: price + 4,
       quality: payload.grade || 'A',
       harvestDate: payload.harvest_date || new Date().toISOString().split('T')[0],
-      cultivationLocation: payload.location_name || 'बाराबंकी, उत्तर प्रदेश',
+      cultivationLocation: payload.location_name || `${payload.locationVillage || 'बैजनाथपुर'}, ${payload.locationDistrict || 'बाराबंकी'}`,
+      locationVillage: payload.locationVillage || (payload.location_name ? payload.location_name.split(',')[0].trim() : 'बैजनाथपुर'),
+      locationDistrict: payload.locationDistrict || (payload.location_name ? (payload.location_name.split(',')[1]?.trim() || payload.location_name.split(',')[0].trim()) : 'बाराबंकी'),
       freshnessWindowHours: Number(payload.shelf_life_days ? payload.shelf_life_days * 24 : 48),
       perishable: true,
       status: 'ACTIVE',
@@ -379,8 +420,8 @@ export async function createFarmerListing(payload: any): Promise<ApiResult<any>>
         (payload.images && payload.images[0]) || payload.image,
         payload.crop_hindi || payload.cropNameHindi
       ),
-      farmerName: 'रामेश्वर प्रसाद (सत्यापित किसान)',
-      fpoName: 'अवध किसान उत्पादक संघ (FPO)',
+      farmerName: payload.farmerName || 'सत्यापित किसान संघ',
+      fpoName: payload.fpoName || 'Kisan FPO',
       distanceKm: 14,
       rating: 4.9,
       createdAt: new Date().toISOString(),
@@ -389,6 +430,15 @@ export async function createFarmerListing(payload: any): Promise<ApiResult<any>>
 
     if (firebaseRtdb) {
       await set(ref(firebaseRtdb, `produceListings/${customId}`), listingData);
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('krishi_farmer_listings');
+        const list = cached ? JSON.parse(cached) : [];
+        const updated = [listingData, ...list.filter((x: any) => x.id !== customId)];
+        localStorage.setItem('krishi_farmer_listings', JSON.stringify(updated));
+      } catch {}
     }
 
     try {

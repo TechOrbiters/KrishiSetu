@@ -323,6 +323,8 @@ export async function createProduceListing(listing: Omit<ProduceListing, 'id'> &
   const dataToSave = {
     ...listing,
     id: customId,
+    category: listing.category || 'Vegetables',
+    availableQtyKg: listing.availableQtyKg ?? listing.quantityKg,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -333,14 +335,24 @@ export async function createProduceListing(listing: Omit<ProduceListing, 'id'> &
       await set(ref(firebaseRtdb, `produceListings/${customId}`), dataToSave);
     }
 
-    // 2. Supabase persistent backup
+    // 2. Cache in localStorage for immediate sync across views
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('krishi_farmer_listings');
+        const list = cached ? JSON.parse(cached) : [];
+        const updated = [dataToSave, ...list.filter((x: any) => x.id !== customId)];
+        localStorage.setItem('krishi_farmer_listings', JSON.stringify(updated));
+      } catch {}
+    }
+
+    // 3. Supabase persistent backup
     supabaseClient
       .from('produce_listings')
       .insert({
         crop_name: listing.cropHindi || listing.crop,
-        category: 'Vegetables',
+        category: listing.category || 'Vegetables',
         total_quantity: listing.quantityKg,
-        available_quantity: listing.quantityKg,
+        available_quantity: listing.availableQtyKg ?? listing.quantityKg,
         price_per_kg: listing.pricePerKg,
         grade: listing.quality || 'A',
         location_name: listing.cultivationLocation,
@@ -350,7 +362,7 @@ export async function createProduceListing(listing: Omit<ProduceListing, 'id'> &
       })
       .then(() => {}, () => {});
 
-    // 3. Zero-latency cross-tab event
+    // 4. Zero-latency cross-tab event
     logisticsSync.broadcast('LISTING_CREATED', { listing: dataToSave });
 
     return customId;

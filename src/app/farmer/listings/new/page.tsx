@@ -291,16 +291,39 @@ function WizardContent() {
     setSubmitting(true);
 
     try {
+      const numMinOrder = Number(minOrder) || 10;
+      const village = user.village || 'बैजनाथपुर';
+      const district = user.district || 'बाराबंकी';
+      const fullLoc = `${village}, ${district}`;
+
       const payload = {
         crop_name: cropName.trim(),
+        cropNameHindi: cropName.trim(),
+        cropNameEnglish: cropName.trim(),
+        cropHindi: cropName.trim(),
+        crop: cropName.trim(),
         category: cropCategory || 'Vegetables',
         quantity: numQty,
+        quantityKg: numQty,
+        availableQtyKg: numQty,
+        min_order_quantity: numMinOrder,
+        minOrderKg: numMinOrder,
         price_per_kg: numPrice,
+        askingPricePerKg: numPrice,
+        pricePerKg: numPrice,
         grade: quality === 'प्रीमियम' ? 'A' : quality === 'अच्छी' ? 'B' : 'C',
-        location_name: `${user.village || 'बैजनाथपुर'}, ${user.district || 'बाराबंकी'}`,
+        quality: quality === 'प्रीमियम' ? 'A' : quality === 'अच्छी' ? 'B' : 'C',
+        location_name: fullLoc,
+        cultivationLocation: fullLoc,
+        locationVillage: village,
+        locationDistrict: district,
+        locationState: user.state || 'उत्तर प्रदेश',
+        farmerName: user.fullName || 'सत्यापित किसान संघ',
+        fpoName: user.fullName || 'Kisan FPO',
         harvest_date: new Date().toISOString().split('T')[0],
         shelf_life_days: 7,
         images: imageUrl ? [imageUrl] : [],
+        image: imageUrl || getAccurateCropImage(cropName),
       };
 
       const res = await createFarmerListing(payload);
@@ -313,28 +336,39 @@ function WizardContent() {
       const realListingId = res.data.id;
       setCreatedListingId(realListingId);
 
-      // Synchronize local cache with real database ID
-      addListing({
+      const listingObj = {
         id: realListingId,
+        farmerId: user.id || 'farmer_101',
         cropNameHindi: cropName,
         cropNameEnglish: cropName,
-        category: cropCategory,
+        crop: cropName,
+        cropHindi: cropName,
+        category: cropCategory || 'Vegetables',
         quantityKg: numQty,
         availableQtyKg: numQty,
-        minOrderQtyKg: Number(minOrder) || 10,
-        unit: 'kg',
-        grade: quality === 'प्रीमियम' ? 'A' : quality === 'अच्छी' ? 'B' : 'C',
+        minOrderQtyKg: numMinOrder,
+        minOrderKg: numMinOrder,
+        unit: 'kg' as const,
+        grade: (quality === 'प्रीमियम' ? 'A' : quality === 'अच्छी' ? 'B' : 'C') as 'A' | 'B' | 'C',
         askingPricePerKg: numPrice,
+        pricePerKg: numPrice,
         marketPriceRange: `₹${Math.max(1, numPrice - 2)} - ₹${numPrice + 2} / kg`,
         freshnessWindowHours: 24,
         harvestDate: new Date().toISOString(),
-        locationVillage: user.village || 'बैजनाथपुर',
-        locationDistrict: user.district || 'बाराबंकी',
+        locationVillage: village,
+        locationDistrict: district,
+        cultivationLocation: fullLoc,
         locationState: user.state || 'उत्तर प्रदेश',
-        availability: 'TODAY',
-        status: 'ACTIVE',
+        availability: 'TODAY' as const,
+        status: 'ACTIVE' as const,
         imageUrl: imageUrl || getAccurateCropImage(cropName),
-      });
+        image: imageUrl || getAccurateCropImage(cropName),
+        farmerName: user.fullName || 'सत्यापित किसान संघ',
+        fpoName: user.fullName || 'Kisan FPO',
+      };
+
+      // Synchronize local cache with real database ID
+      addListing(listingObj);
 
       // Synchronize in real time with Buyer Portal & Admin Portal
       try {
@@ -344,19 +378,22 @@ function WizardContent() {
           produceName: cropName,
           pricePerKg: numPrice,
           quantityKg: numQty,
+          listing: listingObj,
         });
-        createProduceListing({
+        await createProduceListing({
           id: realListingId,
           crop: cropName,
           cropHindi: cropName,
+          category: cropCategory || 'Vegetables',
           variety: 'Desi',
           quantityKg: numQty,
-          minOrderKg: Number(minOrder) || 10,
+          availableQtyKg: numQty,
+          minOrderKg: numMinOrder,
           pricePerKg: numPrice,
           marketPricePerKg: numPrice + 4,
-          quality: quality === 'प्रीमियम' ? 'A' : quality === 'अच्छी' ? 'B' : 'C',
+          quality: (quality === 'प्रीमियम' ? 'A' : quality === 'अच्छी' ? 'B' : 'C') as 'A' | 'B' | 'C',
           harvestDate: new Date().toISOString().split('T')[0],
-          cultivationLocation: `${user.village || 'बैजनाथपुर'}, ${user.district || 'बाराबंकी'}`,
+          cultivationLocation: fullLoc,
           freshnessWindowHours: 24,
           perishable: true,
           status: 'ACTIVE',
@@ -366,7 +403,7 @@ function WizardContent() {
           fpoName: user.fullName || 'Kisan FPO',
           distanceKm: 12,
           rating: 4.9,
-        }).catch(() => {});
+        });
       } catch (e) {}
 
       if (refreshListings) {

@@ -64,29 +64,31 @@ function BuyerPortalPageInner() {
         if (listRes?.success && Array.isArray(listRes.data) && listRes.data.length > 0) {
           const backendListings: ProduceListing[] = listRes.data.map((item: any) => ({
             id: item.id || `live-${Math.random()}`,
-            crop: item.cropNameEnglish || item.crop_name || 'Produce',
-            cropHindi: item.cropNameHindi || item.crop_hindi || 'ताज़ा उपज',
+            crop: item.crop || item.cropNameEnglish || item.crop_name || 'Produce',
+            cropHindi: item.cropHindi || item.cropNameHindi || item.crop_hindi || item.crop || 'ताज़ा उपज',
+            category: item.category || 'Vegetables',
             variety: item.variety || 'Desi',
-            quantityKg: Number(item.totalQuantityKg || item.quantity_kg || 100),
-            minOrderKg: Number(item.minOrderQtyKg || item.min_order_kg || 20),
-            pricePerKg: Number(item.askingPricePerKg || item.price_per_kg || 25),
-            marketPricePerKg: Number(item.mandiBenchmarkPrice || item.market_price || 30),
-            quality: (item.qualityGrade || 'A') as 'A' | 'B' | 'C',
+            quantityKg: Number(item.quantityKg ?? item.availableQtyKg ?? item.totalQuantityKg ?? item.quantity_kg ?? item.quantity ?? 100),
+            availableQtyKg: Number(item.availableQtyKg ?? item.quantityKg ?? item.quantity ?? 100),
+            minOrderKg: Number(item.minOrderKg ?? item.minOrderQtyKg ?? item.min_order_quantity ?? item.min_order_kg ?? 10),
+            pricePerKg: Number(item.pricePerKg ?? item.askingPricePerKg ?? item.price_per_kg ?? 25),
+            marketPricePerKg: Number(item.marketPricePerKg ?? item.mandiBenchmarkPrice ?? item.market_price ?? (Number(item.pricePerKg || item.askingPricePerKg || 25) + 4)),
+            quality: (item.quality || item.qualityGrade || item.grade || 'A') as 'A' | 'B' | 'C',
             harvestDate: item.harvestDate || new Date().toISOString().split('T')[0],
-            cultivationLocation: item.locationDistrict || 'लखनऊ, उत्तर प्रदेश',
-            freshnessWindowHours: Number(item.freshnessDurationHours || 48),
+            cultivationLocation: item.cultivationLocation || (item.locationVillage ? `${item.locationVillage}, ${item.locationDistrict || 'बाराबंकी'}` : item.locationDistrict) || 'बाराबंकी, उत्तर प्रदेश',
+            freshnessWindowHours: Number(item.freshnessWindowHours ?? item.freshnessDurationHours ?? 48),
             perishable: true,
-            status: 'ACTIVE',
-            viewsCount: 42,
+            status: item.status || 'ACTIVE',
+            viewsCount: Number(item.viewsCount || 1),
             image: getAccurateCropImage(
-              item.cropNameEnglish || item.crop_name || item.crop,
+              item.crop || item.cropNameEnglish || item.crop_name,
               item.imageUrl || item.image || item.photoUrl || (item.images && item.images[0]),
-              item.cropNameHindi || item.crop_hindi || item.cropHindi
+              item.cropHindi || item.cropNameHindi || item.crop_hindi
             ),
             farmerName: item.farmerName || 'सत्यापित किसान संघ',
-            fpoName: item.farmerName || 'Kisan FPO',
-            distanceKm: 14,
-            rating: 4.8,
+            fpoName: item.fpoName || item.farmerName || 'Kisan FPO',
+            distanceKm: Number(item.distanceKm || 14),
+            rating: Number(item.rating || 4.8),
           }));
           setListings(backendListings);
         }
@@ -313,6 +315,34 @@ function BuyerPortalPageInner() {
           );
         }
       } else if (event.type === 'LISTING_CREATED' || event.type === 'ORDER_PLACED') {
+        if (event.type === 'LISTING_CREATED' && event.payload?.listing) {
+          const rawItem = event.payload.listing;
+          const mapped: ProduceListing = {
+            id: rawItem.id || `live-${Date.now()}`,
+            crop: rawItem.crop || rawItem.cropNameEnglish || rawItem.crop_name || 'Produce',
+            cropHindi: rawItem.cropHindi || rawItem.cropNameHindi || rawItem.crop_hindi || rawItem.crop || 'ताज़ा उपज',
+            category: rawItem.category || 'Vegetables',
+            variety: rawItem.variety || 'Desi',
+            quantityKg: Number(rawItem.quantityKg ?? rawItem.availableQtyKg ?? rawItem.totalQuantityKg ?? rawItem.quantity ?? 100),
+            availableQtyKg: Number(rawItem.availableQtyKg ?? rawItem.quantityKg ?? 100),
+            minOrderKg: Number(rawItem.minOrderKg ?? rawItem.minOrderQtyKg ?? rawItem.min_order_quantity ?? 10),
+            pricePerKg: Number(rawItem.pricePerKg ?? rawItem.askingPricePerKg ?? rawItem.price_per_kg ?? 25),
+            marketPricePerKg: Number(rawItem.marketPricePerKg ?? (Number(rawItem.pricePerKg || 25) + 4)),
+            quality: (rawItem.quality || rawItem.grade || 'A') as 'A' | 'B' | 'C',
+            harvestDate: rawItem.harvestDate || new Date().toISOString().split('T')[0],
+            cultivationLocation: rawItem.cultivationLocation || (rawItem.locationVillage ? `${rawItem.locationVillage}, ${rawItem.locationDistrict || 'बाराबंकी'}` : rawItem.locationDistrict) || 'बाराबंकी, उत्तर प्रदेश',
+            freshnessWindowHours: Number(rawItem.freshnessWindowHours || 48),
+            perishable: true,
+            status: rawItem.status || 'ACTIVE',
+            viewsCount: 1,
+            image: rawItem.image || rawItem.imageUrl || getAccurateCropImage(rawItem.crop || rawItem.cropNameHindi || 'Produce'),
+            farmerName: rawItem.farmerName || 'सत्यापित किसान संघ',
+            fpoName: rawItem.fpoName || 'Kisan FPO',
+            distanceKm: 14,
+            rating: 4.8,
+          };
+          setListings((prev) => [mapped, ...prev.filter((x) => x.id !== mapped.id)]);
+        }
         loadData();
       }
     });
@@ -344,7 +374,35 @@ function BuyerPortalPageInner() {
 
       unsubFirestoreListings = subscribeProduceListings((fsListings) => {
         if (isMounted && Array.isArray(fsListings)) {
-          setListings(fsListings);
+          const normalized: ProduceListing[] = fsListings.map((item: any) => ({
+            id: item.id || `live-${Math.random()}`,
+            crop: item.crop || item.cropNameEnglish || item.crop_name || 'Produce',
+            cropHindi: item.cropHindi || item.cropNameHindi || item.crop_hindi || item.crop || 'ताज़ा उपज',
+            category: item.category || 'Vegetables',
+            variety: item.variety || 'Desi',
+            quantityKg: Number(item.quantityKg ?? item.availableQtyKg ?? item.totalQuantityKg ?? item.quantity_kg ?? item.quantity ?? 100),
+            availableQtyKg: Number(item.availableQtyKg ?? item.quantityKg ?? item.quantity ?? 100),
+            minOrderKg: Number(item.minOrderKg ?? item.minOrderQtyKg ?? item.min_order_quantity ?? item.min_order_kg ?? 10),
+            pricePerKg: Number(item.pricePerKg ?? item.askingPricePerKg ?? item.price_per_kg ?? 25),
+            marketPricePerKg: Number(item.marketPricePerKg ?? item.mandiBenchmarkPrice ?? item.market_price ?? (Number(item.pricePerKg || item.askingPricePerKg || 25) + 4)),
+            quality: (item.quality || item.qualityGrade || item.grade || 'A') as 'A' | 'B' | 'C',
+            harvestDate: item.harvestDate || new Date().toISOString().split('T')[0],
+            cultivationLocation: item.cultivationLocation || (item.locationVillage ? `${item.locationVillage}, ${item.locationDistrict || 'बाराबंकी'}` : item.locationDistrict) || 'बाराबंकी, उत्तर प्रदेश',
+            freshnessWindowHours: Number(item.freshnessWindowHours ?? item.freshnessDurationHours ?? 48),
+            perishable: true,
+            status: item.status || 'ACTIVE',
+            viewsCount: Number(item.viewsCount || 1),
+            image: getAccurateCropImage(
+              item.crop || item.cropNameEnglish || item.crop_name,
+              item.imageUrl || item.image || item.photoUrl || (item.images && item.images[0]),
+              item.cropHindi || item.cropNameHindi || item.crop_hindi
+            ),
+            farmerName: item.farmerName || 'सत्यापित किसान संघ',
+            fpoName: item.fpoName || item.farmerName || 'Kisan FPO',
+            distanceKm: Number(item.distanceKm || 14),
+            rating: Number(item.rating || 4.8),
+          }));
+          setListings(normalized);
         }
       });
 

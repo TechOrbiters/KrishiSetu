@@ -152,54 +152,64 @@ export default function FarmerDashboard() {
               </div>
 
               {/* Crop Listing Items List */}
-              <div className="divide-y divide-slate-100">
-                {listings.slice(0, 3).map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/farmer/listings`}
-                    className="py-3 flex items-center justify-between hover:bg-slate-50/80 px-1 rounded-xl transition-all"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <img
-                        src={item.imageUrl || '/assets/kisan-setu/wheat.png'}
-                        alt={item.cropNameHindi}
-                        className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
-                      />
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-sm text-slate-900">
-                            {item.cropNameHindi} <span className="text-slate-500 font-semibold text-xs">({item.cropNameEnglish})</span>
-                          </h4>
+              {listings.length === 0 ? (
+                <div className="py-6 text-center text-slate-500 text-xs">
+                  <p className="font-bold text-slate-700">अभी कोई उपज लिस्ट नहीं है (No listings yet)</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">अपनी पहली उपज लिस्ट करने के लिए नीचे दिए गए बटन पर क्लिक करें</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {listings.slice(0, 3).map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/farmer/listings`}
+                      className="py-3 flex items-center justify-between hover:bg-slate-50/80 px-1 rounded-xl transition-all"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <img
+                          src={item.imageUrl || '/assets/kisan-setu/wheat.png'}
+                          alt={item.cropNameHindi}
+                          className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
+                        />
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-sm text-slate-900">
+                              {item.cropNameHindi}
+                              {item.cropNameEnglish && item.cropNameEnglish.toLowerCase() !== item.cropNameHindi.toLowerCase() && (
+                                <span className="text-slate-500 font-semibold text-xs ml-1">({item.cropNameEnglish})</span>
+                              )}
+                            </h4>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium">
+                            {item.availableQtyKg ?? item.quantityKg} kg <span className="mx-1 text-slate-300">•</span> ₹{item.askingPricePerKg} / kg
+                          </p>
                         </div>
-                        <p className="text-xs text-slate-600 font-medium">
-                          {item.availableQtyKg} kg <span className="mx-1 text-slate-300">•</span> ₹{item.askingPricePerKg} / kg
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <span
-                        className={`text-xs px-2.5 py-1 rounded-full border font-bold ${
-                          item.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                            : item.status === 'LOW_STOCK'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200/80'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}
-                      >
-                        {item.status === 'ACTIVE' ? 'सक्रिय' : item.status === 'LOW_STOCK' ? 'कम स्टॉक' : 'निष्क्रिय'}
-                      </span>
-
-                      <div className="text-right hidden sm:block">
-                        <span className="font-bold text-xs text-slate-900 block">{item.ordersCount || 0} ऑर्डर</span>
-                        <span className="text-[10px] text-slate-400 font-medium">ग्रेड {item.grade}</span>
                       </div>
 
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                      <div className="flex items-center gap-4">
+                        <span
+                          className={`text-xs px-2.5 py-1 rounded-full border font-bold ${
+                            item.status === 'ACTIVE'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                              : item.status === 'LOW_STOCK'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {item.status === 'ACTIVE' ? 'सक्रिय' : item.status === 'LOW_STOCK' ? 'कम स्टॉक' : 'निष्क्रिय'}
+                        </span>
+
+                        <div className="text-right hidden sm:block">
+                          <span className="font-bold text-xs text-slate-900 block">{item.ordersCount || 0} ऑर्डर</span>
+                          <span className="text-[10px] text-slate-400 font-medium">ग्रेड {item.grade}</span>
+                        </div>
+
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
 
               {/* Dashed Add Button */}
               <Link

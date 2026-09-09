@@ -279,7 +279,10 @@ export default function MyListingsPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-extrabold text-base text-slate-900">
-                          {item.cropNameHindi} ({item.cropNameEnglish})
+                          {item.cropNameHindi}
+                          {item.cropNameEnglish && item.cropNameEnglish.toLowerCase() !== item.cropNameHindi.toLowerCase() && (
+                            <span className="text-slate-600 font-semibold text-sm ml-1.5">({item.cropNameEnglish})</span>
+                          )}
                         </h3>
                         <ListingStatusBadge status={item.status} />
                         <span className="text-[11px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-bold">

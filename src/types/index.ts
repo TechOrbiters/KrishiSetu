@@ -10,6 +10,7 @@ export interface ProduceListing {
   cropHindi: string;
   variety?: string;
   quantityKg: number;
+  availableQtyKg?: number;
   minOrderKg: number;
   pricePerKg: number;
   marketPricePerKg?: number;
@@ -25,6 +26,7 @@ export interface ProduceListing {
   fpoName?: string;
   distanceKm?: number;
   rating?: number;
+  category?: string;
   createdVia?: 'MANUAL' | 'VOICE' | 'PHOTO';
 }
 

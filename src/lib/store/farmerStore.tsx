@@ -24,6 +24,7 @@ import {
   FPOMemberItem,
 } from '../seedData';
 import { getAccurateCropImage } from '../cropImages';
+import { logisticsSync } from '../realtime/logisticsSync';
 
 interface FarmerStoreContextType {
   user: UserProfile;
@@ -77,7 +78,18 @@ const FarmerStoreContext = createContext<FarmerStoreContextType | undefined>(und
 
 export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile>(EMPTY_USER);
-  const [listings, setListings] = useState<ProduceItem[]>([]);
+  const [listings, setListings] = useState<ProduceItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('krishi_farmer_listings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [marketPrices] = useState<MarketPriceItem[]>([]);
   const [fpoMembers, setFpoMembers] = useState<FPOMemberItem[]>([]);
@@ -106,6 +118,11 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await fetchFarmerListings();
       if (res.success && Array.isArray(res.data)) {
         setListings(res.data);
+        if (typeof window !== 'undefined' && res.data.length > 0) {
+          try {
+            localStorage.setItem('krishi_farmer_listings', JSON.stringify(res.data));
+          } catch {}
+        }
       }
     } catch (err) {
       console.warn('refreshListings error:', err);
@@ -121,6 +138,11 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
       ]);
       if (listingsRes.success && Array.isArray(listingsRes.data)) {
         setListings(listingsRes.data);
+        if (typeof window !== 'undefined' && listingsRes.data.length > 0) {
+          try {
+            localStorage.setItem('krishi_farmer_listings', JSON.stringify(listingsRes.data));
+          } catch {}
+        }
       }
       if (ordersRes.success && Array.isArray(ordersRes.data)) {
         setOrders(ordersRes.data);
@@ -171,6 +193,24 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
       });
 
+      const unsubLogistics = logisticsSync.subscribe((event) => {
+        if (['LISTING_CREATED'].includes(event.type)) {
+          if (event.payload?.listing) {
+            const item = event.payload.listing;
+            setListings((prev) => {
+              const updated = [item, ...prev.filter((x) => x.id !== item.id)];
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('krishi_farmer_listings', JSON.stringify(updated));
+                } catch {}
+              }
+              return updated;
+            });
+          }
+          refreshListings();
+        }
+      });
+
       if (firebaseAuth && typeof onAuthStateChanged === 'function') {
         const unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser) => {
           if (fbUser) {
@@ -179,11 +219,13 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
         });
         return () => {
           unsubscribe();
+          unsubLogistics();
           authListener?.subscription?.unsubscribe();
         };
       }
 
       return () => {
+        unsubLogistics();
         authListener?.subscription?.unsubscribe();
       };
     }
@@ -206,7 +248,15 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
       ordersCount: newListingData.ordersCount || 0,
       updatedAt: newListingData.updatedAt || new Date().toISOString(),
     };
-    setListings((prev) => [newListing, ...prev.filter((item) => item.id !== id)]);
+    setListings((prev) => {
+      const next = [newListing, ...prev.filter((item) => item.id !== id)];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('krishi_farmer_listings', JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
     return id;
   };
 

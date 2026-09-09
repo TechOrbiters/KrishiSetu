@@ -10,8 +10,30 @@ import { ProduceItem } from '../seedData';
 import { logisticsSync } from '../realtime/logisticsSync';
 
 export function useFarmerListings(farmerId?: string) {
-  const [listings, setListings] = useState<ProduceItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [listings, setListings] = useState<ProduceItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('krishi_farmer_listings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('krishi_farmer_listings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return false;
+        }
+      } catch {}
+    }
+    return true;
+  });
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
@@ -20,6 +42,11 @@ export function useFarmerListings(farmerId?: string) {
     const res = await fetchFarmerListings(farmerId);
     if (res.success && res.data) {
       setListings(res.data);
+      if (typeof window !== 'undefined' && res.data.length > 0) {
+        try {
+          localStorage.setItem('krishi_farmer_listings', JSON.stringify(res.data));
+        } catch {}
+      }
     } else {
       setError(res.error || 'उपज सूचियाँ लोड नहीं हो सकीं');
     }
@@ -79,6 +106,18 @@ export function useFarmerListings(farmerId?: string) {
 
     const unsubscribe = logisticsSync.subscribe((event) => {
       if (['LISTING_CREATED'].includes(event.type)) {
+        if (event.payload?.listing) {
+          const item = event.payload.listing;
+          setListings((prev) => {
+            const updated = [item, ...prev.filter((x) => x.id !== item.id)];
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('krishi_farmer_listings', JSON.stringify(updated));
+              } catch {}
+            }
+            return updated;
+          });
+        }
         refetch();
       }
     });
