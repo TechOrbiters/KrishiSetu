@@ -28,6 +28,7 @@ import {
   resetPasswordSupabase,
   SupabaseUserProfile,
 } from '@/lib/supabase/authClient';
+import { LanguageSelector } from '@/components/common/LanguageSelector';
 
 export default function BuyerAuthPage() {
   const router = useRouter();
@@ -170,10 +171,13 @@ export default function BuyerAuthPage() {
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>मुख्य पृष्ठ / Home</span>
         </Link>
-        <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200/60 px-2.5 py-1 rounded-full flex items-center gap-1">
-          <ShoppingBag className="w-3.5 h-3.5" />
-          <span>किसान बाजार • Supabase Auth</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <LanguageSelector variant="light" showLabel={false} />
+          <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200/60 px-2.5 py-1 rounded-full hidden sm:flex items-center gap-1">
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>किसान बाजार</span>
+          </span>
+        </div>
       </div>
 
       {/* Main Container Card */}

@@ -22,44 +22,72 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const STORAGE_KEYS = ['krishisetu_language', 'kisansetu_app_language'];
 
 /**
- * Universal client-side DOM Translation Engine
- * Translates UI text nodes across all portals in real-time.
+ * Maps preserving the original base text of DOM text nodes & input placeholders.
+ * Using WeakMap ensures zero memory leaks when React unmounts or replaces elements.
  */
-function applyDOMTranslation(targetLang: Language) {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  // Hindi is the base application language. Never mutate DOM text when target is 'hi'
-  if (targetLang === 'hi') return;
+const baseTextMap = new WeakMap<Node, string>();
+const basePlaceholderMap = new WeakMap<Element, string>();
 
-  // Build lookup mapping: any source phrase in any language -> target language text
-  const phraseMap = new Map<string, string>();
+interface ReplacementRule {
+  src: string;
+  target: string;
+}
+
+// Cached rule lookup arrays per target language for blazing fast DOM passes
+const rulesCache = new Map<Language, ReplacementRule[]>();
+
+function getRulesForLanguage(targetLang: Language): ReplacementRule[] {
+  if (rulesCache.has(targetLang)) {
+    return rulesCache.get(targetLang)!;
+  }
+
+  const rules: ReplacementRule[] = [];
   for (const entry of DOM_TRANSLATIONS) {
-    const targetText = (entry as any)[targetLang] || entry.hi || entry.en;
-    if (!targetText) continue;
+    const target = (entry as any)[targetLang] || entry.hi || entry.en;
+    if (!target) continue;
 
+    // Collect all possible source variants that should map to target
     const sources = [entry.hi, entry.en, entry.mr, entry.te, entry.ta, entry.bn].filter(Boolean) as string[];
     for (const src of sources) {
-      if (src && src !== targetText) {
-        phraseMap.set(src.trim(), targetText.trim());
+      const trimmedSrc = src.trim();
+      const trimmedTarget = target.trim();
+      if (trimmedSrc && trimmedSrc !== trimmedTarget) {
+        rules.push({ src: trimmedSrc, target: trimmedTarget });
       }
     }
   }
 
-  // Helper to translate single string
+  // Sort by source phrase length DESCENDING so compound phrases match before single words
+  rules.sort((a, b) => b.src.length - a.src.length);
+
+  rulesCache.set(targetLang, rules);
+  return rules;
+}
+
+/**
+ * Universal client-side DOM Translation Engine
+ * Translates UI text nodes across all portals in real-time,
+ * and cleanly restores original base text when switching back to Hindi ('hi').
+ */
+function applyDOMTranslation(targetLang: Language) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  const isHindi = targetLang === 'hi';
+  const rules = isHindi ? [] : getRulesForLanguage(targetLang);
+
+  // Helper to translate single string from its base form
   const translateString = (str: string): string => {
     const trimmed = str.trim();
     if (!trimmed) return str;
-    // Exact match check first
-    if (phraseMap.has(trimmed)) {
-      const match = phraseMap.get(trimmed)!;
-      return str.replace(trimmed, match);
-    }
-    // Partial matches for phrases with arrows or icons (e.g. "प्रवेश करें →", "शेतमाल नोंदवा ⊕")
-    phraseMap.forEach((target, src) => {
-      if (str.includes(src)) {
-        str = str.split(src).join(target);
+
+    let result = str;
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+      if (result.includes(rule.src)) {
+        result = result.split(rule.src).join(rule.target);
       }
-    });
-    return str;
+    }
+    return result;
   };
 
   try {
@@ -78,9 +106,15 @@ function applyDOMTranslation(targetLang: Language) {
             tag === 'code' ||
             tag === 'pre' ||
             parent.closest('[data-no-translate]') ||
-            parent.closest('.language-dropdown-menu')
+            parent.closest('.language-dropdown-menu') ||
+            parent.closest('.language-selector') ||
+            parent.closest('.notranslate')
           ) {
             return NodeFilter.FILTER_REJECT;
+          }
+          const val = node.nodeValue;
+          if (!val || val.trim().length === 0) {
+            return NodeFilter.FILTER_SKIP;
           }
           return NodeFilter.FILTER_ACCEPT;
         },
@@ -89,29 +123,61 @@ function applyDOMTranslation(targetLang: Language) {
 
     let currentNode: Node | null = walker.nextNode();
     while (currentNode) {
-      const val = currentNode.nodeValue;
-      if (val && val.trim().length > 0) {
-        const translated = translateString(val);
-        if (translated !== val) {
-          currentNode.nodeValue = translated;
+      try {
+        if (isHindi) {
+          // Switching back to Hindi: restore original base text
+          if (baseTextMap.has(currentNode)) {
+            const original = baseTextMap.get(currentNode)!;
+            if (currentNode.nodeValue !== original) {
+              currentNode.nodeValue = original;
+            }
+          }
+        } else {
+          // Target language is non-Hindi: save original base text if not already saved
+          if (!baseTextMap.has(currentNode)) {
+            baseTextMap.set(currentNode, currentNode.nodeValue || '');
+          }
+          const original = baseTextMap.get(currentNode) || currentNode.nodeValue || '';
+          if (original.trim().length > 0) {
+            const translated = translateString(original);
+            if (translated !== currentNode.nodeValue) {
+              currentNode.nodeValue = translated;
+            }
+          }
         }
+      } catch (_) {
+        // Guard against any detached DOM node errors
       }
       currentNode = walker.nextNode();
     }
 
-    // Also translate input/textarea placeholders
+    // Also translate input and textarea placeholders
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input[placeholder], textarea[placeholder]');
     inputs.forEach((el) => {
-      const ph = el.getAttribute('placeholder');
-      if (ph) {
-        const translated = translateString(ph);
-        if (translated !== ph) {
-          el.setAttribute('placeholder', translated);
+      try {
+        if (isHindi) {
+          const original = basePlaceholderMap.get(el) || el.dataset.origPlaceholder;
+          if (original && el.getAttribute('placeholder') !== original) {
+            el.setAttribute('placeholder', original);
+          }
+        } else {
+          if (!basePlaceholderMap.has(el)) {
+            const currentPh = el.getAttribute('placeholder') || '';
+            basePlaceholderMap.set(el, currentPh);
+            el.dataset.origPlaceholder = currentPh;
+          }
+          const original = basePlaceholderMap.get(el) || el.dataset.origPlaceholder || '';
+          if (original) {
+            const translated = translateString(original);
+            if (el.getAttribute('placeholder') !== translated) {
+              el.setAttribute('placeholder', translated);
+            }
+          }
         }
-      }
+      } catch (_) {}
     });
   } catch (err) {
-    // Non-fatal DOM traversal error
+    // Non-fatal DOM traversal guard
   }
 }
 
@@ -147,9 +213,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         console.warn('Could not persist language to localStorage:', e);
       }
     }
-    if (newLang !== 'hi') {
-      requestAnimationFrame(() => applyDOMTranslation(newLang));
-    }
+    // Safely trigger translation on next frame for instant responsiveness
+    requestAnimationFrame(() => applyDOMTranslation(newLang));
   }, []);
 
   // Sync with localStorage & other tabs/instances
@@ -159,9 +224,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         const lang = e.newValue as Language;
         if (['hi', 'en', 'mr', 'te', 'ta', 'bn'].includes(lang)) {
           setLanguageState(lang);
-          if (lang !== 'hi') {
-            requestAnimationFrame(() => applyDOMTranslation(lang));
-          }
+          requestAnimationFrame(() => applyDOMTranslation(lang));
         }
       }
     };
@@ -170,6 +233,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       const customEvent = e as CustomEvent<Language>;
       if (customEvent.detail && customEvent.detail !== language) {
         setLanguageState(customEvent.detail);
+        requestAnimationFrame(() => applyDOMTranslation(customEvent.detail));
       }
     };
 
@@ -187,31 +251,30 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     try {
       document.documentElement.lang = language;
     } catch (_) {}
-    
-    if (language === 'hi') return;
 
     applyDOMTranslation(language);
 
-    // Watch for dynamic DOM changes (tab switching, modals, new data)
-    let timer: NodeJS.Timeout;
+    // Watch for dynamic DOM changes (e.g. modals opening, tab switches, dynamic orders)
+    // NOTE: characterData MUST BE FALSE to prevent infinite loops when mutating text nodes!
+    let timer: any = null;
     const observer = new MutationObserver(() => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         applyDOMTranslation(language);
-      }, 150);
+      }, 200);
     });
 
     if (typeof document !== 'undefined' && document.body) {
       observer.observe(document.body, {
         childList: true,
         subtree: true,
-        characterData: true,
+        characterData: false,
       });
     }
 
     return () => {
+      if (timer) clearTimeout(timer);
       observer.disconnect();
-      clearTimeout(timer);
     };
   }, [language]);
 

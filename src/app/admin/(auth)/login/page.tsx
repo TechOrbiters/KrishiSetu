@@ -19,6 +19,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { signInWithSupabase } from '@/lib/supabase/authClient';
+import { LanguageSelector } from '@/components/common/LanguageSelector';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -174,6 +175,15 @@ export default function AdminLoginPage() {
       {/* Right Panel: Login Form */}
       <div className="col-span-1 lg:col-span-7 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 relative">
         <div className="w-full max-w-md space-y-7">
+          {/* Top Controls Bar */}
+          <div className="flex items-center justify-between">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors">
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>मुख्य पृष्ठ / Home</span>
+            </Link>
+            <LanguageSelector variant="dark" showLabel={false} />
+          </div>
+
           {/* Header */}
           <div>
             <div className="lg:hidden flex items-center justify-between mb-8">

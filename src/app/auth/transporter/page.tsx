@@ -28,6 +28,7 @@ import {
   resetPasswordSupabase,
   SupabaseUserProfile,
 } from '@/lib/supabase/authClient';
+import { LanguageSelector } from '@/components/common/LanguageSelector';
 
 export default function TransporterAuthPage() {
   const router = useRouter();
@@ -171,10 +172,13 @@ export default function TransporterAuthPage() {
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>मुख्य पृष्ठ / Home</span>
         </Link>
-        <span className="text-xs font-bold text-amber-900 bg-amber-100 border border-amber-300/60 px-2.5 py-1 rounded-full flex items-center gap-1">
-          <Truck className="w-3.5 h-3.5 text-amber-700" />
-          <span>कृषि परिवहन • Supabase Auth</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <LanguageSelector variant="light" showLabel={false} />
+          <span className="text-xs font-bold text-amber-900 bg-amber-100 border border-amber-300/60 px-2.5 py-1 rounded-full hidden sm:flex items-center gap-1">
+            <Truck className="w-3.5 h-3.5 text-amber-700" />
+            <span>कृषि परिवहन</span>
+          </span>
+        </div>
       </div>
 
       {/* Main Container Card */}
