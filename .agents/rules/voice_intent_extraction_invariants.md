@@ -19,5 +19,17 @@
    - Support both prefix (*"कम से कम 20 किलो"*) and suffix (*"20 किलो न्यूनतम"*) patterns.
 
 5. **Compound Phrase i18n Invariants**:
-   - Technical form labels and field titles that contain common words like *"ऑर्डर"* must be translated as complete compound phrases (e.g., `"न्यूनतम ऑर्डर मात्रा*"` $\to$ `"Minimum Order Quantity*"`, `"किमान ऑर्डर प्रमाण*"`) in translation dictionaries.
+   - Technical form labels and field titles that contain common words like *"ऑर्डर"* must be translated as complete compound phrases (e.g., `"न्यूनतम ऑर्डर मात्रा*"` → `"Minimum Order Quantity*"`, `"किमान ऑर्डर प्रमाण*"`) in translation dictionaries.
    - Substring-only translations must never prematurely mutate part of a Hindi compound phrase into English (e.g., preventing hybrid corruptions like *"न्यूनतम Orders मात्रा* "*).
+
+6. **Single-Field Mic Routing Isolation (CRITICAL)**:
+   - When a user clicks a **specific field microphone** (`cropName`, `quantity`, `price`, `minOrder`), the voice `onSuccess` handler must **always** route to the single-field logic branch — **never** the multi-entity / global path.
+   - The `hasMultipleEntities` check must be gated by `!isSpecificField`:
+     ```ts
+     const isSpecificField = result.field && result.field !== 'global';
+     const hasMultipleEntities = !isSpecificField && (...);
+     ```
+   - **Root cause of bug (2026-09-09):** `parseMandiIntent("24 रुपये")` returns both `quantity=24` AND `pricePerKg=24` because "24" matches the fallback quantity assignment as well as the price regex. Without the `isSpecificField` gate, `hasMultipleEntities` was `true`, causing the global multi-entity path to run — which set **both** quantity and price to 24, contaminating the quantity field when the user only intended to fill the price field.
+   - **Rule:** Multi-entity branch (populating all detected fields at once) is ONLY for `result.field === 'global'` or `result.field === undefined`.
+   - **Price field fallback chain:** `intent.pricePerKg || parseSpokenNumber(transcript) || intent.quantity` — ensures any spoken number reaches the price field even when no price keyword (रुपये, भाव, etc.) is detected.
+   - **Quantity field fallback chain:** `parseSpokenNumber(transcript) || intent.quantity` — prioritizes word-based parsing over intent for plain Hindi number words.
