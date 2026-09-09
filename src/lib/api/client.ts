@@ -332,7 +332,7 @@ export async function fetchFarmerListings(farmerId?: string): Promise<ApiResult<
               updatedAt: item.updatedAt || new Date().toISOString(),
               imageUrl: getAccurateCropImage(
                 item.crop || item.crop_name_english || item.cropNameEnglish || 'Produce',
-                item.image || (item.images && item.images[0]),
+                item.imageUrl || item.image || (item.images && item.images[0]),
                 item.cropHindi || item.crop_name || item.cropNameHindi
               ),
             };
@@ -392,6 +392,12 @@ export async function createFarmerListing(payload: any): Promise<ApiResult<any>>
     const minOrd = Number(payload.min_order_quantity || payload.minOrderKg || payload.minOrder || 10);
     const price = Number(payload.price_per_kg || payload.askingPricePerKg || 20);
 
+    const resolvedImage = getAccurateCropImage(
+      payload.crop_name || payload.cropNameEnglish || payload.crop,
+      (payload.images && payload.images[0]) || payload.image || payload.imageUrl,
+      payload.crop_hindi || payload.cropNameHindi
+    );
+
     const listingData = {
       id: customId,
       crop: payload.crop_name || payload.cropNameEnglish || 'Produce',
@@ -407,19 +413,19 @@ export async function createFarmerListing(payload: any): Promise<ApiResult<any>>
       pricePerKg: price,
       askingPricePerKg: price,
       marketPricePerKg: price + 4,
-      quality: payload.grade || 'A',
-      harvestDate: payload.harvest_date || new Date().toISOString().split('T')[0],
-      cultivationLocation: payload.location_name || `${payload.locationVillage || 'बैजनाथपुर'}, ${payload.locationDistrict || 'बाराबंकी'}`,
+      quality: payload.grade || payload.quality || 'A',
+      grade: payload.grade || payload.quality || 'A',
+      harvestDate: payload.harvest_date || payload.harvestDate || new Date().toISOString().split('T')[0],
+      cultivationLocation: payload.location_name || payload.cultivationLocation || `${payload.locationVillage || 'बैजनाथपुर'}, ${payload.locationDistrict || 'बाराबंकी'}`,
       locationVillage: payload.locationVillage || (payload.location_name ? payload.location_name.split(',')[0].trim() : 'बैजनाथपुर'),
       locationDistrict: payload.locationDistrict || (payload.location_name ? (payload.location_name.split(',')[1]?.trim() || payload.location_name.split(',')[0].trim()) : 'बाराबंकी'),
+      locationState: payload.locationState || 'उत्तर प्रदेश',
       freshnessWindowHours: Number(payload.shelf_life_days ? payload.shelf_life_days * 24 : 48),
       perishable: true,
       status: 'ACTIVE',
-      image: getAccurateCropImage(
-        payload.crop_name || payload.cropNameEnglish || payload.crop,
-        (payload.images && payload.images[0]) || payload.image,
-        payload.crop_hindi || payload.cropNameHindi
-      ),
+      // Both `image` and `imageUrl` so any component can find it regardless of field name used
+      image: resolvedImage,
+      imageUrl: resolvedImage,
       farmerName: payload.farmerName || 'सत्यापित किसान संघ',
       fpoName: payload.fpoName || 'Kisan FPO',
       distanceKm: 14,
@@ -427,6 +433,7 @@ export async function createFarmerListing(payload: any): Promise<ApiResult<any>>
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
 
     if (firebaseRtdb) {
       await set(ref(firebaseRtdb, `produceListings/${customId}`), listingData);

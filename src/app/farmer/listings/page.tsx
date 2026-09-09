@@ -23,6 +23,7 @@ import { useFarmerListings } from '@/lib/hooks/useFarmerListings';
 import { ListingStatusBadge } from '@/components/ui/ListingStatusBadge';
 import { FreshnessTimer } from '@/components/ui/FreshnessTimer';
 import { ProduceItem } from '@/lib/seedData';
+import { getAccurateCropImage } from '@/lib/cropImages';
 
 export default function MyListingsPage() {
   const { listings, deleteListing, pauseListing, updateListing, loading, error, refetch } = useFarmerListings();
@@ -272,9 +273,10 @@ export default function MyListingsPage() {
                 >
                   <div className="flex items-start gap-3">
                     <img
-                      src={item.imageUrl}
+                      src={(item as any).imageUrl || (item as any).image || getAccurateCropImage(item.cropNameHindi, undefined, item.cropNameHindi)}
                       alt={item.cropNameHindi}
                       className="w-16 h-16 rounded-xl object-cover border border-slate-200 flex-shrink-0 shadow-2xs"
+                      onError={(e) => { (e.target as HTMLImageElement).src = getAccurateCropImage(item.cropNameHindi, undefined, item.cropNameHindi); }}
                     />
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">

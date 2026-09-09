@@ -295,22 +295,10 @@ export function parseMandiIntent(text: string): ExtractedIntent {
     pricePerKg = Math.round(pricePerKg / 100);
   }
 
-  // Fallback for multi-field speech: If 2 numbers exist in speech and one was matched as quantity, the other is likely the price
-  const allNumbers = Array.from(lower.matchAll(/\b(\d+)\b/g)).map((m) => parseInt(m[1], 10));
-  if (!quantity && allNumbers.length >= 1) {
-    quantity = allNumbers[0];
-  }
-  if (!pricePerKg && allNumbers.length >= 2) {
-    const candidatePrice = allNumbers.find((n) => n !== quantity && n > 0 && n <= 5000);
-    if (candidatePrice) {
-      pricePerKg = candidatePrice;
-    }
-  }
-
-  // 4. Minimum Order Extraction
+  // 4. Minimum Order Extraction — MUST run BEFORE the number fallback below
   // Robust pattern matching: supports conversational variations with filler words like "ऑर्डर", "आर्डर", "मात्रा", "का", "खरीद"
-  // Prefix patterns: "न्यूनतम ऑर्डर 20 किलो", "कम से कम आर्डर 25", "minimum order 50", "कम से कम बीस", "न्यूनतम बीस किलो"
-  const minOrderPrefixRegex = /(?:कम से कम|न्यूनतम|kam se kam|minimum|min)\s*(?:का|की|के)?\s*(?:ऑर्डर|आर्डर|मात्रा|खरीद|order|quantity|limit)?\s*(?:का|की|के)?\s*([0-9]+|[a-zA-Z\u0900-\u097F]+(?:\s+[a-zA-Z\u0900-\u097F]+)?)/i;
+  // Prefix patterns: "न्यूनतम ऑर्डर मात्रा 20 किलो", "न्यूनतम ऑर्डर 20 किलो", "कम से कम आर्डर 25", "minimum order 50", "कम से कम बीस", "न्यूनतम बीस किलो"
+  const minOrderPrefixRegex = /(?:कम से कम|न्यूनतम|kam se kam|minimum|min)\s*(?:का|की|के)?\s*(?:ऑर्डर|आर्डर|order)?\s*(?:की|का|के)?\s*(?:मात्रा|quantity|limit)?\s*(?:है|हैं|h|hai)?\s*([0-9]+|[a-zA-Z\u0900-\u097F]+(?:\s+[a-zA-Z\u0900-\u097F]+)?)/i;
   const minOrderPrefixMatch = lower.match(minOrderPrefixRegex);
 
   // Suffix patterns: "20 किलो न्यूनतम", "बीस किलो कम से कम", "50 kg minimum order"
@@ -329,6 +317,31 @@ export function parseMandiIntent(text: string): ExtractedIntent {
     }
   }
   // ZERO HALLUCINATED FALLBACK: If minOrder was not explicitly spoken, leave it undefined.
+
+  // Fallback for multi-field speech: assign remaining numbers to quantity/price
+  // CRITICAL: exclude numbers already consumed by minOrder to prevent cross-field contamination
+  const allNumbers = Array.from(lower.matchAll(/\b(\d+)\b/g)).map((m) => parseInt(m[1], 10));
+  // Numbers still available (not consumed by minOrder)
+  const unusedNumbers = allNumbers.filter((n) => n !== minOrder);
+  if (!quantity && unusedNumbers.length >= 1) {
+    // Only assign if there is no minOrder context keyword in the full sentence
+    const hasMinOrderContext = /(?:न्यूनतम|कम से कम|minimum|min\b)/.test(lower);
+    if (!hasMinOrderContext) {
+      quantity = unusedNumbers[0];
+    }
+  }
+  if (!pricePerKg && unusedNumbers.length >= 2) {
+    const candidatePrice = unusedNumbers.find((n) => n !== quantity && n > 0 && n <= 5000);
+    if (candidatePrice) {
+      pricePerKg = candidatePrice;
+    }
+  } else if (!pricePerKg && unusedNumbers.length === 1 && quantity !== undefined && unusedNumbers[0] !== quantity) {
+    // Only one unused number — if quantity was already set by keyword, this could be price
+    const hasMinOrderContext = /(?:न्यूनतम|कम से कम|minimum|min\b)/.test(lower);
+    if (!hasMinOrderContext && unusedNumbers[0] > 0 && unusedNumbers[0] <= 5000) {
+      pricePerKg = unusedNumbers[0];
+    }
+  }
 
   // 5. Quality / Grade
   if (lower.includes('प्रीमियम') || lower.includes('premium') || lower.includes('top') || lower.includes('एक नंबर')) {

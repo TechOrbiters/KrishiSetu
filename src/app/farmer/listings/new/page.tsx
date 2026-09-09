@@ -32,6 +32,7 @@ import { createProduceListing } from '@/lib/firebase';
 import { getAccurateCropImage } from '@/lib/cropImages';
 import { parseMandiIntent, parseSpokenNumber } from '@/lib/mandiIntent';
 
+
 function WizardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,7 +89,7 @@ function WizardContent() {
       return;
     }
 
-    // Instant local preview
+    // Instant local preview using object URL
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
     setUploadedFileName(file.name);
@@ -96,28 +97,37 @@ function WizardContent() {
     setIsUploadingImage(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      // Convert image to compressed Base64 data URL so it persists without Firebase Storage
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const MAX_DIM = 800;
+          const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('Canvas not supported')); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.onerror = () => reject(new Error('Image load failed'));
+        img.src = objectUrl;
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'फोटो अपलोड करने में विफल (Upload failed)');
-      }
-
-      setImageUrl(data.url);
-      setImagePreview(data.url);
+      setImageUrl(dataUrl);
+      setImagePreview(dataUrl);
+      URL.revokeObjectURL(objectUrl);
     } catch (err: any) {
-      console.error('[Upload Error]:', err);
-      setImageUploadError(err.message || 'फोटो अपलोड करने में त्रुटि हुई। कृपया पुनः प्रयास करें।');
+      console.error('[Image Processing Error]:', err);
+      // Fall back to object URL so farmer can still see the image (won't persist on reload)
+      setImageUrl(objectUrl);
+      setImageUploadError('फोटो प्रोसेस करने में त्रुटि। फोटो दिखेगी लेकिन रीफ्रेश पर गायब हो सकती है।');
     } finally {
       setIsUploadingImage(false);
     }
   };
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -235,19 +245,21 @@ function WizardContent() {
             }
           }
         } else if (result.field === 'minOrder') {
-          const num = intent.minOrder || intent.quantity || parseSpokenNumber(cleanText);
+          // When recording for minOrder field, ONLY set minOrder — never touch price or quantity
+          // Use intent.minOrder first, then extract any number from the transcript directly
+          const num = intent.minOrder
+            || (() => {
+              // Directly extract first number from transcript as last resort (field-locked)
+              const firstNum = parseInt(cleanText.replace(/[^0-9]/g, '').trim(), 10);
+              return isNaN(firstNum) ? 0 : firstNum;
+            })();
           if (num && num > 0) {
             setMinOrder(num);
             setVoiceToast(`✓ न्यूनतम ऑर्डर: ${num} kg`);
           } else {
-            const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-            if (!isNaN(fallback) && fallback > 0) {
-              setMinOrder(fallback);
-              setVoiceToast(`✓ न्यूनतम ऑर्डर: ${fallback} kg`);
-            } else {
-              setVoiceToast(`पहचाना गया: "${cleanText}"`);
-            }
+            setVoiceToast(`पहचाना गया: "${cleanText}"`);
           }
+
         } else if (result.field === 'price') {
           const num = intent.pricePerKg || parseSpokenNumber(cleanText);
           if (num && num > 0) {

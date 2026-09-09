@@ -18,6 +18,7 @@ import { getMarketPriceSummary } from '@/lib/api/client';
 import { MarketPriceSummaryCard } from '@/lib/types/market';
 import { useFarmerListings } from '@/lib/hooks/useFarmerListings';
 import { useFarmerOrders } from '@/lib/hooks/useFarmerOrders';
+import { getAccurateCropImage } from '@/lib/cropImages';
 
 export default function FarmerDashboard() {
   const [marketSummaries, setMarketSummaries] = useState<MarketPriceSummaryCard[]>([]);
@@ -167,9 +168,10 @@ export default function FarmerDashboard() {
                     >
                       <div className="flex items-center gap-3.5">
                         <img
-                          src={item.imageUrl || '/assets/kisan-setu/wheat.png'}
+                          src={(item as any).imageUrl || (item as any).image || getAccurateCropImage(item.cropNameHindi, undefined, item.cropNameHindi)}
                           alt={item.cropNameHindi}
                           className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).src = getAccurateCropImage(item.cropNameHindi, undefined, item.cropNameHindi); }}
                         />
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
