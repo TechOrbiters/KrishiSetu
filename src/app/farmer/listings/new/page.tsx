@@ -30,7 +30,7 @@ import { useVoiceInput, VoiceInputResult } from '@/lib/hooks/useVoiceInput';
 import { logisticsSync } from '@/lib/realtime/logisticsSync';
 import { createProduceListing } from '@/lib/firebase';
 import { getAccurateCropImage } from '@/lib/cropImages';
-import { parseMandiIntent } from '@/lib/mandiIntent';
+import { parseMandiIntent, parseSpokenNumber } from '@/lib/mandiIntent';
 
 function WizardContent() {
   const router = useRouter();
@@ -215,35 +215,55 @@ function WizardContent() {
         setTimeout(() => setVoiceToast(null), 6000);
       } else {
         // Single field target
-        setVoiceToast(`पहचाना गया: "${cleanText}"`);
-        setTimeout(() => setVoiceToast(null), 4000);
-
         if (result.field === 'cropName') {
           const detected = intent.crop || cleanText;
           setCropName(detected);
           setCropCategory(intent.category || deduceCategory(detected));
+          setVoiceToast(`✓ फसल: ${detected}`);
         } else if (result.field === 'quantity') {
-          if (intent.quantity) {
-            setQuantity(intent.quantity);
+          const num = intent.quantity || parseSpokenNumber(cleanText);
+          if (num && num > 0) {
+            setQuantity(num);
+            setVoiceToast(`✓ मात्रा: ${num} kg`);
           } else {
-            const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-            setQuantity(!isNaN(num) && num > 0 ? num : cleanText);
+            const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+            if (!isNaN(fallback) && fallback > 0) {
+              setQuantity(fallback);
+              setVoiceToast(`✓ मात्रा: ${fallback} kg`);
+            } else {
+              setVoiceToast(`पहचाना गया: "${cleanText}"`);
+            }
           }
         } else if (result.field === 'minOrder') {
-          if (intent.minOrder) {
-            setMinOrder(intent.minOrder);
+          const num = intent.minOrder || intent.quantity || parseSpokenNumber(cleanText);
+          if (num && num > 0) {
+            setMinOrder(num);
+            setVoiceToast(`✓ न्यूनतम ऑर्डर: ${num} kg`);
           } else {
-            const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-            setMinOrder(!isNaN(num) && num > 0 ? num : cleanText);
+            const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+            if (!isNaN(fallback) && fallback > 0) {
+              setMinOrder(fallback);
+              setVoiceToast(`✓ न्यूनतम ऑर्डर: ${fallback} kg`);
+            } else {
+              setVoiceToast(`पहचाना गया: "${cleanText}"`);
+            }
           }
         } else if (result.field === 'price') {
-          if (intent.pricePerKg) {
-            setPrice(intent.pricePerKg);
+          const num = intent.pricePerKg || parseSpokenNumber(cleanText);
+          if (num && num > 0) {
+            setPrice(num);
+            setVoiceToast(`✓ भाव: ₹${num}/kg`);
           } else {
-            const num = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
-            setPrice(!isNaN(num) && num > 0 ? num : cleanText);
+            const fallback = parseInt(cleanText.replace(/[^\d]/g, ''), 10);
+            if (!isNaN(fallback) && fallback > 0) {
+              setPrice(fallback);
+              setVoiceToast(`✓ भाव: ₹${fallback}/kg`);
+            } else {
+              setVoiceToast(`पहचाना गया: "${cleanText}"`);
+            }
           }
         }
+        setTimeout(() => setVoiceToast(null), 4000);
       }
     },
   });

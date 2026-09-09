@@ -103,65 +103,127 @@ const CROP_MAP: Record<string, { name: string; category: string }> = {
   'corn': { name: 'मक्का', category: 'अनाज' },
   'बाजरा': { name: 'बाजरा', category: 'अनाज' },
   'bajra': { name: 'बाजरा', category: 'अनाज' },
-  'millet': { name: 'बाजरा', category: 'अनाज' },
-  'ज्वार': { name: 'ज्वार', category: 'अनाज' },
-  'jowar': { name: 'ज्वार', category: 'अनाज' },
-  'सरसों': { name: 'सरसों', category: 'अनाज' },
-  'sarso': { name: 'सरसों', category: 'अनाज' },
-  'mustard': { name: 'सरसों', category: 'अनाज' },
-  'सोयाबीन': { name: 'सोयाबीन', category: 'अनाज' },
-  'soyabean': { name: 'सोयाबीन', category: 'अनाज' },
-  'soybean': { name: 'सोयाबीन', category: 'अनाज' },
-  'कपास': { name: 'कपास', category: 'अनाज' },
-  'kapas': { name: 'कपास', category: 'अनाज' },
-  'cotton': { name: 'कपास', category: 'अनाज' },
-
-  // Pulses / दालें
-  'चना': { name: 'चना', category: 'दालें' },
-  'chana': { name: 'चना', category: 'दालें' },
-  'gram': { name: 'चना', category: 'दालें' },
-  'chickpea': { name: 'चना', category: 'दालें' },
-  'अरहर': { name: 'अरहर दाल', category: 'दालें' },
-  'arhar': { name: 'अरहर दाल', category: 'दालें' },
-  'मूंग': { name: 'मूंग दाल', category: 'दालें' },
-  'moong': { name: 'मूंग दाल', category: 'दालें' },
-  'उड़द': { name: 'उड़द दाल', category: 'दालें' },
-  'urad': { name: 'उड़द दाल', category: 'दालें' },
-
-  // Fruits / फल
-  'सेब': { name: 'सेब', category: 'फल' },
-  'seb': { name: 'सेब', category: 'फल' },
-  'apple': { name: 'सेब', category: 'फल' },
-  'आम': { name: 'आम', category: 'फल' },
-  'aam': { name: 'आम', category: 'फल' },
-  'mango': { name: 'आम', category: 'फल' },
-  'केला': { name: 'केला', category: 'फल' },
-  'kela': { name: 'केला', category: 'फल' },
-  'banana': { name: 'केला', category: 'फल' },
-  'संतरा': { name: 'संतरा', category: 'फल' },
-  'santra': { name: 'संतरा', category: 'फल' },
-  'orange': { name: 'संतरा', category: 'फल' },
-  'अनार': { name: 'अनार', category: 'फल' },
-  'anar': { name: 'अनार', category: 'फल' },
-  'pomegranate': { name: 'अनार', category: 'फल' },
-  'पपीता': { name: 'पपीता', category: 'फल' },
-  'papita': { name: 'पपीता', category: 'फल' },
-  'papaya': { name: 'पपीता', category: 'फल' },
-  'तरबूज': { name: 'तरबूज', category: 'फल' },
-  'tarbooj': { name: 'तरबूज', category: 'फल' },
-  'watermelon': { name: 'तरबूज', category: 'फल' },
 };
+
+// Number word mappings for Hindi, Hinglish, and English
+const NUMBER_WORDS: Record<string, number> = {
+  'एक': 1, 'ek': 1, 'one': 1,
+  'दो': 2, 'do': 2, 'two': 2,
+  'तीन': 3, 'teen': 3, 'three': 3,
+  'चार': 4, 'char': 4, 'four': 4,
+  'पांच': 5, 'पाँच': 5, 'panch': 5, 'paanch': 5, 'five': 5,
+  'छह': 6, 'छः': 6, 'che': 6, 'chhe': 6, 'six': 6,
+  'सात': 7, 'saat': 7, 'seven': 7,
+  'आठ': 8, 'aath': 8, 'eight': 8,
+  'नौ': 9, 'nau': 9, 'nine': 9,
+  'दस': 10, 'das': 10, 'ten': 10,
+  'ग्यारह': 11, 'gyarah': 11, 'eleven': 11,
+  'बारह': 12, 'barah': 12, 'twelve': 12,
+  'तेरह': 13, 'terah': 13, 'thirteen': 13,
+  'चौदह': 14, 'chaudah': 14, 'fourteen': 14,
+  'पंद्रह': 15, 'pandrah': 15, 'fifteen': 15,
+  'सोलह': 16, 'solah': 16, 'sixteen': 16,
+  'सत्रह': 17, 'satrah': 17, 'seventeen': 17,
+  'अठारह': 18, 'atharah': 18, 'eighteen': 18,
+  'उन्नीस': 19, 'unnees': 19, 'unnis': 19, 'nineteen': 19,
+  'बीस': 20, 'bees': 20, 'bis': 20, 'twenty': 20,
+  'इक्कीस': 21, 'ikkees': 21,
+  'बाईस': 22, 'baees': 22,
+  'तेईस': 23, 'teees': 23,
+  'चौबीस': 24, 'chaubees': 24,
+  'पच्चीस': 25, 'pachees': 25, 'pachis': 25,
+  'छब्बीस': 26, 'chhabees': 26,
+  'सत्ताईस': 27, 'sattaees': 27,
+  'अट्ठाईस': 28, 'atthaees': 28,
+  'उनतीस': 29, 'untees': 29,
+  'तीस': 30, 'tees': 30, 'thirty': 30,
+  'पैंतीस': 35, 'paintees': 35,
+  'चालीस': 40, 'chalis': 40, 'chaalees': 40, 'forty': 40,
+  'पैंतालीस': 45, 'paintalis': 45,
+  'पचास': 50, 'pachas': 50, 'pachaas': 50, 'fifty': 50,
+  'पचपन': 55, 'pachpan': 55,
+  'साठ': 60, 'saath': 60, 'sath': 60, 'sixty': 60,
+  'पैंसठ': 65, 'painsath': 65,
+  'सत्तर': 70, 'sattar': 70, 'seventy': 70,
+  'पचहत्तर': 75, 'pachhattar': 75,
+  'अस्सी': 80, 'assi': 80, 'eighty': 80,
+  'पचासी': 85, 'pachasi': 85,
+  'नब्बे': 90, 'nabbe': 90, 'ninety': 90,
+  'सौ': 100, 'sau': 100, 'hundred': 100,
+  'डेढ़ सौ': 150, 'dedh sau': 150,
+  'ढाई सौ': 250, 'dhai sau': 250,
+  'हजार': 1000, 'हज़ार': 1000, 'hazar': 1000, 'hajar': 1000, 'thousand': 1000,
+};
+
+/**
+ * Converts Devanagari numerals (०-९) to standard ASCII digits (0-9)
+ */
+export function normalizeDevanagariDigits(str: string): string {
+  const devDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+  return str.replace(/[०-९]/g, (d) => devDigits.indexOf(d).toString());
+}
+
+/**
+ * Parses spoken numbers in Hindi, Hinglish, Devanagari digits, or English.
+ * Returns numeric value, or undefined if no number is found.
+ */
+export function parseSpokenNumber(text: string): number | undefined {
+  if (!text) return undefined;
+  const s = normalizeDevanagariDigits(text.toLowerCase().trim());
+
+  // 1. Direct digit match
+  const directDigits = s.match(/\b(\d+(?:\.\d+)?)\b/);
+  if (directDigits) {
+    const val = parseFloat(directDigits[1]);
+    if (!isNaN(val) && val > 0) return Math.round(val);
+  }
+
+  // 2. Multi-word phrases like "डेढ़ सौ", "ढाई सौ"
+  if (s.includes('डेढ़ सौ') || s.includes('dedh sau')) return 150;
+  if (s.includes('ढाई सौ') || s.includes('dhai sau')) return 250;
+
+  // 3. Multiplier combinations like "दो सौ", "पांच सौ", "दो हजार"
+  const multiplierRegex = /(एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|panch|paanch|che|saat|aath|nau|das)\s*(सौ|sau|hundred|हजार|हज़ार|hazar|thousand)/i;
+  const multMatch = s.match(multiplierRegex);
+  if (multMatch) {
+    const base = NUMBER_WORDS[multMatch[1]] || 1;
+    const multWord = multMatch[2];
+    const mult = (multWord === 'सौ' || multWord === 'sau' || multWord === 'hundred') ? 100 : 1000;
+
+    let remainder = 0;
+    const remainderText = s.substring(s.indexOf(multMatch[0]) + multMatch[0].length).trim();
+    for (const [word, val] of Object.entries(NUMBER_WORDS)) {
+      if (remainderText.includes(word) && val < 100) {
+        remainder = val;
+        break;
+      }
+    }
+    return base * mult + remainder;
+  }
+
+  // 4. Standalone number words (sorted descending so compound words match first)
+  const sortedWords = Object.keys(NUMBER_WORDS).sort((a, b) => b.length - a.length);
+  for (const word of sortedWords) {
+    const regex = new RegExp(`(^|[^a-zA-Z\\u0900-\\u097F])${word}([^a-zA-Z\\u0900-\\u097F]|$)`, 'i');
+    if (regex.test(s) || s.includes(word)) {
+      return NUMBER_WORDS[word];
+    }
+  }
+
+  return undefined;
+}
 
 /**
  * Parses full Hindi or Hinglish natural speech for Mandi produce listing fields:
  * - Crop Name & Category
  * - Total Quantity (in kg)
  * - Price per kg (in ₹)
- * - Minimum Order
+ * - Minimum Order (strictly extracted if spoken, ZERO hallucinated default)
  * - Quality / Grade
  */
 export function parseMandiIntent(text: string): ExtractedIntent {
-  const lower = text.toLowerCase().trim();
+  const normalized = normalizeDevanagariDigits(text);
+  const lower = normalized.toLowerCase().trim();
   let crop: string | undefined;
   let category = 'सब्जी';
   let quantity: number | undefined;
@@ -184,44 +246,46 @@ export function parseMandiIntent(text: string): ExtractedIntent {
   }
 
   // 2. Quantity Extraction
-  // Examples: 500 kilo, 500 किलो, 500 kg, 10 quintal, 10 क्विंटल, 2 ton, 2 टन
-  const qtyRegex = /(\d+)\s*(kilo|kg|kgs|quintal|qtl|ton|tonne|tonnes|किलो|किग्रा|किलोग्राम|क्विंटल|कुंतल|टन)/i;
+  // Examples: 500 kilo, 500 किलो, 500 kg, 10 quintal, 10 क्विंटल, 2 ton, 2 टन, बीस किलो
+  const qtyRegex = /([0-9]+|[a-zA-Z\u0900-\u097F]+)\s*(kilo|kg|kgs|quintal|qtl|ton|tonne|tonnes|किलो|किग्रा|किलोग्राम|क्विंटल|कुंतल|टन)/i;
   const qtyMatch = lower.match(qtyRegex);
 
   let rawUnit = '';
   if (qtyMatch && qtyMatch[1]) {
-    const rawVal = parseInt(qtyMatch[1], 10);
-    rawUnit = (qtyMatch[2] || '').toLowerCase();
+    const rawVal = parseSpokenNumber(qtyMatch[1]) || parseInt(qtyMatch[1], 10);
+    if (rawVal && rawVal > 0) {
+      rawUnit = (qtyMatch[2] || '').toLowerCase();
 
-    if (rawUnit.includes('quintal') || rawUnit.includes('qtl') || rawUnit.includes('क्विंटल') || rawUnit.includes('कुंतल')) {
-      quantity = rawVal * 100; // 1 quintal = 100 kg
-      unit = 'kg';
-    } else if (rawUnit.includes('ton') || rawUnit.includes('टन')) {
-      quantity = rawVal * 1000; // 1 ton = 1000 kg
-      unit = 'kg';
-    } else {
-      quantity = rawVal;
-      unit = 'kg';
+      if (rawUnit.includes('quintal') || rawUnit.includes('qtl') || rawUnit.includes('क्विंटल') || rawUnit.includes('कुंतल')) {
+        quantity = rawVal * 100; // 1 quintal = 100 kg
+        unit = 'kg';
+      } else if (rawUnit.includes('ton') || rawUnit.includes('टन')) {
+        quantity = rawVal * 1000; // 1 ton = 1000 kg
+        unit = 'kg';
+      } else {
+        quantity = rawVal;
+        unit = 'kg';
+      }
     }
   }
 
   // 3. Price Extraction
   // Suffix patterns: "24 rupaye", "24 rupay", "24 rupey", "24 rupees", "24 rs", "24 रुपये", "24 रुपए", "24 भाव", "24 भाव से", "24 rate", "24 daam", "24 per kg", "24 प्रति किलो"
-  const priceSuffixRegex = /(\d+)\s*(?:रुपये|रुपए|रु|rupaye|rupay|rupey|rupees|rs|rs\.|\/kg|per kg|प्रति किलो|प्रति किग्रा|प्रति kg|भाव|दर|दाम|bhav|bhaav|rate|daam)(?:\s+(?:किलो|kg|प्रति किलो|bhav|भाव|se|से))?/i;
+  const priceSuffixRegex = /([0-9]+|[a-zA-Z\u0900-\u097F]+)\s*(?:रुपये|रुपए|रु|rupaye|rupay|rupey|rupees|rs|rs\.|\/kg|per kg|प्रति किलो|प्रति किग्रा|प्रति kg|भाव|दर|दाम|bhav|bhaav|rate|daam)(?:\s+(?:किलो|kg|प्रति किलो|bhav|भाव|se|से))?/i;
   const priceSuffixMatch = lower.match(priceSuffixRegex);
 
   // Prefix patterns: "bhav 24", "rate 24", "bhaav 24", "price 24", "daam 24", "भाव 24", "दाम 24", "दर 24", "कीमत 24", "₹24", "rs 24"
-  const pricePrefixRegex = /(?:₹|rs\.?|rupees|rupaye|rupay|rate|bhav|bhaav|price|daam|भाव|दाम|दर|कीमत|मूल्य)\s*(?:है|h|hai)?\s*(\d+)/i;
+  const pricePrefixRegex = /(?:₹|rs\.?|rupees|rupaye|rupay|rate|bhav|bhaav|price|daam|भाव|दाम|दर|कीमत|मूल्य)\s*(?:है|h|hai)?\s*([0-9]+|[a-zA-Z\u0900-\u097F]+)/i;
   const pricePrefixMatch = lower.match(pricePrefixRegex);
 
   if (priceSuffixMatch && priceSuffixMatch[1]) {
-    const p = parseInt(priceSuffixMatch[1], 10);
-    if (p > 0 && p < 50000) {
+    const p = parseSpokenNumber(priceSuffixMatch[1]) || parseInt(priceSuffixMatch[1], 10);
+    if (p && p > 0 && p < 50000) {
       pricePerKg = p;
     }
   } else if (pricePrefixMatch && pricePrefixMatch[1]) {
-    const p = parseInt(pricePrefixMatch[1], 10);
-    if (p > 0 && p < 50000) {
+    const p = parseSpokenNumber(pricePrefixMatch[1]) || parseInt(pricePrefixMatch[1], 10);
+    if (p && p > 0 && p < 50000) {
       pricePerKg = p;
     }
   }
@@ -231,7 +295,7 @@ export function parseMandiIntent(text: string): ExtractedIntent {
     pricePerKg = Math.round(pricePerKg / 100);
   }
 
-  // Fallback: If 2 numbers exist in speech and one was matched as quantity, the other is likely the price
+  // Fallback for multi-field speech: If 2 numbers exist in speech and one was matched as quantity, the other is likely the price
   const allNumbers = Array.from(lower.matchAll(/\b(\d+)\b/g)).map((m) => parseInt(m[1], 10));
   if (!quantity && allNumbers.length >= 1) {
     quantity = allNumbers[0];
@@ -243,17 +307,30 @@ export function parseMandiIntent(text: string): ExtractedIntent {
     }
   }
 
-  // Minimum Order (if mentioned e.g. "kam se kam 50 kilo" or "minimum 50")
-  const minOrderMatch = lower.match(/(?:कम से कम|न्यूनतम|kam se kam|minimum|min)\s*(\d+)/i);
-  if (minOrderMatch && minOrderMatch[1]) {
-    minOrder = parseInt(minOrderMatch[1], 10);
-  } else if (quantity && quantity >= 100) {
-    minOrder = Math.min(50, Math.round(quantity / 5));
-  } else if (quantity) {
-    minOrder = Math.min(10, quantity);
-  }
+  // 4. Minimum Order Extraction
+  // Robust pattern matching: supports conversational variations with filler words like "ऑर्डर", "आर्डर", "मात्रा", "का", "खरीद"
+  // Prefix patterns: "न्यूनतम ऑर्डर 20 किलो", "कम से कम आर्डर 25", "minimum order 50", "कम से कम बीस", "न्यूनतम बीस किलो"
+  const minOrderPrefixRegex = /(?:कम से कम|न्यूनतम|kam se kam|minimum|min)\s*(?:का|की|के)?\s*(?:ऑर्डर|आर्डर|मात्रा|खरीद|order|quantity|limit)?\s*(?:का|की|के)?\s*([0-9]+|[a-zA-Z\u0900-\u097F]+(?:\s+[a-zA-Z\u0900-\u097F]+)?)/i;
+  const minOrderPrefixMatch = lower.match(minOrderPrefixRegex);
 
-  // Quality / Grade
+  // Suffix patterns: "20 किलो न्यूनतम", "बीस किलो कम से कम", "50 kg minimum order"
+  const minOrderSuffixRegex = /([0-9]+|[a-zA-Z\u0900-\u097F]+)\s*(?:किलो|kg|किग्रा)?\s*(?:का)?\s*(?:ऑर्डर|आर्डर)?\s*(?:न्यूनतम|कम से कम|minimum)/i;
+  const minOrderSuffixMatch = lower.match(minOrderSuffixRegex);
+
+  if (minOrderPrefixMatch && minOrderPrefixMatch[1]) {
+    const parsed = parseSpokenNumber(minOrderPrefixMatch[1]);
+    if (parsed && parsed > 0 && parsed < 50000) {
+      minOrder = parsed;
+    }
+  } else if (minOrderSuffixMatch && minOrderSuffixMatch[1]) {
+    const parsed = parseSpokenNumber(minOrderSuffixMatch[1]);
+    if (parsed && parsed > 0 && parsed < 50000) {
+      minOrder = parsed;
+    }
+  }
+  // ZERO HALLUCINATED FALLBACK: If minOrder was not explicitly spoken, leave it undefined.
+
+  // 5. Quality / Grade
   if (lower.includes('प्रीमियम') || lower.includes('premium') || lower.includes('top') || lower.includes('एक नंबर')) {
     quality = 'प्रीमियम';
   } else if (lower.includes('सामान्य') || lower.includes('normal') || lower.includes('chota') || lower.includes('छोटा')) {
@@ -262,7 +339,7 @@ export function parseMandiIntent(text: string): ExtractedIntent {
     quality = 'अच्छी';
   }
 
-  // Location
+  // 6. Location
   const cityMatch = lower.match(/(?:in|mein|में|at|se|से)\s+([a-zA-Z\u0900-\u097F]+)/i);
   if (cityMatch && cityMatch[1]) {
     const loc = cityMatch[1].trim();
@@ -284,3 +361,4 @@ export function parseMandiIntent(text: string): ExtractedIntent {
     rawText: text,
   };
 }
+
