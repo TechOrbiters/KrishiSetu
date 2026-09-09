@@ -33,20 +33,19 @@ export const FarmerSidebar: React.FC<FarmerSidebarProps> = ({
   const pathname = usePathname();
   const router = useRouter();
   const { t, language, setLanguage, languages } = useLanguage();
-  const { user, notificationsCount } = useFarmerStore();
+  const { user, notificationsCount, logout } = useFarmerStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    // Clear any stored session data
     try {
+      await logout();
       if (typeof window !== 'undefined') {
         localStorage.removeItem('ks_auth_token');
         sessionStorage.clear();
       }
     } catch (_) {}
-    // Small delay for UX feedback, then redirect to landing
-    setTimeout(() => router.push('/'), 400);
+    setTimeout(() => router.push('/auth/farmer'), 300);
   };
 
   const showFarmerAvatar =

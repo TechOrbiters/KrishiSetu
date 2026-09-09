@@ -69,6 +69,7 @@ export function useFarmerOrders() {
         [
           'ORDER_PLACED',
           'ORDER_ACCEPTED',
+          'ORDER_REJECTED',
           'ORDER_PACKED',
           'JOB_ACCEPTED',
           'TRIP_STATUS_UPDATED',

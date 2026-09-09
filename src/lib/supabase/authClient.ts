@@ -34,7 +34,8 @@ export function normalizeAuthEmail(identifier: string, role: UserRole): string {
   }
   const digits = trimmed.replace(/\D/g, '');
   if (digits.length >= 10) {
-    return `user_${role.toLowerCase()}_${digits}@krishisetu.in`;
+    const last10 = digits.slice(-10);
+    return `user_${role.toLowerCase()}_${last10}@krishisetu.in`;
   }
   return `${trimmed}_${role.toLowerCase()}@krishisetu.in`;
 }
@@ -110,6 +111,37 @@ export async function signInWithSupabase(
         if (typeof window !== 'undefined') {
           localStorage.setItem('krishi_active_role', role);
           localStorage.setItem('krishi_user_session', JSON.stringify(sessionPayload));
+
+          if (role === 'BUYER') {
+            localStorage.setItem('krishi_buyer_profile', JSON.stringify({
+              fullName: sessionPayload.name,
+              email: data.user.email,
+              phone: data.user.user_metadata?.phone || '+91 98765 43210',
+              businessName: data.user.user_metadata?.business_name || sessionPayload.name,
+              buyerType: data.user.user_metadata?.buyer_type || 'RETAILER',
+              district: data.user.user_metadata?.district || 'लखनऊ',
+              gstin: data.user.user_metadata?.gstin || '09AABCV1234F1Z5',
+              uid: data.user.id,
+            }));
+          } else if (role === 'TRANSPORTER') {
+            localStorage.setItem('krishi_transporter_profile', JSON.stringify({
+              fullName: sessionPayload.name,
+              email: data.user.email,
+              phone: data.user.user_metadata?.phone || '+91 98765 43212',
+              vehicleNumber: data.user.user_metadata?.vehicle_number || 'UP 32 AB 1234',
+              vehicleType: data.user.user_metadata?.vehicle_type || 'बोलेरो मैक्सी ट्रक (2.5 - 3 टन)',
+              uid: data.user.id,
+            }));
+          } else if (role === 'ADMIN') {
+            localStorage.setItem('krishi_admin_session', JSON.stringify({
+              uid: data.user.id,
+              email: data.user.email,
+              name: sessionPayload.name,
+              designation: data.user.user_metadata?.designation || 'DoCA Surveillance Officer',
+              role: 'ADMIN',
+              loginTime: Date.now(),
+            }));
+          }
         }
 
         // Try syncing role in public.users if not set
@@ -119,7 +151,7 @@ export async function signInWithSupabase(
             firebase_uid: data.user.id,
             full_name: sessionPayload.name,
             phone: data.user.user_metadata?.phone || identifier.replace(/\D/g, '') || '9999999999',
-            role: role === 'ADMIN' ? 'FPO_ADMIN' : role,
+            role: role,
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' });
         } catch (dbErr) {
@@ -236,13 +268,13 @@ export async function signUpWithSupabase(
             firebase_uid: uid,
             full_name: profile.fullName,
             phone: profile.phone || identifier.replace(/\D/g, '') || '9999999999',
-            role: profile.role === 'ADMIN' ? 'FPO_ADMIN' : profile.role,
+            role: profile.role,
             location_name: profile.district || profile.village || 'उत्तर प्रदेश',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' });
 
-          // If farmer, also upsert into farmer_profiles
+          // Role-specific profile upserts
           if (profile.role === 'FARMER') {
             await supabaseClient.from('farmer_profiles').upsert({
               user_id: uid,
@@ -250,6 +282,22 @@ export async function signUpWithSupabase(
               district: profile.district || 'बाराबंकी',
               state: profile.state || 'उत्तर प्रदेश',
               verification_status: 'VERIFIED',
+            }, { onConflict: 'user_id' });
+          } else if (profile.role === 'BUYER') {
+            await supabaseClient.from('buyer_profiles').upsert({
+              user_id: uid,
+              business_name: profile.businessName || profile.fullName,
+              buyer_type: profile.buyerType || 'RETAILER',
+              gstin: profile.gstin || '',
+            }, { onConflict: 'user_id' });
+          } else if (profile.role === 'TRANSPORTER') {
+            await supabaseClient.from('transporter_profiles').upsert({
+              user_id: uid,
+              full_name: profile.fullName,
+              phone: profile.phone || identifier.replace(/\D/g, ''),
+              vehicle_type: profile.vehicleType || 'Mini Truck',
+              vehicle_number: profile.vehicleNumber || '',
+              location_name: profile.district || profile.operatingDistricts || 'उत्तर प्रदेश',
             }, { onConflict: 'user_id' });
           }
         } catch (dbErr) {

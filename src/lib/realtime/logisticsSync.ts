@@ -19,13 +19,16 @@ import {
 
 export type LogisticsEventType =
   | 'JOB_ACCEPTED'
+  | 'JOB_DECLINED'
   | 'TRIP_STATUS_UPDATED'
   | 'LOCATION_TELEMETRY'
   | 'POD_VERIFIED'
   | 'DUTY_STATUS_TOGGLED'
   | 'ORDER_PLACED'
   | 'ORDER_ACCEPTED'
+  | 'ORDER_REJECTED'
   | 'ORDER_PACKED'
+  | 'TRANSPORT_REQUESTED'
   | 'LISTING_CREATED';
 
 export interface LogisticsSyncPayload {
@@ -228,12 +231,12 @@ class LogisticsRealtimeSync {
 
       // (b) Order status progression
       if (
-        (type === 'ORDER_PLACED' || type === 'ORDER_ACCEPTED' || type === 'ORDER_PACKED' || type === 'TRIP_STATUS_UPDATED') &&
+        (type === 'ORDER_PLACED' || type === 'ORDER_ACCEPTED' || type === 'ORDER_REJECTED' || type === 'ORDER_PACKED' || type === 'TRIP_STATUS_UPDATED') &&
         payload.orderId
       ) {
         updateOrderStatusRealtime(
           payload.orderId,
-          payload.status || 'UPDATED',
+          payload.status || (type === 'ORDER_REJECTED' ? 'REJECTED' : 'UPDATED'),
           payload.stepNumber,
           payload.order
         );

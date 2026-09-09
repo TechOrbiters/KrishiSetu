@@ -58,19 +58,26 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     const token = await getFirebaseBearerToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      const storedRole = typeof window !== 'undefined' ? localStorage.getItem('krishi_active_role') : null;
-      if (storedRole === 'BUYER') {
-        headers['Authorization'] = `Bearer demo_token_buyer`;
-      } else if (storedRole === 'TRANSPORTER') {
-        headers['Authorization'] = `Bearer demo_token_transporter_a`;
-      } else if (storedRole === 'ADMIN') {
-        headers['Authorization'] = `Bearer demo_token_admin`;
-      } else {
-        headers['Authorization'] = `Bearer demo_token_farmer`;
-      }
+      return headers;
     }
-  } catch (err) {
+  } catch (err) {}
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+      return headers;
+    }
+  } catch (err) {}
+
+  const storedRole = typeof window !== 'undefined' ? localStorage.getItem('krishi_active_role') : null;
+  if (storedRole === 'BUYER') {
+    headers['Authorization'] = `Bearer demo_token_buyer`;
+  } else if (storedRole === 'TRANSPORTER') {
+    headers['Authorization'] = `Bearer demo_token_transporter_a`;
+  } else if (storedRole === 'ADMIN') {
+    headers['Authorization'] = `Bearer demo_token_admin`;
+  } else {
     headers['Authorization'] = `Bearer demo_token_farmer`;
   }
   return headers;
@@ -123,26 +130,40 @@ export async function fetchFarmerProfile(): Promise<ApiResult<{ user: UserProfil
         .from('users')
         .select('*')
         .eq('id', fbUser.id)
-        .single();
+        .maybeSingle();
+
+      const { data: farmerProf } = await supabaseClient
+        .from('farmer_profiles')
+        .select('*')
+        .eq('user_id', fbUser.id)
+        .maybeSingle();
+
+      let localData: any = {};
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('krishi_farmer_profile') || localStorage.getItem('krishi_user_session');
+          if (raw) localData = JSON.parse(raw);
+        } catch (_) {}
+      }
 
       const formattedUser: UserProfile = {
         id: fbUser.id,
-        fullName: profileData?.full_name || fbUser.email?.split('@')[0] || 'किसान साथी',
-        fatherOrSpouseName: profileData?.father_or_husband_name || '',
-        phone: profileData?.phone || fbUser.phone || '',
-        dob: '01/01/1985',
-        gender: 'पुरुष',
+        fullName: localData?.name || profileData?.full_name || fbUser.email?.split('@')[0] || 'किसान साथी',
+        fatherOrSpouseName: farmerProf?.father_or_husband_name || profileData?.father_or_husband_name || localData?.fatherName || '',
+        phone: localData?.phone || profileData?.phone || fbUser.phone || '',
+        dob: localData?.dob || '01/01/1985',
+        gender: localData?.gender || 'पुरुष',
         role: 'FARMER_FPO',
         entityKind: 'farmer',
-        verificationStatus: profileData?.verification_status || 'PENDING',
-        aadhaarLast4: profileData?.aadhaar_last4 || '',
+        verificationStatus: farmerProf?.verification_status || profileData?.verification_status || 'VERIFIED',
+        aadhaarLast4: localData?.aadhaarLast4 || profileData?.aadhaar_last4 || '',
         registrationDate: new Date(fbUser.created_at || Date.now()).toLocaleDateString('hi-IN'),
         avatarUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300',
-        village: profileData?.village || 'बैजनाथपुर',
-        postOffice: profileData?.post_office || 'बाराबंकी',
-        district: profileData?.district || 'बाराबंकी',
-        state: profileData?.state || 'उत्तर प्रदेश',
-        pincode: profileData?.pincode || '225001',
+        village: farmerProf?.village || profileData?.village || localData?.village || 'बैजनाथपुर',
+        postOffice: farmerProf?.post_office || profileData?.post_office || localData?.postOffice || 'बाराबंकी',
+        district: farmerProf?.district || profileData?.district || localData?.district || 'बाराबंकी',
+        state: farmerProf?.state || profileData?.state || localData?.state || 'उत्तर प्रदेश',
+        pincode: farmerProf?.pincode || profileData?.pincode || localData?.pincode || '225001',
       };
       return { success: true, data: { user: formattedUser }, source: 'supabase_client_direct' };
     }
@@ -684,31 +705,6 @@ export async function createBuyerOrder(payload: any, idempotencyKey?: string): P
 
     if (firebaseRtdb) {
       await set(ref(firebaseRtdb, `orders/${customId}`), orderData);
-
-      // Create transporter trip
-      const tripId = `trip_${Date.now()}`;
-      const tripData = {
-        id: tripId,
-        orderCode,
-        produceName: orderData.items[0]?.cropHindi || 'कृषि उपज',
-        quantityKg: orderData.items[0]?.quantityKg || 50,
-        fpoName: orderData.sellerName,
-        pickupLocation: orderData.pickupLocation,
-        dropLocation: orderData.dropLocation,
-        distanceKm: 28,
-        eta: '45 मिनट',
-        fare: 250,
-        pickupWindowHours: 4,
-        status: 'AVAILABLE',
-        isBestMatch: true,
-        freshnessDeadline: '24 घंटे शेष',
-        freshnessSafe: true,
-        otp: Math.floor(1000 + Math.random() * 9000).toString(),
-        temperature: 21.5,
-        pickupCoords: { lat: 26.9284, lng: 81.1834, label: orderData.pickupLocation },
-        dropCoords: { lat: 26.8524, lng: 80.9412, label: orderData.dropLocation },
-      };
-      await set(ref(firebaseRtdb, `transporterTrips/${tripId}`), tripData);
     }
 
     try {
@@ -891,6 +887,18 @@ export async function acceptFarmerOrder(orderId: string): Promise<ApiResult<any>
     timestamp: Date.now(),
   });
 
+  // Notify Transporters about newly available delivery job
+  logisticsSync.broadcast('TRANSPORT_REQUESTED', {
+    orderId,
+    tripId,
+    trip: newTrip,
+    produceName,
+    quantityKg,
+    totalAmount: fare,
+    status: 'AVAILABLE',
+    timestamp: Date.now(),
+  });
+
   return {
     success: true,
     data: {
@@ -903,6 +911,19 @@ export async function acceptFarmerOrder(orderId: string): Promise<ApiResult<any>
 }
 
 export async function rejectFarmerOrder(orderId: string): Promise<ApiResult<any>> {
+  let orderCode = `ORD-${orderId.slice(-5).toUpperCase()}`;
+  try {
+    if (firebaseRtdb) {
+      const snap = await get(ref(firebaseRtdb, `orders/${orderId}`));
+      if (snap.exists()) {
+        const val = snap.val();
+        if (val?.orderCode || val?.orderNumber) {
+          orderCode = val.orderCode || val.orderNumber;
+        }
+      }
+    }
+  } catch (e) {}
+
   try {
     const headers = await getAuthHeaders();
     const res = await fetch(getApiUrl(`/api/orders/${orderId}/reject`), {
@@ -913,15 +934,68 @@ export async function rejectFarmerOrder(orderId: string): Promise<ApiResult<any>
     let json: any = null;
     try { json = JSON.parse(text); } catch {}
     if (res.ok && json && json.success) {
+      // Broadcast real-time rejection event to buyer
+      logisticsSync.broadcast('ORDER_REJECTED', {
+        orderId,
+        status: 'REJECTED',
+        order: json.order || { id: orderId, orderCode, status: 'REJECTED' },
+        timestamp: Date.now(),
+      });
       return { success: true, data: json.order };
     }
   } catch (err: any) {}
 
   try {
     if (firebaseRtdb) {
-      await update(ref(firebaseRtdb, `orders/${orderId}`), { status: 'REJECTED' });
+      await update(ref(firebaseRtdb, `orders/${orderId}`), {
+        status: 'REJECTED',
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: 'किसान द्वारा अस्वीकृत (Rejected by Farmer)',
+      });
+
+      // Remove any transporter trip if it existed
+      const tripId = `trip_${orderId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+      await remove(ref(firebaseRtdb, `transporterTrips/${tripId}`)).catch(() => {});
     }
-    return { success: true, data: { id: orderId, status: 'REJECTED' } };
+
+    // Update local buyer storage cache
+    if (typeof window !== 'undefined') {
+      try {
+        const local = localStorage.getItem('kisan_buyer_orders');
+        if (local) {
+          const parsed = JSON.parse(local);
+          const updated = parsed.map((o: any) =>
+            o.id === orderId || o.orderCode === orderCode
+              ? { ...o, status: 'REJECTED', statusLabel: 'Rejected', rejectionReason: 'किसान द्वारा अस्वीकृत' }
+              : o
+          );
+          localStorage.setItem('kisan_buyer_orders', JSON.stringify(updated));
+        }
+      } catch (e) {}
+    }
+
+    // Broadcast zero-latency rejection event to Buyer Portal
+    logisticsSync.broadcast('ORDER_REJECTED', {
+      orderId,
+      status: 'REJECTED',
+      order: {
+        id: orderId,
+        orderCode,
+        status: 'REJECTED',
+        rejectionReason: 'किसान द्वारा अस्वीकृत (Rejected by Farmer)',
+      },
+      timestamp: Date.now(),
+    });
+
+    return {
+      success: true,
+      data: {
+        id: orderId,
+        orderCode,
+        status: 'REJECTED',
+        rejectionReason: 'किसान द्वारा अस्वीकृत (Rejected by Farmer)',
+      },
+    };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

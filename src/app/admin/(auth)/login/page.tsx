@@ -234,6 +234,25 @@ export default function AdminLoginPage() {
             </button>
           </div>
 
+          {/* Quick Demo Admin Credentials */}
+          <div className="flex items-center justify-between p-2.5 bg-emerald-950/50 border border-emerald-800/50 rounded-xl text-xs text-slate-300">
+            <div className="text-[11px]">
+              <span className="text-emerald-400 font-bold">Demo Admin:</span> admin@krishisetu.in
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMethod('EMAIL');
+                setEmail('admin@krishisetu.in');
+                setPassword('admin123');
+                setError(null);
+              }}
+              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold transition-colors"
+            >
+              Quick Fill
+            </button>
+          </div>
+
           {/* Error Message */}
           {error && (
             <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5">

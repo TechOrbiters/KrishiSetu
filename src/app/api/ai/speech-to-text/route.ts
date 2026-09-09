@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseMandiIntent } from "@/lib/mandiIntent";
 
-export const dynamic = "force-dynamic";
+export const dynamic = process.env.STATIC_EXPORT === "true" ? "auto" : "force-dynamic";
+
+export async function GET() {
+  return NextResponse.json({ status: "ok", endpoint: "/api/ai/speech-to-text" });
+}
 
 /**
  * POST /api/ai/speech-to-text

@@ -412,36 +412,6 @@ export async function createOrder(order: Order) {
       await set(ref(firebaseRtdb, `orders/${customId}`), orderData);
     }
 
-    // 3. If delivery method is partner, create transporter trip in RTDB
-    if (order.deliveryMethod === 'DELIVERY_PARTNER') {
-      const tripId = `trip_${Date.now()}`;
-      const tripData: TransporterTrip = {
-        id: tripId,
-        orderCode: order.orderCode,
-        produceName: order.items[0]?.cropHindi || order.items[0]?.crop || 'कृषि उपज',
-        quantityKg: order.items.reduce((sum, it) => sum + (it.quantityKg || 0), 0),
-        fpoName: order.sellerName || 'किसान संघ (सत्यापित)',
-        pickupLocation: order.pickupLocation || 'फार्म गेट, बाराबंकी',
-        dropLocation: order.dropLocation || 'मंडी गेट, लखनऊ',
-        distanceKm: order.distanceKm || 28,
-        eta: order.eta || '45 मिनट',
-        fare: order.deliveryFee || 250,
-        pickupWindowHours: 4,
-        status: 'AVAILABLE',
-        isBestMatch: true,
-        freshnessDeadline: '24 घंटे शेष',
-        freshnessSafe: true,
-        otp: Math.floor(1000 + Math.random() * 9000).toString(),
-        temperature: 21.5,
-        pickupCoords: { lat: 26.9284, lng: 81.1834, label: order.pickupLocation || 'फार्म' },
-        dropCoords: { lat: 26.8524, lng: 80.9412, label: order.dropLocation || 'मंडी' },
-      };
-
-      if (firebaseRtdb) {
-        await set(ref(firebaseRtdb, `transporterTrips/${tripId}`), tripData);
-      }
-    }
-
     // 4. Also record in Supabase
     supabaseClient
       .from('orders')

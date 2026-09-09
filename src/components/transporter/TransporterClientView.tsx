@@ -15,6 +15,7 @@ import {
 import { INITIAL_TRANSPORTER_TRIPS } from '@/data/mockData';
 import { firebaseRtdb } from '@/lib/firebase/client';
 import { ref, get } from 'firebase/database';
+import { signOutSupabase } from '@/lib/supabase/authClient';
 
 export function TransporterClientView() {
   const router = useRouter();
@@ -177,8 +178,8 @@ export function TransporterClientView() {
 
     // 2. Listen for cross-portal events
     const unsubscribe = logisticsSync.subscribe((event: any) => {
-      if (event.type === 'ORDER_ACCEPTED' && event.trip) {
-        const newTrip = event.trip as TransporterTrip;
+      if ((event.type === 'ORDER_ACCEPTED' || event.type === 'TRANSPORT_REQUESTED') && (event.trip || event.payload?.trip)) {
+        const newTrip = (event.trip || event.payload?.trip) as TransporterTrip;
         setAvailableTrips((prev) => {
           const exists = prev.some((t) => t.id === newTrip.id || t.orderCode === newTrip.orderCode);
           if (exists) {
@@ -187,7 +188,19 @@ export function TransporterClientView() {
           return [newTrip, ...prev];
         });
       }
-      if (['ORDER_PLACED', 'ORDER_ACCEPTED', 'JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
+      if (event.type === 'ORDER_REJECTED') {
+        const rejectedOrderId = event.payload?.orderId;
+        const rejectedOrderCode = event.payload?.order?.orderCode;
+        setAvailableTrips((prev) =>
+          prev.filter(
+            (t) =>
+              t.id !== rejectedOrderId &&
+              t.orderCode !== rejectedOrderId &&
+              t.orderCode !== rejectedOrderCode
+          )
+        );
+      }
+      if (['ORDER_PLACED', 'ORDER_ACCEPTED', 'TRANSPORT_REQUESTED', 'ORDER_REJECTED', 'JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
         syncBackendData();
       }
     });
@@ -251,6 +264,12 @@ export function TransporterClientView() {
     } catch (e) {}
 
     setAvailableTrips((prev) => prev.filter((t) => t.id !== tripId));
+
+    logisticsSync.broadcast('JOB_DECLINED', {
+      tripId,
+      status: 'AVAILABLE',
+      timestamp: Date.now(),
+    });
   };
 
   const handleUpdateTripStatus = async (tripId: string, status: TransporterTrip['status']) => {
@@ -343,10 +362,24 @@ export function TransporterClientView() {
     });
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOutSupabase();
+    } catch (e) {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('krishi_active_role');
+      localStorage.removeItem('krishi_user_session');
+      localStorage.removeItem('krishi_transporter_profile');
+      localStorage.removeItem('krishi_transporter_trips');
+    }
+    router.push('/auth/transporter');
+  };
+
   return (
     <>
       <TransporterPortal
-        onBackToLanding={() => router.push('/')}
+        onBackToLanding={handleLogout}
+        onLogout={handleLogout}
         availableTrips={availableTrips}
         setAvailableTrips={setAvailableTrips}
         onOpenKrishiAI={() => setIsAiModalOpen(true)}

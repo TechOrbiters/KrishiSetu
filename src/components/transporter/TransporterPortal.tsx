@@ -47,6 +47,7 @@ export type TransporterNavTab = 'DASHBOARD' | 'SMARTMATCH' | 'MY_TRIPS' | 'EARNI
 
 interface TransporterPortalProps {
   onBackToLanding: () => void;
+  onLogout?: () => void;
   availableTrips: TransporterTrip[];
   setAvailableTrips: React.Dispatch<React.SetStateAction<TransporterTrip[]>>;
   onOpenKrishiAI: () => void;
@@ -58,6 +59,7 @@ interface TransporterPortalProps {
 
 export const TransporterPortal: React.FC<TransporterPortalProps> = ({
   onBackToLanding,
+  onLogout,
   availableTrips = [],
   setAvailableTrips,
   onOpenKrishiAI,
@@ -67,6 +69,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
   onUpdateTripLocation,
 }) => {
   const { t } = useLanguage();
+  const handleExit = onLogout || onBackToLanding;
   const [activeNavTab, setActiveNavTab] = useState<TransporterNavTab>('DASHBOARD');
   const [isOnline, setIsOnline] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -93,13 +96,37 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('krishi_transporter_profile') || localStorage.getItem('krishi_user_session');
+        if (cached) {
+          const p = JSON.parse(cached);
+          setProfile({
+            full_name: p.name || p.full_name || 'राजेश कुमार (राज ट्रांसपोर्ट)',
+            vehicle_number: p.vehicle_number || p.vehicleNumber || 'UP 32 AB 1234',
+            vehicle_type: p.vehicle_type || p.vehicleType || 'Mini Truck',
+            phone: p.phone || '+91 98765 43210',
+          });
+        }
+      } catch (e) {}
+    }
     fetchRealData();
   }, []);
+
+  const [incomingJobAlert, setIncomingJobAlert] = useState<TransporterTrip | null>(null);
 
   useEffect(() => {
     const unsubscribe = logisticsSync.subscribe((event) => {
       if (['JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
         fetchRealData();
+      }
+      if ((event.type === 'ORDER_ACCEPTED' || event.type === 'TRANSPORT_REQUESTED') && event.payload?.trip) {
+        setIncomingJobAlert(event.payload.trip as TransporterTrip);
+      }
+      if (event.type === 'ORDER_REJECTED') {
+        setIncomingJobAlert((prev) =>
+          prev?.orderCode === event.payload?.orderId || prev?.id === event.payload?.orderId ? null : prev
+        );
       }
     });
     return () => unsubscribe();
@@ -404,7 +431,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
               </div>
             </div>
             <button
-              onClick={onBackToLanding}
+              onClick={handleExit}
               className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
               title="पोर्टल से बाहर निकलें"
             >
@@ -586,7 +613,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
             </button>
 
             <button
-              onClick={onBackToLanding}
+              onClick={handleExit}
               className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium"
             >
               {t('switchRole')}
@@ -790,7 +817,7 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
               <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
                 <LanguageSelector variant="light" showLabel={false} />
                 <button
-                  onClick={onBackToLanding}
+                  onClick={handleExit}
                   className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -1022,12 +1049,20 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
                                 <div className="text-sm font-black text-amber-800">₹{job.fare}</div>
                                 <div className="text-[10px] text-emerald-700 font-bold">100% भुगतान</div>
                               </div>
-                              <button
-                                onClick={() => handleAcceptJobInternal(job.id)}
-                                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs"
-                              >
-                                स्वीकारें
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleRejectJobInternal(job.id)}
+                                  className="px-2.5 py-1.5 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+                                >
+                                  अस्वीकार
+                                </button>
+                                <button
+                                  onClick={() => handleAcceptJobInternal(job.id)}
+                                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs shadow-2xs cursor-pointer"
+                                >
+                                  स्वीकारें
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))
@@ -1145,6 +1180,122 @@ export const TransporterPortal: React.FC<TransporterPortalProps> = ({
             </div>
           )}
         </main>
+
+        {/* Incoming Job Notification Alert Modal (When Farmer Accepts Order) */}
+        {incomingJobAlert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-lg w-full border border-amber-300 shadow-2xl overflow-hidden animate-scaleUp">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-emerald-800 text-white p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl animate-bounce">
+                      🔔
+                    </div>
+                    <div>
+                      <span className="inline-block px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-black text-[10px] uppercase tracking-wider">
+                        नया डिलीवरी अनुरोध • New Job Request
+                      </span>
+                      <h3 className="text-lg font-black text-white mt-0.5">
+                        किसान ने ऑर्डर स्वीकार किया!
+                      </h3>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIncomingJobAlert(null)}
+                    className="p-1.5 text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-xs text-amber-100 mt-2">
+                  किसान ने ऑर्डर #{incomingJobAlert.orderCode} की पुष्टि कर दी है। क्या आप यह डिलीवरी स्वीकार या अस्वीकार करना चाहते हैं?
+                </p>
+              </div>
+
+              {/* Trip Details Card */}
+              <div className="p-5 space-y-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-base font-extrabold text-slate-900">
+                      {incomingJobAlert.produceName} ({incomingJobAlert.quantityKg} kg)
+                    </span>
+                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                      SmartMatch AI Match
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-600 space-y-1.5 pt-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400 font-medium">विक्रेता:</span>
+                      <strong className="text-slate-800">{incomingJobAlert.fpoName}</strong>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>पिकअप: <strong>{incomingJobAlert.pickupLocation}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>ड्रॉप: <strong>{incomingJobAlert.dropLocation}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 pt-1">
+                      <span>दूरी: <strong>{incomingJobAlert.distanceKm} km</strong></span>
+                      <span>•</span>
+                      <span>समय: <strong>{incomingJobAlert.eta}</strong></span>
+                      <span>•</span>
+                      <span>समय-सीमा: <strong className="text-emerald-700">सुरक्षित (FreshRoute Safe)</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Earnings Highlight */}
+                <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] text-amber-900 font-bold uppercase block">
+                      ट्रांसपोर्टर शुद्ध कमाई (Delivery Pay)
+                    </span>
+                    <span className="text-xs text-emerald-700 font-semibold">
+                      ₹0 कमीशन कटौती • सीधे आपके खाते में
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-amber-900">
+                    ₹{incomingJobAlert.fare}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const id = incomingJobAlert.id;
+                      setIncomingJobAlert(null);
+                      await handleRejectJobInternal(id);
+                    }}
+                    className="py-3 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <X className="w-4 h-4 text-red-500" />
+                    <span>अस्वीकार करें (Reject)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const id = incomingJobAlert.id;
+                      setIncomingJobAlert(null);
+                      await handleAcceptJobInternal(id);
+                    }}
+                    className="py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>स्वीकार करें (Accept Job)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

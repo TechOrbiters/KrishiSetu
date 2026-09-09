@@ -36,7 +36,8 @@ export type OrderStatus =
   | 'DISPATCHED'
   | 'IN_TRANSIT'
   | 'DELIVERED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'REJECTED';
 
 export interface OrderItem {
   id: string;
@@ -78,6 +79,7 @@ export interface Order {
   eta?: string;
   freshnessRemainingHours?: number;
   cancelledReason?: string;
+  rejectionReason?: string;
 }
 
 export interface TransporterTrip {

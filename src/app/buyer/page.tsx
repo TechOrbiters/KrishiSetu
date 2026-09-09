@@ -284,6 +284,25 @@ function BuyerPortalPageInner() {
             )
           );
         }
+      } else if (event.type === 'ORDER_REJECTED') {
+        const { orderId, order } = event.payload;
+        const ordCode = order?.orderCode || orderId;
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId ||
+            o.orderCode === orderId ||
+            (ordCode && o.orderCode === ordCode) ||
+            (ordCode && o.orderCode.replace('#', '') === ordCode.replace('#', ''))
+              ? {
+                  ...o,
+                  status: 'REJECTED' as OrderStatus,
+                  statusLabel: 'Rejected',
+                  rejectionReason: order?.rejectionReason || 'किसान द्वारा अस्वीकृत (Rejected by Farmer)',
+                }
+              : o
+          )
+        );
+        loadData();
       } else if (event.type === 'ORDER_PACKED') {
         const { orderId } = event.payload;
         if (orderId) {
@@ -413,47 +432,16 @@ function BuyerPortalPageInner() {
           console.warn('Backend DB order sync fallback note:', dbErr);
         }
 
-        // 4. Create Transporter Trip for Logistics Network
-        if (newOrder.deliveryMethod === 'DELIVERY_PARTNER') {
-          const newTrip: TransporterTrip = {
-            id: `trip-${Date.now()}`,
-            orderCode: updatedOrder.orderCode,
-            produceName: updatedOrder.items?.[0]?.crop || 'कृषि उपज',
-            quantityKg: updatedOrder.items?.reduce((a, b) => a + (b.quantityKg || 0), 0) || 200,
-            fpoName: updatedOrder.sellerName || 'Sharma FPO',
-            pickupLocation: updatedOrder.pickupLocation || 'बैजनाथपुर फार्म, बाराबंकी',
-            dropLocation: updatedOrder.dropLocation || 'नवीन गल्ला मंडी, लखनऊ',
-            distanceKm: updatedOrder.distanceKm || 28,
-            eta: '2h 30m',
-            fare: updatedOrder.deliveryFee || 250,
-            pickupWindowHours: 12,
-            freshnessRemainingHours: newOrder.freshnessRemainingHours || 24,
-            status: 'AVAILABLE',
-            isBestMatch: true,
-            freshnessDeadline: '24 घंटे शेष',
-            freshnessSafe: true,
-            pickupCoords: { lat: 26.9284, lng: 81.1834, label: newOrder.pickupLocation },
-            dropCoords: { lat: 26.8524, lng: 80.9412, label: newOrder.dropLocation },
-            driverName: 'राज ट्रांसपोर्ट (Rajesh)',
-            vehicleNumber: 'UP 32 AB 1234',
-          };
-
-          setTrips((prev) => [newTrip, ...prev.filter((t) => t.orderCode !== newTrip.orderCode)]);
-
-          // Sync trip with Firebase
-          updateTransporterTrip(newTrip.id, newTrip).catch(() => {});
-
-          // Zero-latency broadcast to Transporter Portal, Farmer Portal, and Admin Console
-          logisticsSync.broadcast('ORDER_PLACED', {
-            orderId: updatedOrder.orderCode,
-            shipmentId: newTrip.id,
-            buyerName: updatedOrder.buyerName || 'Rohit Verma',
-            totalAmount: updatedOrder.totalAmount,
-            produceName: updatedOrder.items?.[0]?.cropHindi || 'उपज',
-            quantityKg: newTrip.quantityKg,
-            status: 'PLACED',
-          });
-        }
+        // 4. Zero-latency broadcast to Farmer Portal & Admin Console (Awaiting Farmer Acceptance)
+        logisticsSync.broadcast('ORDER_PLACED', {
+          orderId: updatedOrder.orderCode,
+          order: updatedOrder,
+          buyerName: updatedOrder.buyerName || 'क्रेता साथी',
+          totalAmount: updatedOrder.totalAmount,
+          produceName: updatedOrder.items?.[0]?.cropHindi || 'उपज',
+          quantityKg: updatedOrder.items?.reduce((a, b) => a + (b.quantityKg || 0), 0) || 50,
+          status: 'PLACED',
+        });
       } catch (err) {
         console.error('Failed to place order:', err);
         setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);

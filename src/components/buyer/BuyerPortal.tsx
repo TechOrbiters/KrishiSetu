@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { signOutSupabase } from '@/lib/supabase/authClient';
 import {
   ProduceListing,
   Order,
@@ -76,6 +78,7 @@ import {
   DollarSign,
   TrendingDown,
   Info,
+  AlertCircle,
   Calendar,
   Building,
   User,
@@ -613,6 +616,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   onCancelOrder,
   isLoading,
 } : BuyerPortalProps) => {
+  const router = useRouter();
   const { language, t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<
@@ -808,7 +812,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     }
   };
   const [sortBy, setSortBy] = useState<'PRICE_ASC' | 'PRICE_DESC' | 'DISTANCE_ASC'>('DISTANCE_ASC');
-  const [orderFilter, setOrderFilter] = useState<'ALL' | 'ACTIVE' | 'ORDERED' | 'PACKED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED'>('ALL');
+  const [orderFilter, setOrderFilter] = useState<'ALL' | 'ACTIVE' | 'ORDERED' | 'PACKED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED' | 'REJECTED'>('ALL');
   const [selectedLocation, setSelectedLocation] = useState('Lucknow, UP');
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY_PARTNER' | 'SELF_PICKUP'>('DELIVERY_PARTNER');
   const [selectedTransporterId, setSelectedTransporterId] = useState<string>('t-1');
@@ -1296,14 +1300,45 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
   // Settings & Saved Addresses
   const [profileData, setProfileData] = useState({
-    name: 'Rohit Verma',
-    businessName: 'Verma Fresh Mart & Catering',
-    phone: '+91 98765 43210',
-    email: 'rohit.verma@vermafresh.in',
-    gst: '09AABCV1234F1Z5',
-    city: 'Lucknow',
+    name: 'रोहित वर्मा (Rohit Verma)',
+    businessName: 'रोहित ट्रेडर्स (Rohit Traders)',
+    phone: '+91 98765 11223',
+    email: 'rohit.verma@example.com',
+    gst: '09AAAAA0000A1Z5',
+    city: 'लखनऊ (Lucknow)',
     state: 'Uttar Pradesh',
   });
+
+  // Sync authenticated buyer profile from localStorage / Supabase
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const rawBuyer = localStorage.getItem('krishi_buyer_profile');
+        const rawSession = localStorage.getItem('krishi_user_session');
+        const buyer = rawBuyer ? JSON.parse(rawBuyer) : null;
+        const session = rawSession ? JSON.parse(rawSession) : null;
+
+        if (buyer || session) {
+          setProfileData((prev) => ({
+            ...prev,
+            name: buyer?.fullName || session?.name || prev.name,
+            businessName: buyer?.businessName || prev.businessName,
+            phone: buyer?.phone || prev.phone,
+            email: buyer?.email || session?.email || prev.email,
+            gst: buyer?.gstin || buyer?.gst || prev.gst,
+            city: buyer?.district || buyer?.city || prev.city,
+          }));
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleBuyerLogout = async () => {
+    try {
+      await signOutSupabase();
+    } catch (_) {}
+    router.push('/auth/buyer');
+  };
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
 
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
@@ -1343,6 +1378,26 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [otpDigits, setOtpDigits] = useState(['2', '6', '4', '8', '1', '3']);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
+  const [orderRejectedAlert, setOrderRejectedAlert] = useState<{
+    orderId?: string;
+    orderCode?: string;
+    reason?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = logisticsSync.subscribe((event) => {
+      if (event.type === 'ORDER_REJECTED') {
+        const orderData = event.payload?.order || {};
+        const code = orderData.orderCode || event.payload?.orderId || 'ORD';
+        setOrderRejectedAlert({
+          orderId: event.payload?.orderId,
+          orderCode: code,
+          reason: event.payload?.order?.rejectionReason || 'किसान द्वारा अस्वीकृत (Rejected by Farmer)',
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<any | null>(null);
   
   // Add Funds Input State
@@ -1817,17 +1872,19 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       sellerName: o.sellerName || 'सत्यापित FPO',
       itemCount: o.items?.length || 1,
       badgeItems: o.items?.length || 1,
-      totalAmount: o.totalAmount || o.productAmount + o.deliveryFee,
+      totalAmount: o.totalAmount || ((o.productAmount || 0) + (o.deliveryFee || 0)),
       productAmount: o.productAmount,
       deliveryFee: o.deliveryFee,
       status: o.status,
       statusLabel:
-        o.status === 'PLACED' ? 'In Transit' :
-        o.status === 'ACCEPTED' ? 'In Transit' :
+        o.status === 'PLACED' ? 'प्रतीक्षित (Placed)' :
+        o.status === 'ACCEPTED' ? 'स्वीकृत (Accepted)' :
         o.status === 'PACKED' ? 'Packed' :
         o.status === 'IN_TRANSIT' ? 'In Transit' :
         o.status === 'DELIVERED' ? 'Delivered' :
+        o.status === 'REJECTED' ? 'अस्वीकृत (Rejected)' :
         o.status === 'CANCELLED' ? 'Cancelled' : o.status,
+      rejectionReason: (o as any).rejectionReason,
       eta: o.eta || '1:15 PM',
       deliveryMethod: o.deliveryMethod || 'DELIVERY_PARTNER',
       pickupLocation: o.pickupLocation,
@@ -1850,8 +1907,16 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         if (orderFilter === 'ACTIVE') {
           return ['PLACED', 'ACCEPTED', 'PACKED', 'IN_TRANSIT'].includes(ord.status);
         }
-        if (orderFilter === 'ORDERED' && ord.status !== 'PLACED' && ord.status !== 'ACCEPTED') return false;
-        if (orderFilter !== 'ORDERED' && ord.status !== orderFilter) return false;
+        if (orderFilter === 'ORDERED') {
+          return ord.status === 'PLACED' || ord.status === 'ACCEPTED';
+        }
+        if (orderFilter === 'CANCELLED') {
+          return ord.status === 'CANCELLED' || ord.status === 'REJECTED';
+        }
+        if (orderFilter === 'REJECTED') {
+          return ord.status === 'REJECTED';
+        }
+        if (ord.status !== orderFilter) return false;
       }
       return true;
     });
@@ -2423,6 +2488,20 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             <span className="bg-emerald-800/80 px-1.5 py-0.2 rounded-md text-[10px]">3</span>
             <span>₹{cartTotal.toLocaleString()}</span>
           </button>
+
+          <button
+            type="button"
+            onClick={handleBuyerLogout}
+            title="लॉगआउट (Logout)"
+            aria-label="Logout from Buyer Portal"
+            className={`p-2 rounded-xl border transition-colors cursor-pointer flex items-center justify-center ${
+              isDark
+                ? 'border-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-800'
+                : 'border-slate-200 text-slate-500 hover:text-red-600 hover:bg-slate-100'
+            }`}
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -2436,6 +2515,44 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           <button onClick={() => setOrderSuccessMsg(null)}>
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Order Rejection Alert Banner (When Farmer Rejects Order) */}
+      {orderRejectedAlert && (
+        <div className="bg-red-600 text-white px-4 py-3 text-xs font-bold flex flex-wrap items-center justify-between gap-3 z-50 shadow-md animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 text-red-200 shrink-0 animate-pulse" />
+            <div>
+              <span className="font-extrabold text-sm sm:text-xs">
+                ⚠️ आपका यह ऑर्डर #{orderRejectedAlert.orderCode} किसान द्वारा अस्वीकार कर दिया गया है। कृपया नया ऑर्डर करें।
+              </span>
+              <span className="text-red-200 text-[11px] block sm:inline sm:ml-2">
+                ({orderRejectedAlert.reason || 'फसल अनुपलब्ध या किसान द्वारा निरस्त'})
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('BROWSE');
+                setOrderRejectedAlert(null);
+              }}
+              className="px-3.5 py-1.5 bg-white text-red-700 hover:bg-red-50 rounded-xl text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>नया ऑर्डर करें (Make a New Order)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderRejectedAlert(null)}
+              className="p-1 hover:bg-red-700 rounded-lg transition-colors cursor-pointer"
+              title="बंद करें"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -2491,14 +2608,14 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-extrabold text-xs truncate">Rohit Verma</span>
+                    <span className="font-extrabold text-xs truncate">{profileData.name}</span>
                     <span className="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded-md">
                       Buyer
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
                     <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
-                    <span>Lucknow, UP (नवीन गल्ला मंडी)</span>
+                    <span>{profileData.city || 'Lucknow, UP'}</span>
                   </div>
                 </div>
               </div>
@@ -2616,14 +2733,14 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <span className={`font-bold text-xs ${isDark ? 'text-white' : 'text-slate-900'} truncate`}>Rohit Verma</span>
+                <span className={`font-bold text-xs ${isDark ? 'text-white' : 'text-slate-900'} truncate`}>{profileData.name}</span>
                 <span className="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1 py-0.2 rounded-md">
                   Buyer
                 </span>
               </div>
               <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-0.5">
                 <MapPin className="w-2.5 h-2.5 text-slate-400" />
-                <span>Lucknow, UP</span>
+                <span>{profileData.city || 'Lucknow, UP'}</span>
               </div>
             </div>
           </div>
@@ -3132,10 +3249,10 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                   {(() => {
                     const activeCount = (orders || []).filter(o => ['PLACED', 'ACCEPTED', 'PACKED', 'IN_TRANSIT'].includes(o.status)).length + defaultKisanBazaarOrders.filter(o => ['PLACED', 'ACCEPTED', 'PACKED', 'IN_TRANSIT'].includes(o.status)).length;
                     const completedCount = (orders || []).filter(o => o.status === 'DELIVERED').length + defaultKisanBazaarOrders.filter(o => o.status === 'DELIVERED').length;
-                    const cancelledCount = (orders || []).filter(o => o.status === 'CANCELLED').length + defaultKisanBazaarOrders.filter(o => o.status === 'CANCELLED').length;
+                    const cancelledCount = (orders || []).filter(o => o.status === 'CANCELLED' || o.status === 'REJECTED').length + defaultKisanBazaarOrders.filter(o => o.status === 'CANCELLED' || o.status === 'REJECTED').length;
                     
                     const totalSpent = [...(orders || []), ...defaultKisanBazaarOrders]
-                      .filter(o => o.status !== 'CANCELLED')
+                      .filter(o => o.status !== 'CANCELLED' && o.status !== 'REJECTED')
                       .reduce((sum, o) => {
                         const amt = o.totalAmount || ((o.productAmount || 0) + (o.deliveryFee || 0));
                         return sum + amt;
@@ -3152,7 +3269,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                           <div className="text-xl font-black text-[#03542B]">{completedCount}</div>
                         </div>
                         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">रद्द ऑर्डर्स</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">रद्द व अस्वीकृत ऑर्डर्स</span>
                           <div className="text-xl font-black text-red-700">{cancelledCount}</div>
                         </div>
                         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
@@ -3172,6 +3289,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                       { id: 'PACKED', label: 'Packed' },
                       { id: 'IN_TRANSIT', label: 'In Transit' },
                       { id: 'DELIVERED', label: 'Delivered' },
+                      { id: 'REJECTED', label: 'अस्वीकृत (Rejected)' },
                       { id: 'CANCELLED', label: 'Cancelled' },
                     ].map((pill) => (
                       <button
@@ -3260,9 +3378,10 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                                 ord.status === 'IN_TRANSIT' ? 'bg-emerald-100 text-emerald-900' :
                                 ord.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' :
                                 ord.status === 'PACKED' ? 'bg-amber-100 text-amber-900' :
+                                ord.status === 'REJECTED' ? 'bg-red-100 text-red-800 border border-red-200' :
                                 ord.status === 'CANCELLED' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'
                               }`}>
-                                {ord.statusLabel || ord.status}
+                                {ord.status === 'REJECTED' ? 'अस्वीकृत (Rejected)' : (ord.statusLabel || ord.status)}
                               </span>
                               {ord.eta && <div className="text-[10px] text-slate-500">ETA: {ord.eta}</div>}
                             </div>
@@ -3274,6 +3393,37 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                             deliveryMethod={ord.deliveryMethod as any}
                             language={language}
                           />
+
+                          {/* Prominent Rejected Banner if order rejected by farmer */}
+                          {ord.status === 'REJECTED' && (
+                            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-red-950 animate-fadeIn">
+                              <div className="flex items-start sm:items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                                  <AlertCircle className="w-6 h-6" />
+                                </div>
+                                <div>
+                                  <h5 className="font-extrabold text-sm text-red-900">
+                                    आपका यह ऑर्डर किसान द्वारा अस्वीकार कर दिया गया है
+                                  </h5>
+                                  <p className="text-[11px] text-red-700 mt-0.5">
+                                    {ord.rejectionReason || 'यह उपज वर्तमान में उपलब्ध नहीं है या किसान द्वारा निरस्त कर दी गई है।'} कृपया नया ऑर्डर करें।
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cropName = ord.items?.[0]?.cropHindi || ord.items?.[0]?.crop || '';
+                                  if (cropName) setSearchQuery(cropName);
+                                  setActiveTab('BROWSE');
+                                }}
+                                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>नया ऑर्डर करें (Make a New Order)</span>
+                              </button>
+                            </div>
+                          )}
 
                           {/* Actions */}
                           <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
@@ -3299,6 +3449,20 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                                     💬 चैट
                                   </button>
                                 </>
+                              )}
+                              {ord.status === 'REJECTED' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cropName = ord.items?.[0]?.cropHindi || ord.items?.[0]?.crop || '';
+                                    if (cropName) setSearchQuery(cropName);
+                                    setActiveTab('BROWSE');
+                                  }}
+                                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1 shadow-2xs"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  <span>नया ऑर्डर करें</span>
+                                </button>
                               )}
                               <button
                                 type="button"

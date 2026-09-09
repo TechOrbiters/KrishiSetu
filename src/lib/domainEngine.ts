@@ -376,7 +376,7 @@ export function calculateOrderPricing(
 // 4. Order State Machine
 // ==========================================
 export const VALID_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PLACED: ['ACCEPTED', 'CANCELLED'],
+  PLACED: ['ACCEPTED', 'CANCELLED', 'REJECTED'],
   ACCEPTED: ['PACKED', 'SELF_PICKUP', 'CANCELLED'],
   SELF_PICKUP: ['DELIVERED', 'CANCELLED'],
   PACKED: ['DISPATCHED', 'CANCELLED'],
@@ -384,6 +384,7 @@ export const VALID_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   IN_TRANSIT: ['DELIVERED'],
   DELIVERED: [], // Terminal
   CANCELLED: [], // Terminal
+  REJECTED: [], // Terminal
 };
 
 export function canTransitionOrder(
@@ -405,6 +406,9 @@ export function canTransitionOrder(
   if (currentStatus === 'PLACED') {
     if (targetStatus === 'ACCEPTED' && callerRole !== 'FARMER' && callerRole !== 'FARMER_FPO' && callerRole !== 'ADMIN') {
       return { allowed: false, reason: 'Only the Farmer/FPO or Admin can accept a placed order' };
+    }
+    if (targetStatus === 'REJECTED' && callerRole !== 'FARMER' && callerRole !== 'FARMER_FPO' && callerRole !== 'ADMIN') {
+      return { allowed: false, reason: 'Only the Farmer/FPO or Admin can reject a placed order' };
     }
   }
 

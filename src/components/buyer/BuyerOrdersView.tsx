@@ -51,6 +51,7 @@ export const BuyerOrdersView: React.FC<BuyerOrdersViewProps> = ({
     { id: 'PACKED', labelHindi: 'Packed', labelEng: 'पैक किया गया' },
     { id: 'IN_TRANSIT', labelHindi: 'In Transit', labelEng: 'रास्ते में है' },
     { id: 'DELIVERED', labelHindi: 'Delivered', labelEng: 'सफल डिलीवरी' },
+    { id: 'REJECTED', labelHindi: 'अस्वीकृत (Rejected)', labelEng: 'अस्वीकृत' },
     { id: 'CANCELLED', labelHindi: 'Cancelled', labelEng: 'रद्द' },
   ];
 
@@ -92,6 +93,13 @@ export const BuyerOrdersView: React.FC<BuyerOrdersViewProps> = ({
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-purple-600" />
             <span>Order Confirmed</span>
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 flex items-center gap-1 border border-red-200">
+            <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+            <span>अस्वीकृत (Rejected)</span>
           </span>
         );
       case 'CANCELLED':
@@ -251,6 +259,32 @@ export const BuyerOrdersView: React.FC<BuyerOrdersViewProps> = ({
                     </div>
                   </div>
 
+                  {/* Prominent Rejection Banner if rejected by farmer */}
+                  {order.status === 'REJECTED' && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 my-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-red-950 animate-fadeIn">
+                      <div className="flex items-start sm:items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-xs text-red-900">
+                            आपका यह ऑर्डर किसान द्वारा अस्वीकार कर दिया गया है
+                          </p>
+                          <p className="text-[11px] text-red-700 mt-0.5">
+                            {order.rejectionReason || 'उपज अनुपलब्ध होने या किसान द्वारा अस्वीकार किए जाने के कारण यह ऑर्डर निरस्त हुआ।'} कृपया नया ऑर्डर करें।
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href="/buyer"
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-xs"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>नया ऑर्डर करें (Make a New Order)</span>
+                      </a>
+                    </div>
+                  )}
+
                   {/* INLINE STEPPER FOR ACTIVE ORDERS (scr-012) */}
                   {isActive && (
                     <div className="bg-slate-50/80 rounded-xl p-3 my-2 border border-slate-200/80">
@@ -307,6 +341,16 @@ export const BuyerOrdersView: React.FC<BuyerOrdersViewProps> = ({
                         </button>
                       )}
 
+                      {order.status === 'REJECTED' && (
+                        <a
+                          href="/buyer"
+                          className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>नया ऑर्डर करें</span>
+                        </a>
+                      )}
+
                       <button
                         onClick={() => setSelectedOrderModal(order)}
                         className="px-3.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
@@ -349,9 +393,9 @@ export const BuyerOrdersView: React.FC<BuyerOrdersViewProps> = ({
               </div>
               <div className="bg-rose-50/70 p-3 rounded-xl border border-rose-100 text-center">
                 <p className="text-xl font-extrabold text-rose-900">
-                  {orders.filter((o) => o.status === 'CANCELLED').length}
+                  {orders.filter((o) => o.status === 'CANCELLED' || o.status === 'REJECTED').length}
                 </p>
-                <p className="text-[11px] text-rose-700">Cancelled</p>
+                <p className="text-[11px] text-rose-700">Cancelled / Rejected</p>
               </div>
             </div>
 

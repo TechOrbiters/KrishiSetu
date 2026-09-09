@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { firebaseAuth } from '../firebase/client';
 import { getFirebaseBearerToken, logoutFirebase } from '../firebase/authClient';
+import { signOutSupabase } from '../supabase/authClient';
+import { supabaseClient } from '../supabase/client';
 import {
   fetchFarmerProfile,
   fetchFarmerListings,
@@ -129,9 +131,14 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const logout = async () => {
-    await logoutFirebase();
+    await logoutFirebase().catch(() => {});
+    await signOutSupabase().catch(() => {});
     if (typeof window !== 'undefined') {
       localStorage.removeItem('krishi_user_profile');
+      localStorage.removeItem('krishi_farmer_profile');
+      localStorage.removeItem('krishi_user_session');
+      localStorage.removeItem('krishi_active_role');
+      localStorage.removeItem('ks_auth_token');
     }
     setUser(EMPTY_USER);
     setListings([]);
@@ -140,13 +147,29 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('krishi_user_profile');
+      const cached = localStorage.getItem('krishi_farmer_profile') || localStorage.getItem('krishi_user_profile') || localStorage.getItem('krishi_user_session');
       if (cached) {
         try {
-          setUser(JSON.parse(cached));
+          const parsed = JSON.parse(cached);
+          setUser((prev) => ({
+            ...prev,
+            fullName: parsed.name || parsed.fullName || parsed.full_name || prev.fullName,
+            phone: parsed.phone || prev.phone,
+            village: parsed.village || prev.village,
+            district: parsed.district || prev.district,
+            state: parsed.state || prev.state,
+            pincode: parsed.pincode || prev.pincode,
+          }));
         } catch (e) {}
       }
       loadDataFromSupabase();
+
+      // Listen for Supabase Auth state changes
+      const { data: authListener } = supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+          await loadDataFromSupabase();
+        }
+      });
 
       if (firebaseAuth && typeof onAuthStateChanged === 'function') {
         const unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser) => {
@@ -154,8 +177,15 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
             await loadDataFromSupabase();
           }
         });
-        return () => unsubscribe();
+        return () => {
+          unsubscribe();
+          authListener?.subscription?.unsubscribe();
+        };
       }
+
+      return () => {
+        authListener?.subscription?.unsubscribe();
+      };
     }
   }, []);
 
@@ -222,10 +252,9 @@ export const FarmerStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
-          const isDelivery = ord.deliveryMode === 'DELIVERY_PARTNER';
           return {
             ...ord,
-            status: isDelivery ? 'IN_TRANSIT' : 'ACCEPTED',
+            status: 'ACCEPTED',
           };
         }
         return ord;

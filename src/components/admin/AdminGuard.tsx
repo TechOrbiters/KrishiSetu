@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Shield, Loader2 } from 'lucide-react';
 import { logoutFirebase } from '@/lib/firebase/authClient';
+import { signOutSupabase } from '@/lib/supabase/authClient';
 
 interface AdminSession {
   uid: string;
@@ -73,7 +74,8 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     try {
       localStorage.removeItem('krishi_admin_session');
       localStorage.removeItem('krishi_active_role');
-      await logoutFirebase();
+      await logoutFirebase().catch(() => {});
+      await signOutSupabase().catch(() => {});
     } finally {
       router.push('/admin/login');
     }

@@ -84,11 +84,16 @@ export const OrderStepper: React.FC<OrderStepperProps> = ({
 
   const currentIdx = getStepIndex(status);
 
-  if (status === 'CANCELLED') {
+  if (status === 'REJECTED' || status === 'CANCELLED') {
+    const isRejected = status === 'REJECTED';
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-800 text-xs font-bold">
+      <div className="bg-red-50 border border-red-300 rounded-xl p-3 flex items-center gap-2.5 text-red-900 text-xs font-bold animate-fadeIn">
         <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-        <span>{isHi ? 'यह ऑर्डर रद्द कर दिया गया है' : 'This order has been cancelled'}</span>
+        <span>
+          {isRejected
+            ? (isHi ? 'यह ऑर्डर किसान द्वारा अस्वीकार कर दिया गया है। कृपया नया ऑर्डर करें।' : 'Your this order is rejected by farmer. Please make a new order.')
+            : (isHi ? 'यह ऑर्डर रद्द कर दिया गया है।' : 'This order has been cancelled.')}
+        </span>
       </div>
     );
   }
