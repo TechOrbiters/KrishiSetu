@@ -33,3 +33,14 @@
    - **Rule:** Multi-entity branch (populating all detected fields at once) is ONLY for `result.field === 'global'` or `result.field === undefined`.
    - **Price field fallback chain:** `intent.pricePerKg || parseSpokenNumber(transcript) || intent.quantity` — ensures any spoken number reaches the price field even when no price keyword (रुपये, भाव, etc.) is detected.
    - **Quantity field fallback chain:** `parseSpokenNumber(transcript) || intent.quantity` — prioritizes word-based parsing over intent for plain Hindi number words.
+
+7. **Produce Listing Form Layout: Price In Place of Minimum Order Quantity**:
+   - In Step 1 of the produce listing wizard (`/farmer/listings/new`), the Minimum Order Quantity input and its warning banner are completely replaced by the Price input box (`कीमत*`).
+   - The price box includes:
+     - Currency badge prefix: `₹`
+     - Number input (`input-price`) with placeholder `जैसे - 24`
+     - Dedicated voice mic button (`mic-price`)
+     - Unit suffix: `प्रति kg`
+     - Market price reference banner: `📈 आज का बाजार भाव: ₹20 - ₹24 / kg`
+   - The dedicated price mic must directly set `price` for any spoken number without minOrder diversion.
+   - Any deployment to Firebase Hosting must ensure `STATIC_EXPORT=true` is used (via `npm run build:export`) so `out/` is regenerated before `firebase deploy --only hosting`.
