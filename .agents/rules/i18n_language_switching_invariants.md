@@ -26,12 +26,16 @@ These architectural invariants ensure smooth, error-free, and crash-resistant mu
 - **Rationale**: Observing `characterData: true` while mutating `node.nodeValue` inside the callback creates an infinite loop that freezes the browser UI thread and crashes the page.
 - **Debounce**: Always debounce translation callbacks with a 150–200ms timer.
 
-## 4. Length-Descending Rule Ordering
-- **Invariant**: When compiling DOM translation rules from `DOM_TRANSLATIONS`, rules must be sorted by `src.length` in descending order:
+## 4. Single-Pass Regex Replacement (Zero Cascading or Runaway Duplication)
+- **Invariant**: NEVER use sequential loop replacements like `for (rule of rules) { str = str.split(rule.src).join(rule.target); }`.
+- **Anti-Pattern Rationale**: Sequential in-place string replacement causes re-entrant cascading corruption. When one rule translates `"Orders"` $\to$ `"ऑर्डर्स"`, a subsequent rule matching `"ऑर्डर"` will match inside the newly generated `"ऑर्डर्स"`, repeatedly appending characters and halants (`्स्स्स्स्स्स्स्स्स्स्स्स्`), or splitting multi-byte Indic conjuncts and leaving orphaned vowel marks (`◌ॆ`).
+- **Solution**: Always compile all translation phrases into a single regular expression with length-descending alternation:
   ```ts
-  rules.sort((a, b) => b.src.length - a.src.length);
+  const sortedKeys = Array.from(phraseMap.keys()).sort((a, b) => b.length - a.length);
+  const regex = new RegExp(sortedKeys.map(escapeRegex).join('|'), 'g');
+  return str.replace(regex, (match) => phraseMap.get(match) || match);
   ```
-- **Rationale**: Ensures compound phrases (e.g. `"क्रेता लॉगिन / Buyer Sign In"`) match and replace cleanly before shorter subphrases (e.g. `"क्रेता लॉगिन"`), preventing partial replacements and garbled UI text.
+- **Guarantee**: JavaScript's regex engine advances its scan pointer past each replacement, guaranteeing that translated text is NEVER inspected or re-matched again in the same pass.
 
 ## 5. Universal Selector Availability
 - **Invariant**: Every role portal and authentication page MUST have a visible `<LanguageSelector />` rendered in its top bar or header:
