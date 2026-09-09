@@ -28,40 +28,46 @@ const STORAGE_KEYS = ['krishisetu_language', 'kisansetu_app_language'];
 const baseTextMap = new WeakMap<Node, string>();
 const basePlaceholderMap = new WeakMap<Element, string>();
 
-interface ReplacementRule {
-  src: string;
-  target: string;
+interface CompiledLanguageEngine {
+  phraseMap: Map<string, string>;
+  regex: RegExp | null;
 }
 
-// Cached rule lookup arrays per target language for blazing fast DOM passes
-const rulesCache = new Map<Language, ReplacementRule[]>();
+// Cached compiled regex engines per target language for instantaneous single-pass translations
+const engineCache = new Map<Language, CompiledLanguageEngine>();
 
-function getRulesForLanguage(targetLang: Language): ReplacementRule[] {
-  if (rulesCache.has(targetLang)) {
-    return rulesCache.get(targetLang)!;
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getEngineForLanguage(targetLang: Language): CompiledLanguageEngine {
+  if (engineCache.has(targetLang)) {
+    return engineCache.get(targetLang)!;
   }
 
-  const rules: ReplacementRule[] = [];
+  const phraseMap = new Map<string, string>();
   for (const entry of DOM_TRANSLATIONS) {
     const target = (entry as any)[targetLang] || entry.hi || entry.en;
     if (!target) continue;
 
-    // Collect all possible source variants that should map to target
-    const sources = [entry.hi, entry.en, entry.mr, entry.te, entry.ta, entry.bn].filter(Boolean) as string[];
+    // Only translate from application base text (Hindi and English)
+    const sources = [entry.hi, entry.en].filter(Boolean) as string[];
     for (const src of sources) {
       const trimmedSrc = src.trim();
       const trimmedTarget = target.trim();
       if (trimmedSrc && trimmedSrc !== trimmedTarget) {
-        rules.push({ src: trimmedSrc, target: trimmedTarget });
+        phraseMap.set(trimmedSrc, trimmedTarget);
       }
     }
   }
 
-  // Sort by source phrase length DESCENDING so compound phrases match before single words
-  rules.sort((a, b) => b.src.length - a.src.length);
+  // Sort keys by length DESCENDING so longer compound phrases match before subphrases
+  const sortedKeys = Array.from(phraseMap.keys()).sort((a, b) => b.length - a.length);
+  const regex = sortedKeys.length > 0 ? new RegExp(sortedKeys.map(escapeRegex).join('|'), 'g') : null;
 
-  rulesCache.set(targetLang, rules);
-  return rules;
+  const engine: CompiledLanguageEngine = { phraseMap, regex };
+  engineCache.set(targetLang, engine);
+  return engine;
 }
 
 /**
@@ -73,21 +79,26 @@ function applyDOMTranslation(targetLang: Language) {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
   const isHindi = targetLang === 'hi';
-  const rules = isHindi ? [] : getRulesForLanguage(targetLang);
+  const engine = isHindi ? null : getEngineForLanguage(targetLang);
 
-  // Helper to translate single string from its base form
+  // Helper to translate single string from its base form in a single regex pass
   const translateString = (str: string): string => {
+    if (!engine || !engine.regex) return str;
     const trimmed = str.trim();
     if (!trimmed) return str;
 
-    let result = str;
-    for (let i = 0; i < rules.length; i++) {
-      const rule = rules[i];
-      if (result.includes(rule.src)) {
-        result = result.split(rule.src).join(rule.target);
-      }
+    // 1. Exact match check first for instantaneous 1-to-1 lookup
+    if (engine.phraseMap.has(trimmed)) {
+      const match = engine.phraseMap.get(trimmed)!;
+      return str === trimmed ? match : str.replace(trimmed, match);
     }
-    return result;
+
+    // 2. Single-pass regex replacement:
+    // Guarantees each matched token is replaced once and the regex pointer advances past it,
+    // making cascading replacements, runaway character duplication, or broken Indic conjuncts impossible!
+    return str.replace(engine.regex, (matched) => {
+      return engine.phraseMap.get(matched) || matched;
+    });
   };
 
   try {

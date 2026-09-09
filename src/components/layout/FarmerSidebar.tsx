@@ -139,7 +139,7 @@ export const FarmerSidebar: React.FC<FarmerSidebarProps> = ({
               <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-700' : 'text-slate-500'}`} />
               <div className="flex flex-col leading-tight">
                 <span className="text-sm">{t(item.labelKey)}</span>
-                <span className="text-[11px] text-slate-400 font-normal">{item.subKey}</span>
+                <span className="text-[11px] text-slate-400 font-normal" data-no-translate="true">{item.subKey}</span>
               </div>
             </Link>
           );
