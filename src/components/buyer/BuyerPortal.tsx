@@ -121,130 +121,6 @@ interface CartItem {
   unit?: string;
 }
 
-// Mock Order Records matching mockups (Image 4)
-const defaultKisanBazaarOrders = [
-  {
-    id: 'ord-5678',
-    orderCode: 'ORD5678',
-    placedAt: '12 मई 2024, 10:30 AM',
-    sellerName: 'Sharma FPO, मोहनलालगंज',
-    itemCount: 2,
-    badgeItems: 2,
-    totalAmount: 3685,
-    productAmount: 3435,
-    deliveryFee: 250,
-    status: 'IN_TRANSIT',
-    statusLabel: 'In Transit',
-    eta: '1:15 PM',
-    estDelivered: 'Est. 3:00 PM',
-    deliveryMethod: 'DELIVERY_PARTNER',
-    pickupLocation: 'बैजनाथपुर फार्म, बाराबंकी',
-    dropLocation: 'लखनऊ, उत्तर प्रदेश',
-    images: [
-      'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80',
-      'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80',
-    ],
-    items: [
-      { id: 'i-1', listingId: 'l1', crop: 'Potato', cropHindi: 'आलू (Potato)', quantityKg: 20, pricePerKg: 28, lineAmount: 560, image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80' },
-      { id: 'i-2', listingId: 'l2', crop: 'Tomato', cropHindi: 'टमाटर (Tomato)', quantityKg: 20, pricePerKg: 45, lineAmount: 900, image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80' },
-      { id: 'i-3', listingId: 'l3', crop: 'Wheat', cropHindi: 'गेहूं (Wheat)', quantityKg: 100, pricePerKg: 22.25, lineAmount: 2225, image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=200&q=80' },
-    ],
-  },
-  {
-    id: 'ord-5567',
-    orderCode: 'ORD5567',
-    placedAt: '10 मई 2024, 09:20 AM',
-    sellerName: 'Kisan Utpadak FPO, बक्सी का तालाब',
-    itemCount: 1,
-    badgeItems: 1,
-    totalAmount: 2225,
-    productAmount: 2225,
-    deliveryFee: 0,
-    status: 'DELIVERED',
-    statusLabel: 'Delivered',
-    deliveredNote: 'Delivered on 10 मई, 2:45 PM',
-    deliveryMethod: 'SELF_PICKUP',
-    pickupLocation: 'बक्सी का तालाब मंडी',
-    dropLocation: 'लखनऊ, उत्तर प्रदेश',
-    images: [
-      'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=200&q=80',
-    ],
-    items: [
-      { id: 'i-3', listingId: 'l3', crop: 'Wheat', cropHindi: 'गेहूं (Wheat)', quantityKg: 100, pricePerKg: 22.25, lineAmount: 2225, image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=200&q=80' },
-    ],
-  },
-  {
-    id: 'ord-5456',
-    orderCode: 'ORD5456',
-    placedAt: '08 मई 2024, 04:15 PM',
-    sellerName: 'Green Fields FPO, मलिहाबाद',
-    itemCount: 2,
-    badgeItems: 2,
-    totalAmount: 1340,
-    productAmount: 1190,
-    deliveryFee: 150,
-    status: 'PACKED',
-    statusLabel: 'Packed',
-    expectedNote: 'Expected: 08 मई, 6:00 PM',
-    deliveryMethod: 'DELIVERY_PARTNER',
-    pickupLocation: 'मलिहाबाद फार्म',
-    dropLocation: 'लखनऊ, उत्तर प्रदेश',
-    images: [
-      'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cf?auto=format&fit=crop&w=200&q=80',
-      'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80',
-    ],
-    items: [
-      { id: 'i-4', listingId: 'l4', crop: 'Onion', cropHindi: 'प्याज (Onion)', quantityKg: 35, pricePerKg: 34, lineAmount: 1190, image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cf?auto=format&fit=crop&w=200&q=80' },
-    ],
-  },
-  {
-    id: 'ord-5345',
-    orderCode: 'ORD5345',
-    placedAt: '06 मई 2024, 11:10 AM',
-    sellerName: 'Verma FPO, मोहनलालगंज',
-    itemCount: 1,
-    badgeItems: 1,
-    totalAmount: 1820,
-    productAmount: 1820,
-    deliveryFee: 0,
-    status: 'CANCELLED',
-    statusLabel: 'Cancelled',
-    cancelledNote: 'Cancelled on 06 मई, 1:30 PM',
-    deliveryMethod: 'SELF_PICKUP',
-    pickupLocation: 'मोहनलालगंज मंडी',
-    dropLocation: 'लखनऊ, उत्तर प्रदेश',
-    images: [
-      'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80',
-    ],
-    items: [
-      { id: 'i-5', listingId: 'l5', crop: 'Potato', cropHindi: 'आलू (Potato)', quantityKg: 65, pricePerKg: 28, lineAmount: 1820, image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80' },
-    ],
-  },
-  {
-    id: 'ord-5234',
-    orderCode: 'ORD5234',
-    placedAt: '04 मई 2024, 09:00 AM',
-    sellerName: 'Sharma FPO, मोहनलालगंज',
-    itemCount: 2,
-    badgeItems: 2,
-    totalAmount: 980,
-    productAmount: 830,
-    deliveryFee: 150,
-    status: 'DELIVERED',
-    statusLabel: 'Delivered',
-    deliveredNote: 'Delivered on 04 मई, 1:20 PM',
-    deliveryMethod: 'DELIVERY_PARTNER',
-    pickupLocation: 'मोहनलालगंज फार्म',
-    dropLocation: 'लखनऊ, उत्तर प्रदेश',
-    images: [
-      'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80',
-      'https://images.unsplash.com/photo-1425543103986-22abb7d7e8d2?auto=format&fit=crop&w=200&q=80',
-    ],
-    items: [
-      { id: 'i-6', listingId: 'l6', crop: 'Tomato', cropHindi: 'टमाटर (Tomato)', quantityKg: 15, pricePerKg: 45, lineAmount: 675, image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80' },
-    ],
-  },
-];
 
 // Transporters List for Delivery Vikalp (Image 1 - scr-007)
 const candidateTransporters = [
@@ -326,113 +202,6 @@ const candidateTransporters = [
   },
 ];
 
-// FPOs List matching Image 3 (scr-011)
-const mockupFPOs = [
-  {
-    id: 'fpo-1',
-    name: 'Verma FPO',
-    type: 'FPO',
-    location: 'Mohanlalganj, Lucknow',
-    farmersCount: '250+',
-    productsCount: '20+',
-    onTimeRate: '98%',
-    rating: 4.6,
-    reviewCount: 96,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'fpo-2',
-    name: 'Kisan Sangh FPO',
-    type: 'FPO',
-    location: 'Barabanki, UP',
-    farmersCount: '180+',
-    productsCount: '15+',
-    onTimeRate: '96%',
-    rating: 4.5,
-    reviewCount: 78,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'farmer-1',
-    name: 'Ramesh Yadav',
-    type: 'Farmer',
-    location: 'Malihabad, Lucknow',
-    experienceYears: '5+ Years',
-    productsCount: '12+',
-    onTimeRate: '95%',
-    rating: 4.7,
-    reviewCount: 62,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'fpo-3',
-    name: 'Green Field FPO',
-    type: 'FPO',
-    location: 'Sitapur, UP',
-    farmersCount: '220+',
-    productsCount: '18+',
-    onTimeRate: '97%',
-    rating: 4.6,
-    reviewCount: 85,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'farmer-2',
-    name: 'Suresh Singh',
-    type: 'Farmer',
-    location: 'Bachhrawan, Raebareli',
-    experienceYears: '8+ Years',
-    productsCount: '10+',
-    onTimeRate: '94%',
-    rating: 4.4,
-    reviewCount: 38,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'fpo-4',
-    name: 'Shree Ram FPO',
-    type: 'FPO',
-    location: 'Gosaiganj, Lucknow',
-    farmersCount: '160+',
-    productsCount: '14+',
-    onTimeRate: '96%',
-    rating: 4.3,
-    reviewCount: 55,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'farmer-3',
-    name: 'Arvind Kumar',
-    type: 'Farmer',
-    location: 'Mohangram, Sitapur',
-    experienceYears: '6+ Years',
-    productsCount: '9+',
-    onTimeRate: '93%',
-    rating: 4.5,
-    reviewCount: 41,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'fpo-5',
-    name: 'Sakhi Mahila FPO',
-    type: 'FPO',
-    location: 'Unnao, UP',
-    farmersCount: '120+',
-    productsCount: '16+',
-    onTimeRate: '95%',
-    rating: 4.2,
-    reviewCount: 48,
-    isVerified: true,
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
-  },
-];
 
 const getCropEmoji = (cropName: string): string => {
   const c = (cropName || '').toLowerCase();
@@ -513,74 +282,6 @@ const getCropCategory = (cropName: string): string => {
   return 'VEGETABLES';
 };
 
-// Baazar Bhav Mandi Table matching Image 2 (scr-003)
-const mockupBaazarBhav = [
-  {
-    crop: 'Tomato',
-    cropHindi: 'टमाटर',
-    image: '🍅',
-    minPrice: 1200,
-    maxPrice: 1850,
-    avgPrice: 1525,
-    change: -50,
-    changePercent: -3.2,
-    trend: 'DOWN',
-    kisanBazaarPrice: '1,250 / क्विंटल (₹12.5 / kg)',
-    savings: '₹275 (18.0%)',
-  },
-  {
-    crop: 'Potato',
-    cropHindi: 'आलू',
-    image: '🥔',
-    minPrice: 1000,
-    maxPrice: 1550,
-    avgPrice: 1275,
-    change: -30,
-    changePercent: -2.3,
-    trend: 'DOWN',
-    kisanBazaarPrice: '1,050 / क्विंटल (₹10.5 / kg)',
-    savings: '₹225 (17.6%)',
-  },
-  {
-    crop: 'Onion',
-    cropHindi: 'प्याज',
-    image: '🧅',
-    minPrice: 1100,
-    maxPrice: 1600,
-    avgPrice: 1300,
-    change: 40,
-    changePercent: 3.2,
-    trend: 'UP',
-    kisanBazaarPrice: '1,080 / क्विंटल (₹10.8 / kg)',
-    savings: '₹220 (16.9%)',
-  },
-  {
-    crop: 'Wheat',
-    cropHindi: 'गेहूं',
-    image: '🌾',
-    minPrice: 2050,
-    maxPrice: 2450,
-    avgPrice: 2225,
-    change: 25,
-    changePercent: 1.1,
-    trend: 'UP',
-    kisanBazaarPrice: '2,000 / क्विंटल',
-    savings: '₹225 (10.1%)',
-  },
-  {
-    crop: 'Paddy',
-    cropHindi: 'धान (सामान्य)',
-    image: '🌾',
-    minPrice: 1800,
-    maxPrice: 2150,
-    avgPrice: 1975,
-    change: 35,
-    changePercent: 1.8,
-    trend: 'UP',
-    kisanBazaarPrice: '1,780 / क्विंटल',
-    savings: '₹195 (9.9%)',
-  },
-];
 
 // Constants
 const CATEGORY_NAMES: Record<string, { hi: string; en: string }> = {
@@ -824,14 +525,14 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [couponInput, setCouponInput] = useState('');
   const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const [selectedFarmerDetail, setSelectedFarmerDetail] = useState<typeof mockupFPOs[0] | null>(null);
+  const [selectedFarmerDetail, setSelectedFarmerDetail] = useState<any | null>(null);
   const [selectedProduceDetail, setSelectedProduceDetail] = useState<ProduceListing | null>(null);
 
   const [farmerFilterType, setFarmerFilterType] = useState<'ALL' | 'Farmer' | 'FPO' | 'Followed'>('ALL');
   const [farmerSearchQuery, setFarmerSearchQuery] = useState<string>('');
-  const [followedFarmerIds, setFollowedFarmerIds] = useState<string[]>(['fpo-1', 'farmer-1']);
+  const [followedFarmerIds, setFollowedFarmerIds] = useState<string[]>([]);
 
-  const [activeTrackOrderId, setActiveTrackOrderId] = useState<string>('ORD5678');
+  const [activeTrackOrderId, setActiveTrackOrderId] = useState<string>('');
 
   const selectedTrip = useMemo(() => {
     if (!trips || trips.length === 0) return null;
@@ -1896,11 +1597,6 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     }));
 
     const merged = [...firestoreFormatted];
-    defaultKisanBazaarOrders.forEach((def) => {
-      if (!merged.some((m) => m.orderCode === def.orderCode || m.id === def.id)) {
-        merged.push(def as any);
-      }
-    });
 
     return merged.filter((ord) => {
       if (orderFilter !== 'ALL') {
@@ -1921,6 +1617,33 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       return true;
     });
   }, [orders, orderFilter]);
+
+  // Derive real Farmers & FPOs strictly from active produce listings
+  const realFarmers = useMemo(() => {
+    const map = new Map<string, any>();
+    (listings || []).forEach((l) => {
+      const fName = l.farmerName || l.fpoName || 'सत्यापित किसान';
+      if (!map.has(fName)) {
+        const isFPO = Boolean((l.fpoName && l.fpoName.includes('FPO')) || l.farmerName?.includes('FPO'));
+        map.set(fName, {
+          id: `farmer-${fName.replace(/\s+/g, '_')}`,
+          name: fName,
+          type: isFPO ? 'FPO' : 'Farmer',
+          location: l.cultivationLocation || 'उत्तर प्रदेश',
+          farmersCount: isFPO ? '150+' : '1',
+          experienceYears: '10+ वर्ष',
+          productsCount: `${(listings || []).filter(item => (item.farmerName === fName || item.fpoName === fName)).length} उपज`,
+          onTimeRate: '99%',
+          rating: l.rating || 4.9,
+          reviewCount: 12,
+          isVerified: true,
+          avatar: l.image || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300',
+          crop: l.cropHindi || l.crop,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [listings]);
 
   // Filter produce listings
   const filteredListings = useMemo(() => {
@@ -3247,11 +2970,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
                   {/* Executive Order Stats Cards */}
                   {(() => {
-                    const activeCount = (orders || []).filter(o => ['PLACED', 'ACCEPTED', 'PACKED', 'IN_TRANSIT'].includes(o.status)).length + defaultKisanBazaarOrders.filter(o => ['PLACED', 'ACCEPTED', 'PACKED', 'IN_TRANSIT'].includes(o.status)).length;
-                    const completedCount = (orders || []).filter(o => o.status === 'DELIVERED').length + defaultKisanBazaarOrders.filter(o => o.status === 'DELIVERED').length;
-                    const cancelledCount = (orders || []).filter(o => o.status === 'CANCELLED' || o.status === 'REJECTED').length + defaultKisanBazaarOrders.filter(o => o.status === 'CANCELLED' || o.status === 'REJECTED').length;
+                    const activeCount = (orders || []).filter(o => ['PLACED', 'ACCEPTED', 'PACKED', 'IN_TRANSIT'].includes(o.status)).length;
+                    const completedCount = (orders || []).filter(o => o.status === 'DELIVERED').length;
+                    const cancelledCount = (orders || []).filter(o => o.status === 'CANCELLED' || o.status === 'REJECTED').length;
                     
-                    const totalSpent = [...(orders || []), ...defaultKisanBazaarOrders]
+                    const totalSpent = (orders || [])
                       .filter(o => o.status !== 'CANCELLED' && o.status !== 'REJECTED')
                       .reduce((sum, o) => {
                         const amt = o.totalAmount || ((o.productAmount || 0) + (o.deliveryFee || 0));
@@ -3507,7 +3230,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        All ({mockupFPOs.length})
+                        All ({realFarmers.length})
                       </button>
                       <button
                         type="button"
@@ -3518,7 +3241,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        Farmers ({mockupFPOs.filter((f) => f.type === 'Farmer').length})
+                        Farmers ({realFarmers.filter((f) => f.type === 'Farmer').length})
                       </button>
                       <button
                         type="button"
@@ -3529,7 +3252,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        FPOs ({mockupFPOs.filter((f) => f.type === 'FPO').length})
+                        FPOs ({realFarmers.filter((f) => f.type === 'FPO').length})
                       </button>
                       <button
                         type="button"
@@ -3557,93 +3280,101 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                   </div>
 
                   {/* Grid of Farmer/FPO Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {mockupFPOs
-                      .filter((item) => {
-                        if (farmerFilterType === 'Farmer' && item.type !== 'Farmer') return false;
-                        if (farmerFilterType === 'FPO' && item.type !== 'FPO') return false;
-                        if (farmerFilterType === 'Followed' && !followedFarmerIds.includes(item.id)) return false;
-                        if (farmerSearchQuery.trim()) {
-                          const q = farmerSearchQuery.toLowerCase().trim();
-                          const matchName = (item.name || '').toLowerCase().includes(q);
-                          const matchLoc = (item.location || '').toLowerCase().includes(q);
-                          return matchName || matchLoc;
-                        }
-                        return true;
-                      })
-                      .map((item) => {
-                        const isFollowed = followedFarmerIds.includes(item.id);
-                        return (
-                          <div key={item.id} className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-3 relative">
-                            <span
-                              className={`absolute top-3 right-3 text-[9px] font-extrabold px-2 py-0.5 rounded-md ${
-                                item.type === 'FPO' ? 'bg-emerald-800 text-white' : 'bg-amber-600 text-white'
-                              }`}
-                            >
-                              {item.type}
-                            </span>
+                  {realFarmers.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500 my-4">
+                      <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                      <p className="font-bold text-slate-700">वर्तमान में कोई पंजीकृत किसान या FPO उपलब्ध नहीं है</p>
+                      <p className="text-xs text-slate-400 mt-1">जब किसान अपनी फसल लिस्ट करेंगे, वे यहाँ दिखाई देंगे।</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {realFarmers
+                        .filter((item) => {
+                          if (farmerFilterType === 'Farmer' && item.type !== 'Farmer') return false;
+                          if (farmerFilterType === 'FPO' && item.type !== 'FPO') return false;
+                          if (farmerFilterType === 'Followed' && !followedFarmerIds.includes(item.id)) return false;
+                          if (farmerSearchQuery.trim()) {
+                            const q = farmerSearchQuery.toLowerCase().trim();
+                            const matchName = (item.name || '').toLowerCase().includes(q);
+                            const matchLoc = (item.location || '').toLowerCase().includes(q);
+                            return matchName || matchLoc;
+                          }
+                          return true;
+                        })
+                        .map((item) => {
+                          const isFollowed = followedFarmerIds.includes(item.id);
+                          return (
+                            <div key={item.id} className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-3 relative">
+                              <span
+                                className={`absolute top-3 right-3 text-[9px] font-extrabold px-2 py-0.5 rounded-md ${
+                                  item.type === 'FPO' ? 'bg-emerald-800 text-white' : 'bg-amber-600 text-white'
+                                }`}
+                              >
+                                {item.type}
+                              </span>
 
-                            <div className="flex items-center gap-3">
-                              <img src={item.avatar} alt={item.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
-                              <div>
-                                <div className="font-extrabold text-sm text-slate-900 flex items-center gap-1">
-                                  <span>{item.name}</span>
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
+                              <div className="flex items-center gap-3">
+                                <img src={item.avatar} alt={item.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
+                                <div>
+                                  <div className="font-extrabold text-sm text-slate-900 flex items-center gap-1">
+                                    <span>{item.name}</span>
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
+                                  </div>
+                                  <div className="text-[11px] text-slate-500">📍 {item.location}</div>
                                 </div>
-                                <div className="text-[11px] text-slate-500">📍 {item.location}</div>
                               </div>
-                            </div>
 
-                            <div className="grid grid-cols-3 gap-1 text-center text-[10px] bg-slate-50 p-2 rounded-xl border border-slate-100">
-                              <div>
-                                <span className="text-slate-400 block">{item.farmersCount ? 'Farmers' : 'Experience'}</span>
-                                <strong className="text-slate-900 font-extrabold">{item.farmersCount || item.experienceYears}</strong>
+                              <div className="grid grid-cols-3 gap-1 text-center text-[10px] bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <div>
+                                  <span className="text-slate-400 block">{item.farmersCount ? 'Farmers' : 'Experience'}</span>
+                                  <strong className="text-slate-900 font-extrabold">{item.farmersCount || item.experienceYears}</strong>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block">Products</span>
+                                  <strong className="text-slate-900 font-extrabold">{item.productsCount}</strong>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block">On-time</span>
+                                  <strong className="text-emerald-800 font-extrabold">{item.onTimeRate}</strong>
+                                </div>
                               </div>
-                              <div>
-                                <span className="text-slate-400 block">Products</span>
-                                <strong className="text-slate-900 font-extrabold">{item.productsCount}</strong>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 block">On-time</span>
-                                <strong className="text-emerald-800 font-extrabold">{item.onTimeRate}</strong>
-                              </div>
-                            </div>
 
-                            <div className="flex items-center justify-between pt-1">
-                              <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                                <span>{item.rating}</span>
-                                <span className="text-[10px] text-slate-400 font-normal">({item.reviewCount} orders)</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFollowedFarmerIds((prev) =>
-                                      isFollowed ? prev.filter((id) => id !== item.id) : [...prev, item.id]
-                                    )
-                                  }
-                                  className={`px-2.5 py-1 text-[11px] font-bold rounded-xl cursor-pointer transition-colors ${
-                                    isFollowed
-                                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                  }`}
-                                >
-                                  {isFollowed ? '✓ Following' : '+ Follow'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedFarmerDetail(item)}
-                                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl cursor-pointer transition-colors"
-                                >
-                                  View Profile
-                                </button>
+                              <div className="flex items-center justify-between pt-1">
+                                <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                  <span>{item.rating}</span>
+                                  <span className="text-[10px] text-slate-400 font-normal">({item.reviewCount} orders)</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setFollowedFarmerIds((prev) =>
+                                        isFollowed ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+                                      )
+                                    }
+                                    className={`px-2.5 py-1 text-[11px] font-bold rounded-xl cursor-pointer transition-colors ${
+                                      isFollowed
+                                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                  >
+                                    {isFollowed ? '✓ Following' : '+ Follow'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedFarmerDetail(item)}
+                                    className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                                  >
+                                    View Profile
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                  </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               )}
 

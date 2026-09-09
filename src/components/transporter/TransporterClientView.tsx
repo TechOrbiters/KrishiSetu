@@ -12,7 +12,6 @@ import {
   updateTransporterTrip,
   updateTransporterLocation,
 } from '@/lib/firebase';
-import { INITIAL_TRANSPORTER_TRIPS } from '@/data/mockData';
 import { firebaseRtdb } from '@/lib/firebase/client';
 import { ref, get } from 'firebase/database';
 import { signOutSupabase } from '@/lib/supabase/authClient';
@@ -167,12 +166,7 @@ export function TransporterClientView() {
     // 1. RTDB real-time trips subscription for zero-latency sync
     const unsubTrips = subscribeTransporterTrips((liveTrips) => {
       if (isMounted && Array.isArray(liveTrips)) {
-        setAvailableTrips((prev) => {
-          const tripMap = new Map<string, TransporterTrip>();
-          prev.forEach((t) => tripMap.set(t.id, t));
-          liveTrips.forEach((t) => tripMap.set(t.id, t));
-          return Array.from(tripMap.values());
-        });
+        setAvailableTrips(liveTrips);
       }
     });
 
@@ -200,7 +194,7 @@ export function TransporterClientView() {
           )
         );
       }
-      if (['ORDER_PLACED', 'ORDER_ACCEPTED', 'TRANSPORT_REQUESTED', 'ORDER_REJECTED', 'JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
+      if (['ORDER_ACCEPTED', 'TRANSPORT_REQUESTED', 'ORDER_REJECTED', 'JOB_ACCEPTED', 'TRIP_STATUS_UPDATED', 'POD_VERIFIED'].includes(event.type)) {
         syncBackendData();
       }
     });

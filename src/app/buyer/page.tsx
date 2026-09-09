@@ -6,11 +6,7 @@ import { BuyerPortal } from '@/components/buyer/BuyerPortal';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { KrishiAIAssistantModal } from '@/components/common/KrishiAIAssistantModal';
 import {
-  INITIAL_LISTINGS,
-  INITIAL_ORDERS,
-  INITIAL_TRANSPORTER_TRIPS,
   MARKET_PRICES,
-  FPO_PROFILES,
 } from '@/data/mockData';
 import {
   fetchFarmerListings,
@@ -53,7 +49,7 @@ function BuyerPortalPageInner() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [trips, setTrips] = useState<TransporterTrip[]>([]);
   const [marketPrices, setMarketPrices] = useState<MarketPrice[]>(MARKET_PRICES);
-  const [fpos, setFpos] = useState<FPOProfile[]>(FPO_PROFILES);
+  const [fpos, setFpos] = useState<FPOProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAIOpen, setIsAIOpen] = useState<boolean>(false);
 
@@ -347,19 +343,8 @@ function BuyerPortalPageInner() {
       });
 
       unsubFirestoreListings = subscribeProduceListings((fsListings) => {
-        if (isMounted && Array.isArray(fsListings) && fsListings.length > 0) {
-          setListings((prev) => {
-            const merged = [...prev];
-            fsListings.forEach((fl) => {
-              const idx = merged.findIndex((m) => m.id === fl.id);
-              if (idx >= 0) {
-                merged[idx] = { ...merged[idx], ...fl };
-              } else {
-                merged.unshift(fl);
-              }
-            });
-            return merged;
-          });
+        if (isMounted && Array.isArray(fsListings)) {
+          setListings(fsListings);
         }
       });
 

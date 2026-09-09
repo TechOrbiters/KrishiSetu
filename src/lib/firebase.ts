@@ -20,9 +20,6 @@ import {
   Dispute,
 } from '../types';
 import {
-  initialProduceListings,
-  initialOrders,
-  initialTransporterTrips,
   initialMarketPrices,
   initialFPOs,
   initialVerifications,
@@ -584,35 +581,8 @@ export async function seedInitialDataIfEmpty(force = false) {
   if (!firebaseRtdb || !force) return;
 
   try {
-    const snap = await get(ref(firebaseRtdb, 'produceListings'));
-    if (!snap.exists() || !snap.val()) {
-      console.log('Seeding initial produce listings to RTDB...');
-      const listingsMap: Record<string, any> = {};
-      initialProduceListings.forEach((it) => {
-        listingsMap[it.id] = it;
-      });
-      await set(ref(firebaseRtdb, 'produceListings'), listingsMap);
-    }
-
-    const oSnap = await get(ref(firebaseRtdb, 'orders'));
-    if (force || !oSnap.exists() || !oSnap.val()) {
-      console.log('Seeding initial orders to RTDB...');
-      const ordersMap: Record<string, any> = {};
-      initialOrders.forEach((o) => {
-        ordersMap[o.id] = o;
-      });
-      await set(ref(firebaseRtdb, 'orders'), ordersMap);
-    }
-
-    const tSnap = await get(ref(firebaseRtdb, 'transporterTrips'));
-    if (force || !tSnap.exists() || !tSnap.val()) {
-      console.log('Seeding initial trips to RTDB...');
-      const tripsMap: Record<string, any> = {};
-      initialTransporterTrips.forEach((t) => {
-        tripsMap[t.id] = t;
-      });
-      await set(ref(firebaseRtdb, 'transporterTrips'), tripsMap);
-    }
+    // Note: produceListings, orders, and transporterTrips are strictly populated by real farmer listings and buyer orders.
+    // No mock data is seeded into produceListings, orders, or transporterTrips.
 
     const pSnap = await get(ref(firebaseRtdb, 'marketPrices'));
     if (force || !pSnap.exists() || !pSnap.val()) {

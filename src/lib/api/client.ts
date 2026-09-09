@@ -9,7 +9,7 @@ import { calculateHaversineFallback, calculateRoute } from "../maps/routing";
 import { MarketPriceQueryFilters, MarketPriceApiResponse, MarketPriceSummaryCard, MarketPriceRecord } from "../types/market";
 import { TransporterTrip } from "@/types";
 import { getFirebaseBearerToken } from "../firebase/authClient";
-import { UserProfile, ProduceItem, OrderItem, INITIAL_PRODUCE, INITIAL_ORDERS, INITIAL_MARKET_PRICES } from "../seedData";
+import { UserProfile, ProduceItem, OrderItem, INITIAL_MARKET_PRICES } from "../seedData";
 import { logisticsSync } from "../realtime/logisticsSync";
 import { firebaseRtdb } from "../firebase/client";
 import { ref, get, set, update, remove } from "firebase/database";
@@ -497,8 +497,7 @@ export async function fetchListingById(id: string): Promise<ApiResult<ProduceIte
     }
   } catch (rtdbErr) {}
 
-  const found = INITIAL_PRODUCE.find(p => p.id === id) || INITIAL_PRODUCE[0];
-  return { success: true, data: found };
+  return { success: false, error: 'Listing not found' };
 }
 
 export async function updateFarmerListing(id: string, updates: any): Promise<ApiResult<any>> {
@@ -800,8 +799,7 @@ export async function fetchOrderById(orderId: string): Promise<ApiResult<OrderIt
     }
   } catch (rtdbErr) {}
 
-  const found = INITIAL_ORDERS.find(o => o.id === orderId) || INITIAL_ORDERS[0];
-  return { success: true, data: found };
+  return { success: false, error: 'Order not found' };
 }
 
 export async function acceptFarmerOrder(orderId: string): Promise<ApiResult<any>> {
@@ -813,7 +811,7 @@ export async function acceptFarmerOrder(orderId: string): Promise<ApiResult<any>
     }
   } catch {}
   if (!foundOrder) {
-    foundOrder = INITIAL_ORDERS.find(o => o.id === orderId) || null;
+    return { success: false, error: 'Order not found' };
   }
 
   const tripId = `trip_${orderId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
