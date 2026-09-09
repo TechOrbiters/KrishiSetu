@@ -140,13 +140,13 @@ function WizardContent() {
   // Helper to deduce category from crop name
   const deduceCategory = (crop: string) => {
     const c = crop.toLowerCase();
-    if (c.includes('गेहूँ') || c.includes('चावल') || c.includes('धान') || c.includes('मक्का') || c.includes('wheat') || c.includes('rice') || c.includes('grain')) {
+    if (c.includes('गेहूँ') || c.includes('गेहूं') || c.includes('चावल') || c.includes('धान') || c.includes('मक्का') || c.includes('बाजरा') || c.includes('जौ') || c.includes('ज्वार') || c.includes('wheat') || c.includes('rice') || c.includes('grain') || c.includes('corn') || c.includes('maize') || c.includes('bajra') || c.includes('paddy')) {
       return 'अनाज';
     }
-    if (c.includes('चना') || c.includes('दाल') || c.includes('मटर') || c.includes('pulse')) {
+    if (c.includes('चना') || c.includes('दाल') || c.includes('मूंग') || c.includes('उड़द') || c.includes('अरहर') || c.includes('तूर') || c.includes('मसूर') || c.includes('राजमा') || c.includes('pulse') || c.includes('chana') || c.includes('dal') || c.includes('lentil')) {
       return 'दालें';
     }
-    if (c.includes('सेब') || c.includes('आम') || c.includes('केला') || c.includes('fruit')) {
+    if (c.includes('सेब') || c.includes('आम') || c.includes('केला') || c.includes('संतरा') || c.includes('अंगूर') || c.includes('पपीता') || c.includes('अमरूद') || c.includes('अनार') || c.includes('तरबूज') || c.includes('खरबूजा') || c.includes('fruit') || c.includes('apple') || c.includes('banana') || c.includes('mango') || c.includes('orange') || c.includes('grape')) {
       return 'फल';
     }
     return 'सब्जी';
