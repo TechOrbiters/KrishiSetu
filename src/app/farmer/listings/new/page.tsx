@@ -463,7 +463,7 @@ function WizardContent() {
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 2 ? 'bg-emerald-700 text-white' : 'bg-slate-200'}`}>
                 2
               </span>
-              <span>2. कीमत व डिलीवरी</span>
+              <span>2. बिक्री की जानकारी</span>
             </div>
           </div>
           <span className="ml-3 text-[11px] font-extrabold bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200 flex-shrink-0">
@@ -586,18 +586,18 @@ function WizardContent() {
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                       सफलतापूर्वक भरे गए विवरण (Filled Details):
                     </span>
-                    {step === 1 && (quantity || price) && (
+                    {step === 1 && (cropName && quantity && price) && (
                       <button
                         type="button"
                         onClick={() => setStep(2)}
                         className="text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
                       >
-                        <span>मात्रा व कीमत देखें (Step 2)</span>
+                        <span>आगे बढ़ें (Step 2)</span>
                         <span>→</span>
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200">
                       <span className="text-[10px] text-slate-500 block font-medium">फसल (Crop)</span>
                       <span className="font-bold text-slate-900">{cropName || '—'}</span>
@@ -607,12 +607,8 @@ function WizardContent() {
                       <span className="font-bold text-slate-900">{quantity ? `${quantity} kg` : '—'}</span>
                     </div>
                     <div className="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200">
-                      <span className="text-[10px] text-slate-500 block font-medium">भाव (Price)</span>
+                      <span className="text-[10px] text-slate-500 block font-medium">कीमत (Price)</span>
                       <span className="font-bold text-slate-900">{price ? `₹${price}/kg` : '—'}</span>
-                    </div>
-                    <div className="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200">
-                      <span className="text-[10px] text-slate-500 block font-medium">न्यूनतम (Min Order)</span>
-                      <span className="font-bold text-slate-900">{minOrder ? `${minOrder} kg` : '—'}</span>
                     </div>
                   </div>
                 </div>
@@ -795,105 +791,11 @@ function WizardContent() {
               )}
             </div>
 
-            {/* Field 4: Minimum Order Quantity */}
-            <div className="space-y-1.5">
-              <label className="font-bold text-slate-800 block">न्यूनतम ऑर्डर मात्रा*</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="number"
-                    id="input-min-order"
-                    placeholder="जैसे - 20"
-                    value={minOrder}
-                    onChange={(e) => setMinOrder(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full p-3 pr-10 border border-slate-200 rounded-xl text-xs font-bold"
-                  />
-                  <button
-                    type="button"
-                    id="mic-min-order"
-                    aria-label="न्यूनतम मात्रा बोलकर भरें"
-                    title="बोलकर न्यूनतम मात्रा भरें"
-                    onClick={() =>
-                      isRecording && activeField === 'minOrder'
-                        ? stopRecording()
-                        : startRecording('minOrder')
-                    }
-                    className={`absolute right-2 top-2 p-1.5 rounded-lg transition-all ${
-                      activeField === 'minOrder' && isRecording
-                        ? 'bg-red-500 text-white animate-pulse'
-                        : activeField === 'minOrder' && isProcessing
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'text-emerald-700 hover:bg-emerald-50'
-                    }`}
-                  >
-                    {activeField === 'minOrder' && isProcessing ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : activeField === 'minOrder' && isRecording ? (
-                      <MicOff className="w-4 h-4" />
-                    ) : (
-                      <Mic className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-                <select className="p-3 border border-slate-200 rounded-xl text-xs font-bold bg-slate-50">
-                  <option>kg ▾</option>
-                </select>
-              </div>
-
-              {activeField === 'minOrder' && isRecording && (
-                <div className="flex items-center justify-between text-[11px] text-red-700 bg-red-50 border border-red-200 p-2 rounded-lg animate-pulse">
-                  <span className="flex items-center gap-1.5 font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-red-600 inline-block animate-ping" />
-                    न्यूनतम ऑर्डर मात्रा बोलें ({recordingSeconds}s)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={stopRecording}
-                    className="font-bold text-xs underline text-red-800 hover:text-red-950"
-                  >
-                    रोकें
-                  </button>
-                </div>
-              )}
-
-              {activeField === 'minOrder' && isProcessing && (
-                <div className="flex items-center gap-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded-lg">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Sarvam AI न्यूनतम मात्रा पहचान रहा है...</span>
-                </div>
-              )}
-            </div>
-
-
-            {/* Yellow Tip Note */}
-            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 font-semibold flex items-center gap-2">
-              <span>💡</span>
-              <span>न्यूनतम ऑर्डर मात्रा से कम का ऑर्डर नहीं किया जा सकेगा।</span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setStep(2)}
-            className="w-full bg-emerald-700 text-white font-extrabold text-xs py-3.5 rounded-xl hover:bg-emerald-800 transition-colors shadow-xs"
-          >
-            आगे बढ़ें →
-          </button>
-        </div>
-      )}
-
-      {/* STEP 2: 2. कीमत और बिक्री की जानकारी */}
-      {step === 2 && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
-          <h2 className="font-bold text-base text-slate-900 border-b border-slate-100 pb-2">
-            2. कीमत और बिक्री की जानकारी
-          </h2>
-
-          <div className="space-y-4 text-xs">
-            {/* Field 1: Asking Price */}
+            {/* Field 4: कीमत* (Price per kg) — moved from Step 2 */}
             <div className="space-y-1.5">
               <label className="font-bold text-slate-800 block">कीमत*</label>
               <div className="flex items-center gap-2">
-                <span className="p-3 bg-slate-100 border border-slate-200 rounded-xl font-bold">₹</span>
+                <span className="p-3 bg-slate-100 border border-slate-200 rounded-xl font-bold text-xs">₹</span>
                 <div className="relative flex-1">
                   <input
                     type="number"
@@ -930,7 +832,7 @@ function WizardContent() {
                     )}
                   </button>
                 </div>
-                <span className="font-bold text-slate-600">प्रति kg</span>
+                <span className="font-bold text-slate-600 text-xs whitespace-nowrap">प्रति kg</span>
               </div>
 
               {activeField === 'price' && isRecording && (
@@ -955,14 +857,44 @@ function WizardContent() {
                   <span>Sarvam AI कीमत पहचान रहा है...</span>
                 </div>
               )}
-            </div>
 
-
-            {/* Green Today Market Price Banner */}
-            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center gap-2">
-              <span>📈</span>
-              <span>आज का बाजार भाव: ₹20 - ₹24 / kg</span>
+              {/* Market Price Banner */}
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-[11px] text-emerald-800 font-bold flex items-center gap-2">
+                <span>📈</span>
+                <span>आज का बाजार भाव: ₹20 - ₹24 / kg</span>
+              </div>
             </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (!cropName || cropName.trim() === '') {
+                setApiError('कृपया उपज का नाम दर्ज करें (Crop name is required)');
+                return;
+              }
+              const numPrice = Number(price);
+              if (isNaN(numPrice) || numPrice <= 0) {
+                setApiError('कृपया वैध कीमत दर्ज करें (Price must be greater than 0)');
+                return;
+              }
+              setApiError(null);
+              setStep(2);
+            }}
+            className="w-full bg-emerald-700 text-white font-extrabold text-xs py-3.5 rounded-xl hover:bg-emerald-800 transition-colors shadow-xs"
+          >
+            आगे बढ़ें →
+          </button>
+        </div>
+      )}
+
+      {/* STEP 2: 2. बिक्री की जानकारी */}
+      {step === 2 && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+          <h2 className="font-bold text-base text-slate-900 border-b border-slate-100 pb-2">
+            2. बिक्री की जानकारी
+          </h2>
+
+          <div className="space-y-4 text-xs">
 
             {/* Quality Selection */}
             <div className="space-y-1.5">
