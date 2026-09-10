@@ -216,7 +216,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     buyer: 'Buyer',
     transporter: 'Transporter',
     admin: 'Admin',
-    heroTitle: 'Direct from Farmer to Market',
+    heroTitle: 'Direct from Farmer to Buyer',
     heroTagline1: 'Better Prices',
     heroTagline2: 'Easy Selling',
     heroTagline3: 'Smart Delivery',
@@ -685,7 +685,7 @@ export const DOM_TRANSLATIONS: DOMTranslationEntry[] = [
   { hi: 'ड्राइवर', en: 'Driver', mr: 'ड्रायव्हर', te: 'డ్రైవర్', ta: 'ஓட்டுநர்', bn: 'ড্রাইভার' },
 
   // Landing Page Hero & Cards
-  { hi: 'किसान से सीधा बाज़ार तक', en: 'Direct from Farmer to Market', mr: 'शेतकऱ्यापासून थेट बाजारापर्यंत', te: 'రైతు నుండి నేరుగా మార్కెట్ వరకు', ta: 'விவசாயியிடமிருந்து நேரடியாக சந்தைக்கு', bn: 'কৃষক থেকে সরাসরি বাজারে' },
+  { hi: 'किसान से सीधा खरीदार तक', en: 'Direct from Farmer to Buyer', mr: 'शेतकऱ्यापासून थेट खरेदीदारापर्यंत', te: 'రైతు నుండి నేరుగా కొనుగోలుదారు వరకు', ta: 'விவசாயியிடமிருந்து நேரடியாக வாங்குபவருக்கு', bn: 'কৃষক থেকে সরাসরি ক্রেতা' },
   { hi: 'बेहतर दाम', en: 'Better Prices', mr: 'चांगला भाव', te: 'మంచి ధరలు', ta: 'சிறந்த விலை', bn: 'উন্নত দাম' },
   { hi: 'आसान बिक्री', en: 'Easy Selling', mr: 'सोपी विक्री', te: 'సులభమైన అమ్మకాలు', ta: 'எளிதான விற்பனை', bn: 'সহজ বিক্রয়' },
   { hi: 'स्मार्ट डिलीवरी', en: 'Smart Delivery', mr: 'स्मार्ट डिलिव्हरी', te: 'స్మార్ట్ డెలివరీ', ta: 'ஸ்மார்ட் டெலிவரி', bn: 'স্মার্ট ডেলিভারি' },
