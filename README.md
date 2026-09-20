@@ -597,5 +597,5 @@ This project is developed for **Smart India Hackathon 2026** (Problem ID 26033).
 <br/>
 
 [![GitHub](https://img.shields.io/badge/GitHub-TechOrbiters%2FKrishiSetu-181717?style=for-the-badge&logo=github)](https://github.com/TechOrbiters/KrishiSetu)
-[![Live Demo](https://krishisetu.web.app)]
+
 </div>
